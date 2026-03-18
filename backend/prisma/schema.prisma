@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  user_id   Int    @id @default(autoincrement())
+  name      String
+  username  String @unique
+  password  String
+  is_active Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  roles UserRole[]
+
+  @@map("users")
+}
+
+model RoleTypes {
+  role_id   Int    @id @default(autoincrement())
+  role_name String @db.VarChar(50)
+  role_desc String? @db.VarChar(200)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  users     UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  user_id Int                                                   // Foreign key from users 
+  role_id Int                                                   // Foreign key from roles
+
+  user Users @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  role RoleTypes @relation(fields: [role_id], references: [role_id], onDelete: Cascade)
+
+  @@id([user_id, role_id])                                      // primary | composite keys
+  @@index([user_id])
+  @@index([role_id])
+  @@map("user_roles")
+}
