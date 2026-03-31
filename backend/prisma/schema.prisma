@@ -9,14 +9,17 @@ datasource db {
 }
 
 model Users {
-  user_id   Int    @id @default(autoincrement())
-  name      String
-  username  String @unique
-  password  String
-  is_active Boolean @default(true)
+  user_id    Int     @id @default(autoincrement())
+  name       String  @db.VarChar(50)
+  username   String  @unique
+  password   String  @db.Text
+  is_active  Boolean @default(true)
+  license_no String? @db.VarChar(20)
+  title      String? @db.VarChar(50)
+  ptr_no     String? @db.VarChar(20)
 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at DateTime  @default(now())
+  updated_at DateTime? @updatedAt
 
   roles UserRole[]
 
@@ -24,27 +27,205 @@ model Users {
 }
 
 model RoleTypes {
-  role_id   Int    @id @default(autoincrement())
-  role_name String @db.VarChar(50)
-  role_desc String? @db.VarChar(200)
+  role_id   Int     @id @default(autoincrement())
+  role_name String  @db.VarChar(50)
+  role_desc String? @db.VarChar(100)
 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at DateTime  @default(now())
+  updated_at DateTime? @updatedAt
 
-  users     UserRole[]
+  users UserRole[]
 
   @@map("roles")
 }
 
 model UserRole {
-  user_id Int                                                   // Foreign key from users 
-  role_id Int                                                   // Foreign key from roles
+  user_id Int // Foreign key from users 
+  role_id Int // Foreign key from roles
 
-  user Users @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  user Users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   role RoleTypes @relation(fields: [role_id], references: [role_id], onDelete: Cascade)
 
-  @@id([user_id, role_id])                                      // primary | composite keys
+  @@id([user_id, role_id]) // primary | composite keys
   @@index([user_id])
   @@index([role_id])
   @@map("user_roles")
+}
+
+model VitallSign {
+  vs_id      Int       @id @default(autoincrement())
+  patient_id Int
+  bp         String?   @db.VarChar(20)
+  temp       String?   @db.VarChar(20)
+  cr         String?   @db.VarChar(20)
+  rr         String?   @db.VarChar(20)
+  wt         String?   @db.VarChar(20)
+  ht         String?   @db.VarChar(20)
+  created_at DateTime  @default(now())
+  updated_at DateTime? @updatedAt
+
+  phr      PatientHistoricalRecord[]
+  cons_req ConsultationRequest[]
+  patient  Patients                  @relation(fields: [patient_id], references: [patient_id])
+
+  @@map("vital_signs")
+}
+
+model PatientHistoricalRecord {
+  phr_id            Int      @id @default(autoincrement())
+  patient_id        Int
+  vs_id             Int
+  hist_illness      String   @db.Text
+  consultation_date DateTime @db.Date
+  chief_complaint   String   @db.Text
+
+  // PMH
+  pmh_allergy     Boolean @default(false)
+  pmh_admission   Boolean @default(false)
+  pmh_others      Boolean @default(false)
+  pmh_others_text String?
+
+  // FH
+  fh_htn         Boolean @default(false)
+  fh_dm          Boolean @default(false)
+  fh_ba          Boolean @default(false)
+  fh_cancer      Boolean @default(false)
+  fh_others      Boolean @default(false)
+  fh_others_text String?
+
+  // OB
+  ob_score String?
+  ob_nvsd  Boolean @default(false)
+  ob_cs    Boolean @default(false)
+
+  menarche    String? @db.VarChar(100)
+  interval    String? @db.VarChar(100)
+  duration    String? @db.VarChar(100)
+  amount      String? @db.VarChar(100)
+  ob_symptoms String? @db.VarChar(100)
+
+  // Personal History
+  cigarette_use Boolean @default(false)
+  alcohol_use   Boolean @default(false)
+  drug_use      Boolean @default(false)
+  exercise      Boolean @default(false)
+  hygiene_prac  Boolean @default(false)
+  coffee_cons   Boolean @default(false)
+  soda_cons     Boolean @default(false)
+  // Social
+  sh_allergy    Boolean @default(false)
+  sh_admission  Boolean @default(false)
+
+  travel_history String? @db.VarChar(100)
+  diet           String? @db.VarChar(100)
+  stress         String? @db.VarChar(100)
+  occupation     String? @db.VarChar(100)
+
+  created_at DateTime  @default(now())
+  updated_at DateTime? @updatedAt
+
+  patient Patients         @relation(fields: [patient_id], references: [patient_id])
+  vitals  VitallSign       @relation(fields: [vs_id], references: [vs_id])
+  mr      MedicalRecords[]
+
+  @@index([patient_id])
+  @@index([vs_id])
+  @@map("consultation_records")
+}
+
+enum Sex {
+  male
+  female
+}
+
+model Request {
+  req_id     Int           @id @default(autoincrement())
+  patient_id Int
+  req_type   RequestType
+  status     RequestStatus
+  req_date   DateTime      @db.Date
+
+  patient Patients @relation(fields: [patient_id], references: [patient_id])
+
+  laboratory          LaboratoryRequest?
+  consult             ConsultationRequest?
+
+  @@index([patient_id])
+  @@map("request")
+}
+
+enum RequestType {
+  CONSULTATION
+  LABORATORY
+  CERTIFICATE
+}
+
+enum RequestStatus {
+  WAITING
+  SERVING
+  CANCELED
+  DONE
+}
+
+model ConsultationRequest {
+  id     Int @id @default(autoincrement())
+  req_id Int @unique
+  vs_id  Int
+
+  request Request    @relation(fields: [req_id], references: [req_id])
+  vitals  VitallSign @relation(fields: [vs_id], references: [vs_id])
+
+  @@map("consultation_request")
+}
+
+model LaboratoryRequest {
+  id     Int    @id @default(autoincrement())
+  req_id Int    @unique
+  test   String @db.Text
+  req_by String @db.VarChar(50)
+
+  request Request @relation(fields: [req_id], references: [req_id])
+
+  @@map("laboratory_request")
+}
+
+model Patients {
+  patient_id     Int      @id @default(autoincrement())
+  patient_code   String?  @unique
+  name           String   @db.VarChar(50)
+  address        String   @db.Text
+  contact_number String   @db.VarChar(50)
+  birth_date     DateTime @db.Date
+  religion       String?  @db.VarChar(50)
+
+  sex Sex
+  age Int?
+
+  created_at DateTime  @default(now())
+  updated_at DateTime? @updatedAt
+
+  phr     PatientHistoricalRecord[]
+  request Request[]
+  mr      MedicalRecords[]
+  vitals  VitallSign[]
+
+  @@map("patients")
+}
+
+model MedicalRecords {
+  mt_id         Int      @id @default(autoincrement())
+  patient_id    Int
+  phr_id        Int
+  lab_id        Int
+  findings      String   @db.Text
+  presc         String   @db.Text
+  followup_date DateTime
+  med_cert      Boolean  @default(false)
+
+  patient Patients                @relation(fields: [patient_id], references: [patient_id])
+  phr     PatientHistoricalRecord @relation(fields: [phr_id], references: [phr_id])
+
+  @@index([patient_id])
+  @@index([phr_id])
+  @@map("medical_records")
 }

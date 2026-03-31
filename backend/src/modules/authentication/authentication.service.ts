@@ -1,13 +1,13 @@
 import { prisma } from "../../config/prismaClient";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { RegisterPayload } from "./authentication.types";
+import { iRegister } from "./authentication.types";
 
 /**
  * REGISTER USER
  */
-export const registerUser = async (payload: RegisterPayload) => {
-  const { name, username, password, role_id } = payload;
+export const registerUser = async (payload: iRegister) => {
+  const { name, username, password, role_id, license_no, title, ptr_no } = payload;
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -16,7 +16,10 @@ export const registerUser = async (payload: RegisterPayload) => {
       data: {
         name,
         username,
-        password: hashedPassword
+        password: hashedPassword,
+        license_no,
+        title: title === "" ? undefined : title,
+        ptr_no,
       }
     });
 
@@ -42,11 +45,11 @@ export const loginUser = async (username: string, password: string) => {
   const user = await prisma.users.findUnique({
     where: { username },
     include: {
-        roles: {
+      roles: {
         include: {
             role: true
         }
-        }
+      }
     }
   });
 

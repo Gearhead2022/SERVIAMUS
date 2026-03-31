@@ -40,7 +40,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/authentication', authentocationRoutes);
 
 // protected routes
-// app.use('/api', protectedRoutes);
+app.use('/api', protectedRoutes);
 
 app.use(errorHandler);
 
