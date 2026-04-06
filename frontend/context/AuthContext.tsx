@@ -49,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(true);
     
     const admin_user = user.roles.includes('ADMIN');
+    const doctor_user = user.roles.includes('DOCTOR');
     const laboratory_user = user.roles.includes('LAB');
     const staff_user = user.roles.includes('STAFF');
 
@@ -56,8 +57,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.replace("dashboard"); 
     }
 
+    if (doctor_user) {
+      router.replace("doctordashboard");
+    }
+
     if (laboratory_user) {
-      router.replace("/pages/lab/");
+      router.replace("labdashboard");
     }
 
     if (staff_user) {
