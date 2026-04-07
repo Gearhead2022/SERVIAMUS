@@ -51,17 +51,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const admin_user = user.roles.includes('ADMIN');
     const laboratory_user = user.roles.includes('LAB');
     const staff_user = user.roles.includes('STAFF');
+    const doctor_user = user.roles.includes('DOCTOR');
 
     if (admin_user) {
       router.replace("dashboard"); 
     }
 
     if (laboratory_user) {
-      router.replace("/pages/lab/");
+      router.replace("labdashboard");
     }
 
     if (staff_user) {
       router.replace("registration");
+    }
+
+     if (doctor_user) {
+      router.replace("docDashboard");
     }
   };
 

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createConsultarionResultController } from "./consultation.controller";
+import { createConsultarionResultController, getAllPatientRequestController } from "./consultation.controller";
 
 const router = Router();
 
@@ -8,5 +8,11 @@ router.post(
   "/results",
   createConsultarionResultController
 );
+
+router.get(
+  "/request",
+  getAllPatientRequestController
+);
+
 
 export default router;
