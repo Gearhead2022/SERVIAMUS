@@ -2,8 +2,14 @@
 
 import Image from "next/image";
 import { useRef, type ReactNode } from "react";
+import Button from "@/components/ui/Button";
 
-type LabCategory = "clinical-chemistry" | "hematology" | "parasitology" | "urinalysis";
+type LabCategory =
+  | "clinical-chemistry"
+  | "hematology"
+  | "parasitology"
+  | "urinalysis"
+  | "other";
 
 type LabRequest = {
   id: string;
@@ -67,6 +73,12 @@ function PreviewField({ label, value }: { label: string; value: string }) {
       <p className="result-value mt-1 text-sm text-slate-700">{value}</p>
     </div>
   );
+}
+
+function formatLabel(key: string) {
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function PreviewShell({ title, children }: { title: string; children: ReactNode }) {
@@ -327,6 +339,43 @@ function ClinicalChemistryTemplate({ request, form }: { request: LabRequest; for
   );
 }
 
+function GenericTemplate({
+  request,
+  title,
+  form,
+}: {
+  request: LabRequest;
+  title: string;
+  form: Record<string, string>;
+}) {
+  const rows = Object.entries(form).filter(([, value]) => value.trim() !== "");
+
+  return (
+    <PreviewShell title={title}>
+      <PatientBlock request={request} />
+      <section className="mt-5">
+        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">
+          TEST DETAILS
+        </h3>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {rows.length ? (
+            rows.map(([key, value]) => (
+              <div key={key} className="result-card rounded-2xl border border-slate-200 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  {formatLabel(key)}
+                </p>
+                <p className="mt-2 text-sm text-slate-700">{value}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-slate-500">No values entered yet.</p>
+          )}
+        </div>
+      </section>
+    </PreviewShell>
+  );
+}
+
 export default function LabResultPreview({
   request,
   category,
@@ -556,30 +605,21 @@ export default function LabResultPreview({
         {category === "parasitology" ? <ParasitologyTemplate request={request} form={form} /> : null}
         {category === "urinalysis" ? <UrinalysisTemplate request={request} form={form} /> : null}
         {category === "clinical-chemistry" ? <ClinicalChemistryTemplate request={request} form={form} /> : null}
+        {category === "other" ? (
+          <GenericTemplate request={request} title={request.testType.toUpperCase()} form={form} />
+        ) : null}
       </div>
 
       <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 bg-white px-1 pt-5 print:hidden">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-        >
+        <Button type="button" variant="secondary" onClick={onBack}>
           Back to Edit
-        </button>
-        <button
-          type="button"
-          onClick={onPassToDoctor}
-          className="rounded-lg border border-[#152859] px-4 py-2 text-sm font-semibold text-[#152859] transition hover:bg-[#eef2ff]"
-        >
+        </Button>
+        <Button type="button" variant="neutral" onClick={onPassToDoctor}>
           Pass Data to Doctor
-        </button>
-        <button
-          type="button"
-          onClick={handlePrint}
-          className="rounded-lg bg-[#152859] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1c3570]"
-        >
+        </Button>
+        <Button type="button" onClick={handlePrint}>
           Print Form
-        </button>
+        </Button>
       </div>
     </div>
   );

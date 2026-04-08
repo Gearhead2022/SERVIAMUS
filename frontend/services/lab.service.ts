@@ -1,28 +1,44 @@
 import api from "./axios";
 
-export type LabCategory = "clinical-chemistry" | "hematology" | "parasitology" | "urinalysis";
+export type LabCategory =
+  | "clinical-chemistry"
+  | "hematology"
+  | "parasitology"
+  | "urinalysis"
+  | "other";
 export type RequestStatus = "queued" | "pending" | "done";
 
 export type LabRequest = {
   labId: number;
+  requestId: number;
+  laboratoryRequestId: number;
   id: string;
   patientName: string;
   patientId: string;
   rawPatientId: number;
   testType: string;
+  category: LabCategory;
   tests: string[];
+  completedTests: string[];
+  pendingTests: string[];
+  totalTests: number;
+  completedCount: number;
   requestedAt: string;
   requestedDate: string;
   age: string;
   priority: "Routine" | "Urgent";
   status: RequestStatus;
+  requestStatus: RequestStatus;
   requestedBy: string;
   address: string;
   sex: string;
+  resultPayload?: Record<string, string> | null;
 };
 
 type LabRequestApiResponse = {
   labId: number;
+  requestId: number;
+  laboratoryRequestId: number;
   id: string;
   patientId: string;
   rawPatientId: number;
@@ -34,9 +50,16 @@ type LabRequestApiResponse = {
   requestedAt: string;
   requestedDate: string;
   status: RequestStatus;
+  requestStatus: RequestStatus;
+  category: LabCategory;
   tests: string[];
+  completedTests: string[];
+  pendingTests: string[];
+  totalTests: number;
+  completedCount: number;
   testType: string;
   priority: "Routine" | "Urgent";
+  resultPayload?: Record<string, string> | null;
 };
 
 export type SearchPatientResult = {
@@ -83,7 +106,7 @@ export const searchPatients = async (search: string) => {
 
 export const createLabRequest = async (payload: { patientId: number; tests: string[]; requestedBy?: string }) => {
   const res = await api.post("/api/lab/requests", payload);
-  return res.data.data as LabRequestApiResponse;
+  return toFrontendRequest(res.data.data as LabRequestApiResponse);
 };
 
 export const fetchPatientRecords = async (search: string) => {
@@ -112,5 +135,5 @@ export const saveLabResult = async (payload: {
   pathologistUserId?: number | null;
 }) => {
   const res = await api.post("/api/lab/results", payload);
-  return res.data.data;
+  return toFrontendRequest(res.data.data as LabRequestApiResponse);
 };

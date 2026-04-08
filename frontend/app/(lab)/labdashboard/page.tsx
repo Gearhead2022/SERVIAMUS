@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  Beaker,
   BellRing,
   CheckCircle2,
+  ClipboardList,
   Clock3,
   FlaskConical,
   Microscope,
@@ -13,37 +13,52 @@ import {
 } from "lucide-react";
 import ModalHeader from "@/components/Modal/ModalHeader";
 import ClinicalChemistryModal from "@/components/Modal/LabModal/ClinicalChemistryModal";
+import GeneralResultModal from "@/components/Modal/LabModal/GeneralResultModal";
 import HematologyModal from "@/components/Modal/LabModal/HematologyModal";
 import LabResultPreview from "@/components/Modal/LabModal/LabResultPreview";
 import ParasitologyModal from "@/components/Modal/LabModal/ParasitologyModal";
 import UrinalysisModal from "@/components/Modal/LabModal/UrinalysisModal";
-import select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
-import input from "@/components/ui/Input";
-import label from "@/components/ui/label";
-import textarea from "@/components/ui/Textarea";
-
-
-
-
 import {
   fetchLabRequests,
   saveLabResult,
   updateLabRequestStatus,
   type LabCategory,
   type LabRequest,
+  type RequestStatus,
 } from "@/services/lab.service";
 import SweetAlert from "@/utils/SweetAlert";
+
+type RequestPreviewCard = {
+  requestId: number;
+  id: string;
+  patientName: string;
+  patientId: string;
+  requestedBy: string;
+  requestedAt: string;
+  requestedDate: string;
+  requestStatus: RequestStatus;
+  tests: string[];
+  completedTests: string[];
+  pendingTests: string[];
+  completedCount: number;
+  totalTests: number;
+};
 
 const categoryLabels: Record<LabCategory, string> = {
   "clinical-chemistry": "Clinical Chemistry",
   hematology: "Hematology",
   parasitology: "Parasitology",
   urinalysis: "Urinalysis",
+  other: "General Result",
 };
 
-function getCategory(testType: string): LabCategory {
-  const value = testType.toLowerCase();
+function resolveCategory(request: LabRequest): LabCategory {
+  if (request.category) {
+    return request.category;
+  }
+
+  const value = request.testType.toLowerCase();
   if (value.includes("urinalysis")) return "urinalysis";
   if (
     value.includes("blood count") ||
@@ -56,7 +71,30 @@ function getCategory(testType: string): LabCategory {
   if (value.includes("fecal") || value.includes("stool") || value.includes("parasit")) {
     return "parasitology";
   }
-  return "clinical-chemistry";
+  if (value.includes("blood chemistry")) {
+    return "clinical-chemistry";
+  }
+  return "other";
+}
+
+function getStatusBadgeClasses(status: RequestStatus) {
+  if (status === "done") {
+    return "bg-[#e3f6ea] text-[#237a4e]";
+  }
+
+  if (status === "pending") {
+    return "bg-[#eef4ff] text-[#305c9b]";
+  }
+
+  return "bg-[#f4efe0] text-[#8a6a18]";
+}
+
+function formatList(items: string[]) {
+  if (!items.length) {
+    return "None yet";
+  }
+
+  return items.join(", ");
 }
 
 export default function DashboardPage() {
@@ -87,29 +125,94 @@ export default function DashboardPage() {
     void loadRequests();
   }, []);
 
-  const queued = useMemo(() => requests.filter((item) => item.status === "queued"), [requests]);
-  const pending = useMemo(() => requests.filter((item) => item.status === "pending"), [requests]);
+  const queued = useMemo(
+    () => requests.filter((item) => item.status === "queued"),
+    [requests]
+  );
+  const pending = useMemo(
+    () => requests.filter((item) => item.status === "pending"),
+    [requests]
+  );
   const done = useMemo(() => requests.filter((item) => item.status === "done"), [requests]);
-  const urgentCount = useMemo(() => requests.filter((item) => item.priority === "Urgent").length, [requests]);
 
+  const requestPreviews = useMemo<RequestPreviewCard[]>(() => {
+    const groupedRequests = new Map<number, RequestPreviewCard>();
+
+    requests.forEach((item) => {
+      if (groupedRequests.has(item.requestId)) {
+        return;
+      }
+
+      groupedRequests.set(item.requestId, {
+        requestId: item.requestId,
+        id: item.id,
+        patientName: item.patientName,
+        patientId: item.patientId,
+        requestedBy: item.requestedBy,
+        requestedAt: item.requestedAt,
+        requestedDate: item.requestedDate,
+        requestStatus: item.requestStatus,
+        tests: item.tests,
+        completedTests: item.completedTests,
+        pendingTests: item.pendingTests,
+        completedCount: item.completedCount,
+        totalTests: item.totalTests,
+      });
+    });
+
+    return Array.from(groupedRequests.values()).sort(
+      (left, right) =>
+        new Date(right.requestedDate).getTime() - new Date(left.requestedDate).getTime()
+    );
+  }, [requests]);
+
+  const activeCategory = activeRequest ? resolveCategory(activeRequest) : null;
+
+  const inProgressRequests = useMemo(
+    () => requestPreviews.filter((item) => item.requestStatus === "pending").length,
+    [requestPreviews]
+  );
+  const completedRequestCount = useMemo(
+    () => requestPreviews.filter((item) => item.requestStatus === "done").length,
+    [requestPreviews]
+  );
   const acceptanceRate = useMemo(() => {
     const accepted = pending.length + done.length;
     if (!requests.length) return 0;
     return Math.round((accepted / requests.length) * 100);
-  }, [requests.length, pending.length, done.length]);
-
+  }, [done.length, pending.length, requests.length]);
   const completionRate = useMemo(() => {
     if (!requests.length) return 0;
     return Math.round((done.length / requests.length) * 100);
-  }, [requests.length, done.length]);
-
-  const activeCategory = activeRequest ? getCategory(activeRequest.testType) : null;
+  }, [done.length, requests.length]);
 
   const replaceRequest = (updated: LabRequest) => {
-    setRequests((prev) => prev.map((item) => (item.labId === updated.labId ? updated : item)));
+    setRequests((current) =>
+      current.map((item) => {
+        if (item.requestId !== updated.requestId) {
+          return item;
+        }
+
+        if (item.labId === updated.labId) {
+          return updated;
+        }
+
+        return {
+          ...item,
+          requestStatus: updated.requestStatus,
+          tests: updated.tests,
+          completedTests: updated.completedTests,
+          pendingTests: updated.pendingTests,
+          totalTests: updated.totalTests,
+          completedCount: updated.completedCount,
+        };
+      })
+    );
+
     if (activeRequest?.labId === updated.labId) {
       setActiveRequest(updated);
     }
+
     if (previewPayload?.request.labId === updated.labId) {
       setPreviewPayload((current) =>
         current ? { ...current, request: updated } : current
@@ -145,13 +248,14 @@ export default function DashboardPage() {
 
     try {
       setSavingResults(true);
-      await saveLabResult({
+      const updated = await saveLabResult({
         labId: activeRequest.labId,
         category: activeCategory,
         form,
       });
 
-      setPreviewPayload({ request: activeRequest, category: activeCategory, form });
+      replaceRequest(updated);
+      setPreviewPayload({ request: updated, category: activeCategory, form });
     } catch {
       SweetAlert.errorAlert("Save Failed", "Unable to save laboratory results.");
     } finally {
@@ -175,17 +279,32 @@ export default function DashboardPage() {
   };
 
   const renderSelectedModal = () => {
-    if (!activeCategory) return null;
+    if (!activeRequest || !activeCategory) return null;
+
     if (activeCategory === "hematology") {
       return <HematologyModal onSubmit={handleSaveResults} onCancel={closeModal} />;
     }
+
     if (activeCategory === "parasitology") {
       return <ParasitologyModal onSubmit={handleSaveResults} onCancel={closeModal} />;
     }
+
     if (activeCategory === "urinalysis") {
       return <UrinalysisModal onSubmit={handleSaveResults} onCancel={closeModal} />;
     }
-    return <ClinicalChemistryModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+
+    if (activeCategory === "clinical-chemistry") {
+      return <ClinicalChemistryModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+    }
+
+    return (
+      <GeneralResultModal
+        testName={activeRequest.testType}
+        initialValues={activeRequest.resultPayload}
+        onSubmit={handleSaveResults}
+        onCancel={closeModal}
+      />
+    );
   };
 
   return (
@@ -193,15 +312,18 @@ export default function DashboardPage() {
       {activeRequest && !previewPayload ? (
         <ModalHeader
           showModal={!!activeRequest}
-          title={`Laboratory Request - ${categoryLabels[activeCategory ?? "clinical-chemistry"]}`}
+          title={`Laboratory Request - ${categoryLabels[activeCategory ?? "other"]}`}
+          subtitle={`${activeRequest.patientName} • ${activeRequest.testType}`}
+          meta={`${activeRequest.id} • ${activeRequest.patientId}`}
           onClose={closeModal}
         >
           <div className="border-b border-[#d2ebe6] bg-[#f5fbfa] px-5 py-3">
             <p className="text-xs font-medium text-[#2f5e57]">
-              {activeRequest.id} • {activeRequest.patientId}
+              Requested by {activeRequest.requestedBy}
             </p>
             <p className="mt-1 text-sm font-semibold text-[#133d37]">
-              {activeRequest.patientName} • {activeRequest.testType}
+              {activeRequest.completedCount} of {activeRequest.totalTests} test
+              {activeRequest.totalTests === 1 ? "" : "s"} completed for this patient request
             </p>
             {savingResults ? (
               <p className="mt-2 text-xs font-medium text-[#2f5e57]">Saving encoded results...</p>
@@ -212,7 +334,13 @@ export default function DashboardPage() {
       ) : null}
 
       {previewPayload ? (
-        <ModalHeader showModal={true} title={`Result Preview - ${previewPayload.request.patientName}`} onClose={closeModal}>
+        <ModalHeader
+          showModal={!!previewPayload}
+          title={`Result Preview - ${previewPayload.request.patientName}`}
+          subtitle={previewPayload.request.testType}
+          meta={`${previewPayload.request.id} • ${previewPayload.request.patientId}`}
+          onClose={closeModal}
+        >
           <LabResultPreview
             request={previewPayload.request}
             category={previewPayload.category}
@@ -232,12 +360,20 @@ export default function DashboardPage() {
             <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-white/75">Laboratory Operations</p>
-                <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">Laboratory Dashboard</h1>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">
+                  Laboratory Dashboard
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm text-white/75">
+                  Each requested test now appears as its own laboratory entry, while the patient
+                  request only moves to completed when every requested test is finished.
+                </p>
               </div>
               <div className="rounded-xl border border-white/25 bg-white/10 px-4 py-3 backdrop-blur-sm">
                 <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <BellRing size={16} className="text-[#c8ffe8]" />
-                  <span>{queued.length} new request{queued.length === 1 ? "" : "s"} in queue</span>
+                  <span>
+                    {queued.length} queued test {queued.length === 1 ? "entry" : "entries"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -246,11 +382,11 @@ export default function DashboardPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#2f5e57]">Queued Requests</p>
+                <p className="text-sm font-medium text-[#2f5e57]">Queued Test Entries</p>
                 <Clock3 size={18} className="text-[#2f9f90]" />
               </div>
               <p className="mt-3 text-3xl font-bold text-[#143a35]">{queued.length}</p>
-              <p className="mt-1 text-xs text-[#5f8a83]">Awaiting laboratory acceptance</p>
+              <p className="mt-1 text-xs text-[#5f8a83]">Waiting for laboratory acceptance</p>
             </div>
             <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
@@ -262,19 +398,19 @@ export default function DashboardPage() {
             </div>
             <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#2f5e57]">Completed</p>
+                <p className="text-sm font-medium text-[#2f5e57]">Completed Tests</p>
                 <CheckCircle2 size={18} className="text-[#2f9f90]" />
               </div>
               <p className="mt-3 text-3xl font-bold text-[#143a35]">{done.length}</p>
-              <p className="mt-1 text-xs text-[#5f8a83]">Done and confirmed by personnel</p>
+              <p className="mt-1 text-xs text-[#5f8a83]">Individual tests already finished</p>
             </div>
             <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#2f5e57]">Urgent Cases</p>
-                <Activity size={18} className="text-[#dc6f4f]" />
+                <p className="text-sm font-medium text-[#2f5e57]">Completed Patient Requests</p>
+                <Activity size={18} className="text-[#2f9f90]" />
               </div>
-              <p className="mt-3 text-3xl font-bold text-[#143a35]">{urgentCount}</p>
-              <p className="mt-1 text-xs text-[#5f8a83]">Needs faster turnaround</p>
+              <p className="mt-3 text-3xl font-bold text-[#143a35]">{completedRequestCount}</p>
+              <p className="mt-1 text-xs text-[#5f8a83]">Only elevated once all tests are done</p>
             </div>
           </div>
 
@@ -286,6 +422,7 @@ export default function DashboardPage() {
                   {queued.length} queued
                 </div>
               </div>
+
               <div className="space-y-3">
                 {loadingRequests ? (
                   <div className="rounded-xl border border-dashed border-[#cbe6e1] bg-[#f5fbfa] px-4 py-6 text-center text-sm text-[#5c8b84]">
@@ -301,26 +438,36 @@ export default function DashboardPage() {
                       key={item.labId}
                       className="rounded-xl border border-[#d5ebe6] bg-[#fbfefe] p-4 transition hover:border-[#9fd3c9]"
                     >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div>
+                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                        <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="rounded-md bg-[#e6f7f3] px-2 py-1 text-xs font-semibold text-[#2e7a6e]">
                               {item.id}
                             </span>
-                            <span className="rounded-md bg-[#eef5f4] px-2 py-1 text-xs font-semibold text-[#4d7a73]">
-                              {item.priority}
+                            <span
+                              className={`rounded-md px-2 py-1 text-xs font-semibold ${getStatusBadgeClasses(
+                                item.requestStatus
+                              )}`}
+                            >
+                              Patient Request: {item.requestStatus}
                             </span>
                           </div>
-                          <p className="mt-2 text-sm font-semibold text-[#173f39]">{item.patientName}</p>
-                          <p className="mt-1 text-xs text-[#577d76]">
-                            {item.patientId} • {item.testType}
+                          <p className="text-sm font-semibold text-[#173f39]">{item.patientName}</p>
+                          <p className="text-xs text-[#577d76]">
+                            {item.patientId} • Current Test: {item.testType}
                           </p>
-                          <p className="mt-1 text-xs text-[#6f948d]">Requested at {item.requestedAt}</p>
+                          <p className="text-xs text-[#6f948d]">
+                            Completed: {formatList(item.completedTests)}
+                          </p>
+                          <p className="text-xs text-[#6f948d]">
+                            Remaining: {formatList(item.pendingTests)}
+                          </p>
                         </div>
                         <Button
                           type="button"
                           onClick={() => acceptRequest(item.labId)}
                           disabled={busyRequestId === item.labId}
+                          className="min-w-[148px]"
                         >
                           {busyRequestId === item.labId ? "Accepting..." : "Accept Request"}
                         </Button>
@@ -334,9 +481,10 @@ export default function DashboardPage() {
             <section className="space-y-6">
               <div className="rounded-2xl border border-[#c8e4de] bg-white p-5 shadow-sm">
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-[#133d37]">Pending Requests</h2>
+                  <h2 className="text-lg font-semibold text-[#133d37]">Pending Test Entries</h2>
                   <Microscope size={17} className="text-[#2f9f90]" />
                 </div>
+
                 <div className="space-y-3">
                   {loadingRequests ? (
                     <div className="rounded-xl border border-dashed border-[#cbe6e1] bg-[#f5fbfa] px-4 py-5 text-center text-sm text-[#5c8b84]">
@@ -349,21 +497,30 @@ export default function DashboardPage() {
                   ) : (
                     pending.map((item) => (
                       <div key={item.labId} className="rounded-xl border border-[#d5ebe6] bg-[#fbfefe] p-3.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
                             <p className="text-sm font-semibold text-[#173f39]">{item.patientName}</p>
-                            <p className="text-xs text-[#63867f]">{item.testType}</p>
+                            <p className="text-xs text-[#63867f]">
+                              {item.testType} • {categoryLabels[resolveCategory(item)]}
+                            </p>
+                            <p className="text-xs text-[#6f948d]">
+                              Done: {item.completedCount} / {item.totalTests}
+                            </p>
                           </div>
                           <span className="rounded-md bg-[#ecf6f4] px-2 py-1 text-[11px] font-medium text-[#396f66]">
                             {item.id}
                           </span>
                         </div>
-                        <Button
-                          type="button"
-                          onClick={() => openModal(item)}
-                        >
-                          Confirm Done
-                        </Button>
+
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            onClick={() => openModal(item)}
+                            className="min-w-[150px]"
+                          >
+                            {resolveCategory(item) === "other" ? "Update Result" : "Encode Result"}
+                          </Button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -395,22 +552,126 @@ export default function DashboardPage() {
                     <div className="rounded-lg bg-[#f4faf8] p-3">
                       <div className="flex items-center gap-2 text-[#326a61]">
                         <UserRound size={14} />
-                        <span className="text-xs font-medium">Patients today</span>
+                        <span className="text-xs font-medium">Patient Requests</span>
                       </div>
-                      <p className="mt-2 text-xl font-bold text-[#143a35]">{requests.length}</p>
+                      <p className="mt-2 text-xl font-bold text-[#143a35]">{requestPreviews.length}</p>
                     </div>
                     <div className="rounded-lg bg-[#f4faf8] p-3">
                       <div className="flex items-center gap-2 text-[#326a61]">
-                        <Beaker size={14} />
-                        <span className="text-xs font-medium">Results encoded</span>
+                        <ClipboardList size={14} />
+                        <span className="text-xs font-medium">In Progress</span>
                       </div>
-                      <p className="mt-2 text-xl font-bold text-[#143a35]">{done.length}</p>
+                      <p className="mt-2 text-xl font-bold text-[#143a35]">{inProgressRequests}</p>
                     </div>
                   </div>
                 </div>
               </div>
             </section>
           </div>
+
+          <section className="rounded-2xl border border-[#c8e4de] bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-[#133d37]">Patient Request Preview</h2>
+                <p className="mt-1 text-sm text-[#5f8a83]">
+                  Review the overall progress of every patient request before it is elevated to done.
+                </p>
+              </div>
+              <span className="rounded-full bg-[#e3f6f2] px-3 py-1 text-xs font-medium text-[#2e6e64]">
+                {requestPreviews.length} patient request{requestPreviews.length === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              {loadingRequests ? (
+                <div className="rounded-xl border border-dashed border-[#cbe6e1] bg-[#f5fbfa] px-4 py-6 text-center text-sm text-[#5c8b84] lg:col-span-2">
+                  Loading patient previews...
+                </div>
+              ) : requestPreviews.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[#cbe6e1] bg-[#f5fbfa] px-4 py-6 text-center text-sm text-[#5c8b84] lg:col-span-2">
+                  No patient request previews available.
+                </div>
+              ) : (
+                requestPreviews.map((request) => (
+                  <div key={request.requestId} className="rounded-2xl border border-[#d5ebe6] bg-[#fbfefe] p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-md bg-[#e6f7f3] px-2 py-1 text-xs font-semibold text-[#2e7a6e]">
+                            {request.id}
+                          </span>
+                          <span
+                            className={`rounded-md px-2 py-1 text-xs font-semibold ${getStatusBadgeClasses(
+                              request.requestStatus
+                            )}`}
+                          >
+                            {request.requestStatus === "done" ? "All Tests Done" : request.requestStatus}
+                          </span>
+                        </div>
+                        <p className="text-base font-semibold text-[#173f39]">{request.patientName}</p>
+                        <p className="text-xs text-[#63867f]">
+                          {request.patientId} • Requested by {request.requestedBy}
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl bg-[#f4faf8] px-3 py-2 text-right">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#63867f]">
+                          Progress
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-[#143a35]">
+                          {request.completedCount}/{request.totalTests}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#63867f]">
+                          Completed Tests
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {request.completedTests.length ? (
+                            request.completedTests.map((test) => (
+                              <span
+                                key={`${request.requestId}-${test}-done`}
+                                className="rounded-full bg-[#e3f6ea] px-3 py-1 text-xs font-medium text-[#237a4e]"
+                              >
+                                {test}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-[#6f948d]">No completed tests yet.</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#63867f]">
+                          Remaining Tests
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {request.pendingTests.length ? (
+                            request.pendingTests.map((test) => (
+                              <span
+                                key={`${request.requestId}-${test}-pending`}
+                                className="rounded-full bg-[#f4efe0] px-3 py-1 text-xs font-medium text-[#8a6a18]"
+                              >
+                                {test}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-[#237a4e]">
+                              All requested tests are already complete.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
         </div>
       </div>
     </>

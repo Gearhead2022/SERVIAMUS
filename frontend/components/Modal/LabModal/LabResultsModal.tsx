@@ -247,6 +247,7 @@ export default function LabResultsModal({ request, onClose, onComplete }: Props)
 
   return (
     <ModalHeader
+      showModal={true}
       title={previewForm ? `Preview Result — ${request.patientName}` : `Encode Results — ${request.patientName}`}
       onClose={onClose}
     >
