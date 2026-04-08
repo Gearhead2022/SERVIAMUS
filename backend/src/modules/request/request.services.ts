@@ -1,6 +1,10 @@
 import { VitallSign } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
 import { CreateRequestProps } from "./request.types";
+import {
+  categorizeLabTest,
+  splitLabTests,
+} from "../lab/lab.utils";
 
 export const getPrevVitalSigns = async (patient_id: number) => {
   return prisma.$transaction(async (tx) => {
@@ -66,12 +70,27 @@ export const createRequest = async (payload: CreateRequestProps) => {
     }
 
     if (payload.req_type === "LABORATORY") {
+      const normalizedTests = splitLabTests(payload.test.join(", "));
+
+      if (!normalizedTests.length) {
+        throw new Error("At least one laboratory test is required.");
+      }
+
       const lab = await tx.laboratoryRequest.create({
         data: {
           req_id: request.req_id,
-          test: payload.test.join(", "),    
-          req_by: payload.req_by, 
+          test: normalizedTests.join(", "),
+          req_by: payload.req_by,
         },
+      });
+
+      await tx.laboratoryRequestItem.createMany({
+        data: normalizedTests.map((test, index) => ({
+          laboratory_request_id: lab.id,
+          test_name: test,
+          category: categorizeLabTest(test),
+          sort_order: index,
+        })),
       });
 
       return { request, lab };

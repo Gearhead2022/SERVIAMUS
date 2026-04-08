@@ -49,12 +49,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(true);
     
     const admin_user = user.roles.includes('ADMIN');
+    const doctor_user = user.roles.includes('DOCTOR');
     const laboratory_user = user.roles.includes('LAB');
     const staff_user = user.roles.includes('STAFF');
     const doctor_user = user.roles.includes('DOCTOR');
 
     if (admin_user) {
       router.replace("dashboard"); 
+    }
+
+    if (doctor_user) {
+      router.replace("doctordashboard");
     }
 
     if (laboratory_user) {
