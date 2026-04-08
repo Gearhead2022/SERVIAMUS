@@ -5,9 +5,7 @@ type ButtonVariant =
   | "secondary"
   | "danger"
   | "neutral"
-  | "addPatient"
-  | "acceptRequest"
-  | "declineRequest";
+  | "addPatient";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -33,11 +31,7 @@ const variants: Record<ButtonVariant, string> = {
   neutral:
     "text-[#6b7da0] border border-[#dce3ef] hover:border-[#0f2244] hover:text-[#0f2244]",
   addPatient: 
-    "flex items-center gap-2 bg-[#c8102e] hover:bg-[#a50d25] text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-lg shadow-[#c8102e]/30",
-  acceptRequest: 
-    "flex items-center gap-[.2rem] bg-[#234075] hover:bg-[#09152b] text-white text-sm font-semibold px-[.7rem] py-[2px] rounded-xl transition shadow-lg shadow-[#234075]/30",
-  declineRequest: 
-    "flex items-center gap-[.2rem] bg-[#c8102e] hover:bg-[#a50d25] text-white text-sm font-semibold px-[.7rem] py-[2px] rounded-xl transition shadow-lg shadow-[#c8102e]/30"
+    "flex items-center gap-2 bg-[#c8102e] hover:bg-[#a50d25] text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-lg shadow-[#c8102e]/30"
 };
 
 const Button: React.FC<ButtonProps> = ({
