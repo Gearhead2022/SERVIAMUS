@@ -74,3 +74,10 @@ export const createConsultationResult = async (payload: PatientConsultationRecor
     return {patient, vitals};
   });
 };
+
+export const getAllConsultationRequest = async () => {
+  return prisma.$transaction( async (tx) => {
+    const patientRequest = await tx.consultationRequest.findMany();
+    return patientRequest;
+  });
+};
