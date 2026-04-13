@@ -8,6 +8,7 @@ import { errorHandler } from "./middlewares/error.middleware";
 
 const PORT = Number(process.env.PORT) || 5000;
 
+
 dotenv.config();
 
 const app = express();
