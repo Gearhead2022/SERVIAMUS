@@ -9,19 +9,24 @@ type Props = {
 
 const testRows: { label: string; name: string; convName?: string }[] = [
   { label: "FBS (Fasting Blood Sugar)", name: "FBS", convName: "FBS_conv" },
-  { label: "1 HOUR AFTER GLUCOSE LOAD", name: "onehagl", convName: "onehagl_conv" },
-  { label: "2 HOUR AFTER GLUCOSE LOAD", name: "twohagl", convName: "twohagl_conv" },
-  { label: "3 HOUR AFTER GLUCOSE LOAD", name: "threehagl", convName: "threehagl_conv" },
+  { label: "1 Hour After Glucose Load", name: "onehagl", convName: "onehagl_conv" },
+  { label: "2 Hours After Glucose Load", name: "twohagl", convName: "twohagl_conv" },
+  { label: "3 Hours After Glucose Load", name: "threehagl", convName: "threehagl_conv" },
 ];
 
 const initialForm: Record<string, string> = {
-  FBS: "", FBS_conv: "",
-  onehagl: "", onehagl_conv: "",
-  twohagl: "", twohagl_conv: "",
-  threehagl: "", threehagl_conv: "",
+  test_type: "OGTT",
+  FBS: "",
+  FBS_conv: "",
+  onehagl: "",
+  onehagl_conv: "",
+  twohagl: "",
+  twohagl_conv: "",
+  threehagl: "",
+  threehagl_conv: "",
 };
 
-export default function ClinicalChemistryModal({ onSubmit, onCancel }: Props) {
+export default function OGTTResultModal({ onSubmit, onCancel }: Props) {
   const [form, setForm] = useState<Record<string, string>>(initialForm);
 
   const set = (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -35,17 +40,31 @@ export default function ClinicalChemistryModal({ onSubmit, onCancel }: Props) {
       }}
       className="p-5 space-y-5"
     >
+      <div className="grid grid-cols-1 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-slate-500">Test Type</label>
+          <input
+            type="text"
+            name="test_type"
+            value={form.test_type}
+            onChange={set}
+            placeholder="e.g. OGTT / 75G"
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
+          />
+        </div>
+      </div>
+
       <div>
         <div className="mb-2 flex items-center gap-2">
           <div className="h-4 w-1 shrink-0 rounded-full bg-teal-600" />
           <h6 className="text-xs font-bold uppercase tracking-widest text-teal-700">
-            OGTT BIOCHEMICAL DIAGNOSIS OF GESTATIONAL DIABETES MELLITUS
+            Oral Glucose Tolerance Test
           </h6>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[1fr_6.5rem_6.5rem] text-xs font-semibold text-slate-400 bg-slate-50 px-4 py-2 border-b border-slate-200">
-            <span>OGTT</span>
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="grid grid-cols-[1fr_6.5rem_6.5rem] border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-400">
+            <span>Phase</span>
             <span className="text-center">Result</span>
             <span className="text-center">Conv.</span>
           </div>
@@ -53,7 +72,7 @@ export default function ClinicalChemistryModal({ onSubmit, onCancel }: Props) {
           {testRows.map((row) => (
             <div
               key={row.name}
-              className="grid grid-cols-[1fr_6.5rem_6.5rem] items-center px-4 py-2 border-b border-slate-100 last:border-0"
+              className="grid grid-cols-[1fr_6.5rem_6.5rem] items-center border-b border-slate-100 px-4 py-2 last:border-0"
             >
               <span className="text-sm text-slate-700">{row.label}</span>
               <input
@@ -61,21 +80,17 @@ export default function ClinicalChemistryModal({ onSubmit, onCancel }: Props) {
                 name={row.name}
                 value={form[row.name]}
                 onChange={set}
-                placeholder="—"
+                placeholder="--"
                 className="mx-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
               />
-              {row.convName ? (
-                <input
-                  type="text"
-                  name={row.convName}
-                  value={form[row.convName]}
-                  onChange={set}
-                  placeholder="—"
-                  className="mx-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
-                />
-              ) : (
-                <div />
-              )}
+              <input
+                type="text"
+                name={row.convName}
+                value={form[row.convName ?? ""]}
+                onChange={set}
+                placeholder="--"
+                className="mx-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
+              />
             </div>
           ))}
         </div>

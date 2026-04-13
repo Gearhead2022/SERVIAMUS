@@ -29,6 +29,7 @@ export type LabRequest = {
   priority: "Routine" | "Urgent";
   status: RequestStatus;
   requestStatus: RequestStatus;
+  schemaKey?: string | null;
   requestedBy: string;
   address: string;
   sex: string;
@@ -52,6 +53,7 @@ type LabRequestApiResponse = {
   status: RequestStatus;
   requestStatus: RequestStatus;
   category: LabCategory;
+  schemaKey?: string | null;
   tests: string[];
   completedTests: string[];
   pendingTests: string[];

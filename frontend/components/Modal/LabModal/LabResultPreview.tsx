@@ -9,6 +9,10 @@ type LabCategory =
   | "hematology"
   | "parasitology"
   | "urinalysis"
+  | "serology"
+  | "hba1c"
+  | "chemistry"
+  | "ogtt"
   | "other";
 
 type LabRequest = {
@@ -605,6 +609,18 @@ export default function LabResultPreview({
         {category === "parasitology" ? <ParasitologyTemplate request={request} form={form} /> : null}
         {category === "urinalysis" ? <UrinalysisTemplate request={request} form={form} /> : null}
         {category === "clinical-chemistry" ? <ClinicalChemistryTemplate request={request} form={form} /> : null}
+        {category === "serology" ? (
+          <GenericTemplate request={request} title="SEROLOGY" form={form} />
+        ) : null}
+        {category === "hba1c" ? (
+          <GenericTemplate request={request} title="HBA1C" form={form} />
+        ) : null}
+        {category === "chemistry" ? (
+          <GenericTemplate request={request} title="CHEMISTRY" form={form} />
+        ) : null}
+        {category === "ogtt" ? (
+          <GenericTemplate request={request} title="OGTT" form={form} />
+        ) : null}
         {category === "other" ? (
           <GenericTemplate request={request} title={request.testType.toUpperCase()} form={form} />
         ) : null}

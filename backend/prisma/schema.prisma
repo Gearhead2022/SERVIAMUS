@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  // output   = "../generated/prisma"
 }
 
 datasource db {
@@ -21,7 +20,25 @@ model Users {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  roles UserRole[]
+  roles               UserRole[]
+  processed_lab_items LaboratoryRequestItem[]
+  hematology_results_as_medtech          HematologyResult[]         @relation("HematologyResultMedTech")
+  hematology_results_as_pathologist      HematologyResult[]         @relation("HematologyResultPathologist")
+  serology_results_as_medtech            SerologyResult[]           @relation("SerologyResultMedTech")
+  serology_results_as_pathologist        SerologyResult[]           @relation("SerologyResultPathologist")
+  parasitology_results_as_medtech        ParasitologyResult[]       @relation("ParasitologyResultMedTech")
+  parasitology_results_as_pathologist    ParasitologyResult[]       @relation("ParasitologyResultPathologist")
+  urinalysis_results_as_medtech          UrinalysisResult[]         @relation("UrinalysisResultMedTech")
+  urinalysis_results_as_pathologist      UrinalysisResult[]         @relation("UrinalysisResultPathologist")
+  clinical_chemistry_results_as_medtech  ClinicalChemistryResult[]  @relation("ClinicalChemistryResultMedTech")
+  clinical_chemistry_results_as_pathologist ClinicalChemistryResult[] @relation("ClinicalChemistryResultPathologist")
+  hba1c_results_as_medtech               HbA1cResult[]              @relation("HbA1cResultMedTech")
+  hba1c_results_as_pathologist           HbA1cResult[]              @relation("HbA1cResultPathologist")
+  chemistry_results_as_medtech           ChemistryResult[]          @relation("ChemistryResultMedTech")
+  chemistry_results_as_pathologist       ChemistryResult[]          @relation("ChemistryResultPathologist")
+  ogtt_results_as_medtech                OgttResult[]               @relation("OgttResultMedTech")
+  ogtt_results_as_pathologist            OgttResult[]               @relation("OgttResultPathologist")
+  medical_certificate_results_as_medtech MedicalCertificateResult[] @relation("MedicalCertificateResultMedTech")
 
   @@map("users")
 }
@@ -40,13 +57,13 @@ model RoleTypes {
 }
 
 model UserRole {
-  user_id Int // Foreign key from users 
-  role_id Int // Foreign key from roles
+  user_id Int
+  role_id Int
 
   user Users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   role RoleTypes @relation(fields: [role_id], references: [role_id], onDelete: Cascade)
 
-  @@id([user_id, role_id]) // primary | composite keys
+  @@id([user_id, role_id])
   @@index([user_id])
   @@index([role_id])
   @@map("user_roles")
@@ -79,13 +96,11 @@ model PatientHistoricalRecord {
   consultation_date DateTime @db.Date
   chief_complaint   String   @db.Text
 
-  // PMH
   pmh_allergy     Boolean @default(false)
   pmh_admission   Boolean @default(false)
   pmh_others      Boolean @default(false)
   pmh_others_text String?
 
-  // FH
   fh_htn         Boolean @default(false)
   fh_dm          Boolean @default(false)
   fh_ba          Boolean @default(false)
@@ -93,7 +108,6 @@ model PatientHistoricalRecord {
   fh_others      Boolean @default(false)
   fh_others_text String?
 
-  // OB
   ob_score String?
   ob_nvsd  Boolean @default(false)
   ob_cs    Boolean @default(false)
@@ -104,7 +118,6 @@ model PatientHistoricalRecord {
   amount      String? @db.VarChar(100)
   ob_symptoms String? @db.VarChar(100)
 
-  // Personal History
   cigarette_use Boolean @default(false)
   alcohol_use   Boolean @default(false)
   drug_use      Boolean @default(false)
@@ -112,9 +125,9 @@ model PatientHistoricalRecord {
   hygiene_prac  Boolean @default(false)
   coffee_cons   Boolean @default(false)
   soda_cons     Boolean @default(false)
-  // Social
-  sh_allergy    Boolean @default(false)
-  sh_admission  Boolean @default(false)
+
+  sh_allergy   Boolean @default(false)
+  sh_admission Boolean @default(false)
 
   travel_history String? @db.VarChar(100)
   diet           String? @db.VarChar(100)
@@ -124,8 +137,8 @@ model PatientHistoricalRecord {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  patient Patients         @relation(fields: [patient_id], references: [patient_id])
-  vitals  VitallSign       @relation(fields: [vs_id], references: [vs_id])
+  patient Patients                @relation(fields: [patient_id], references: [patient_id])
+  vitals  VitallSign              @relation(fields: [vs_id], references: [vs_id])
   mr      MedicalRecords[]
 
   @@index([patient_id])
@@ -145,10 +158,10 @@ model Request {
   status     RequestStatus
   req_date   DateTime      @db.Date
 
-  patient Patients @relation(fields: [patient_id], references: [patient_id])
-
+  patient             Patients                  @relation(fields: [patient_id], references: [patient_id])
   laboratory          LaboratoryRequest?
   consult             ConsultationRequest?
+  medical_certificate MedicalCertificateResult?
 
   @@index([patient_id])
   @@map("request")
@@ -181,13 +194,55 @@ model ConsultationRequest {
 model LaboratoryRequest {
   id     Int    @id @default(autoincrement())
   req_id Int    @unique
-  test   String @db.Text
   req_by String @db.VarChar(50)
 
-  request Request @relation(fields: [req_id], references: [req_id])
+  request Request                @relation(fields: [req_id], references: [req_id])
   items   LaboratoryRequestItem[]
 
   @@map("laboratory_request")
+}
+
+model LaboratoryTest {
+  test_id     Int               @id @default(autoincrement())
+  name        String            @db.VarChar(100)
+  category    LaboratoryCategory @default(OTHER)
+  schema_key  String?           @db.VarChar(50)
+
+  items LaboratoryRequestItem[]
+
+  @@map("laboratory_tests")
+}
+
+model LaboratoryRequestItem {
+  item_id Int @id @default(autoincrement())
+
+  laboratory_request_id Int
+  test_id               Int
+
+  status         LaboratoryRequestItemStatus @default(QUEUED)
+  result_payload Json?
+  processed_by   Int?
+
+  completed_at DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime? @updatedAt
+
+  laboratoryRequest          LaboratoryRequest        @relation(fields: [laboratory_request_id], references: [id], onDelete: Cascade)
+  test                       LaboratoryTest           @relation(fields: [test_id], references: [test_id])
+  processor                  Users?                   @relation(fields: [processed_by], references: [user_id])
+  hematology_result          HematologyResult?
+  serology_result            SerologyResult?
+  parasitology_result        ParasitologyResult?
+  urinalysis_result          UrinalysisResult?
+  clinical_chemistry_result  ClinicalChemistryResult?
+  hba1c_result               HbA1cResult?
+  chemistry_result           ChemistryResult?
+  ogtt_result                OgttResult?
+
+  @@index([laboratory_request_id])
+  @@index([status])
+  @@index([processed_by])
+  @@map("laboratory_request_items")
 }
 
 enum LaboratoryCategory {
@@ -200,27 +255,9 @@ enum LaboratoryCategory {
 
 enum LaboratoryRequestItemStatus {
   QUEUED
-  PENDING
+  PROCESSING
   DONE
-}
-
-model LaboratoryRequestItem {
-  item_id                Int                        @id @default(autoincrement())
-  laboratory_request_id  Int
-  test_name              String                     @db.VarChar(100)
-  category               LaboratoryCategory         @default(OTHER)
-  status                 LaboratoryRequestItemStatus @default(QUEUED)
-  result_payload         Json?
-  sort_order             Int                        @default(0)
-  completed_at           DateTime?
-  created_at             DateTime                   @default(now())
-  updated_at             DateTime?                  @updatedAt
-
-  laboratoryRequest LaboratoryRequest @relation(fields: [laboratory_request_id], references: [id], onDelete: Cascade)
-
-  @@index([laboratory_request_id])
-  @@index([status])
-  @@map("laboratory_request_items")
+  CANCELLED
 }
 
 model Patients {
@@ -238,10 +275,20 @@ model Patients {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  phr     PatientHistoricalRecord[]
+  phr  PatientHistoricalRecord[]
   request Request[]
-  mr      MedicalRecords[]
-  vitals  VitallSign[]
+  mr   MedicalRecords[]
+  vitals VitallSign[]
+
+  hematology_results         HematologyResult[]
+  serology_results           SerologyResult[]
+  parasitology_results       ParasitologyResult[]
+  urinalysis_results         UrinalysisResult[]
+  clinical_chemistry_results ClinicalChemistryResult[]
+  hba1c_results              HbA1cResult[]
+  chemistry_results          ChemistryResult[]
+  ogtt_results               OgttResult[]
+  medical_certificate_results MedicalCertificateResult[]
 
   @@map("patients")
 }
@@ -262,4 +309,293 @@ model MedicalRecords {
   @@index([patient_id])
   @@index([phr_id])
   @@map("medical_records")
+}
+
+model HematologyResult {
+  ht_id               Int      @id @default(autoincrement())
+  patient_id          Int
+  lab_id              Int      @unique
+  hemoglobin          String?  @db.VarChar(50)
+  rbc_count           String?  @db.VarChar(50)
+  wbc_count           String?  @db.VarChar(50)
+  platelet_count      String?  @db.VarChar(50)
+  others_mcv          String?  @db.VarChar(50)
+  mchc                String?  @db.VarChar(50)
+  reticulocyte_count  String?  @db.VarChar(50)
+  nss_1               String?  @db.VarChar(50)
+  nss_2               String?  @db.VarChar(50)
+  nss_3               String?  @db.VarChar(50)
+  lymphocytes         String?  @db.VarChar(50)
+  monocytes           String?  @db.VarChar(50)
+  eosinophils         String?  @db.VarChar(50)
+  basophils           String?  @db.VarChar(50)
+  others1             String?  @db.Text
+  clotting_time       String?  @db.VarChar(50)
+  bleeding_time       String?  @db.VarChar(50)
+  blood_type          String?  @db.VarChar(20)
+  abo_type            String?  @db.VarChar(20)
+  rh_type             String?  @db.VarChar(20)
+  others2             String?  @db.Text
+  med_tech_user_id    Int?
+  pth_user_id         Int?
+  result_date         DateTime @default(now()) @db.Date
+  created_at          DateTime @default(now())
+  updated_at          DateTime? @updatedAt
+
+  patient     Patients             @relation(fields: [patient_id], references: [patient_id])
+  lab         LaboratoryRequestItem @relation(fields: [lab_id], references: [item_id], onDelete: Cascade)
+  med_tech    Users?               @relation("HematologyResultMedTech", fields: [med_tech_user_id], references: [user_id])
+  pathologist Users?               @relation("HematologyResultPathologist", fields: [pth_user_id], references: [user_id])
+
+  @@index([patient_id])
+  @@index([med_tech_user_id])
+  @@index([pth_user_id])
+  @@map("hematology_results")
+}
+
+model SerologyResult {
+  st_id              Int      @id @default(autoincrement())
+  patient_id         Int
+  lab_id             Int      @unique
+  test_name          String?  @db.VarChar(100)
+  method             String?  @db.VarChar(100)
+  specimen           String?  @db.VarChar(100)
+  result             String?  @db.Text
+  day_of_fever       String?  @db.VarChar(50)
+  med_tech_user_id   Int?
+  pth_user_id        Int?
+  result_date        DateTime @default(now()) @db.Date
+  created_at         DateTime @default(now())
+  updated_at         DateTime? @updatedAt
+
+  patient     Patients             @relation(fields: [patient_id], references: [patient_id])
+  lab         LaboratoryRequestItem @relation(fields: [lab_id], references: [item_id], onDelete: Cascade)
+  med_tech    Users?               @relation("SerologyResultMedTech", fields: [med_tech_user_id], references: [user_id])
+  pathologist Users?               @relation("SerologyResultPathologist", fields: [pth_user_id], references: [user_id])
+
+  @@index([patient_id])
+  @@index([med_tech_user_id])
+  @@index([pth_user_id])
+  @@map("serology_results")
+}
+
+model ParasitologyResult {
+  pr_id                    Int      @id @default(autoincrement())
+  patient_id               Int
+  lab_id                   Int      @unique
+  time_collected           String?  @db.VarChar(50)
+  time_received            String?  @db.VarChar(50)
+  color                    String?  @db.VarChar(50)
+  consistency              String?  @db.VarChar(50)
+  pus_cells                String?  @db.VarChar(50)
+  rbc                      String?  @db.VarChar(50)
+  bacteria                 String?  @db.VarChar(50)
+  hookworm                 String?  @db.VarChar(50)
+  ascaris                  String?  @db.VarChar(50)
+  trichuris                String?  @db.VarChar(50)
+  strongloides             String?  @db.VarChar(50)
+  histolytica_cyst         String?  @db.VarChar(50)
+  histolytica_trophozoite  String?  @db.VarChar(50)
+  coli_cyst                String?  @db.VarChar(50)
+  coli_trophozoite         String?  @db.VarChar(50)
+  others                   String?  @db.Text
+  med_tech_user_id         Int?
+  pth_user_id              Int?
+  result_date              DateTime @default(now()) @db.Date
+  created_at               DateTime @default(now())
+  updated_at               DateTime? @updatedAt
+
+  patient     Patients             @relation(fields: [patient_id], references: [patient_id])
+  lab         LaboratoryRequestItem @relation(fields: [lab_id], references: [item_id], onDelete: Cascade)
+  med_tech    Users?               @relation("ParasitologyResultMedTech", fields: [med_tech_user_id], references: [user_id])
+  pathologist Users?               @relation("ParasitologyResultPathologist", fields: [pth_user_id], references: [user_id])
+
+  @@index([patient_id])
+  @@index([med_tech_user_id])
+  @@index([pth_user_id])
+  @@map("parasitology_results")
+}
+
+model UrinalysisResult {
+  ur_id               Int      @id @default(autoincrement())
+  patient_id          Int
+  lab_id              Int      @unique
+  color               String?  @db.VarChar(50)
+  transparency        String?  @db.VarChar(50)
+  ph_result           String?  @db.VarChar(50)
+  spec_grav_result    String?  @db.VarChar(50)
+  protein             String?  @db.VarChar(50)
+  nitrite             String?  @db.VarChar(50)
+  glucose             String?  @db.VarChar(50)
+  ketones             String?  @db.VarChar(50)
+  leukocytes          String?  @db.VarChar(50)
+  blood               String?  @db.VarChar(50)
+  pus_cells           String?  @db.VarChar(50)
+  rbc                 String?  @db.VarChar(50)
+  bacteria            String?  @db.VarChar(50)
+  squamous_cell       String?  @db.VarChar(50)
+  round_cell          String?  @db.VarChar(50)
+  mucous              String?  @db.VarChar(50)
+  crystals            String?  @db.VarChar(50)
+  casts               String?  @db.VarChar(50)
+  others              String?  @db.Text
+  med_tech_user_id    Int?
+  pth_user_id         Int?
+  result_date         DateTime @default(now()) @db.Date
+  created_at          DateTime @default(now())
+  updated_at          DateTime? @updatedAt
+
+  patient     Patients             @relation(fields: [patient_id], references: [patient_id])
+  lab         LaboratoryRequestItem @relation(fields: [lab_id], references: [item_id], onDelete: Cascade)
+  med_tech    Users?               @relation("UrinalysisResultMedTech", fields: [med_tech_user_id], references: [user_id])
+  pathologist Users?               @relation("UrinalysisResultPathologist", fields: [pth_user_id], references: [user_id])
+
+  @@index([patient_id])
+  @@index([med_tech_user_id])
+  @@index([pth_user_id])
+  @@map("urinalysis_results")
+}
+
+model ClinicalChemistryResult {
+  cc_id                    Int      @id @default(autoincrement())
+  patient_id               Int
+  lab_id                   Int      @unique
+  fbs                      String?  @db.VarChar(50)
+  rbs                      String?  @db.VarChar(50)
+  bun                      String?  @db.VarChar(50)
+  creatinine               String?  @db.VarChar(50)
+  uric_acid                String?  @db.VarChar(50)
+  cholesterol              String?  @db.VarChar(50)
+  hdl_cholesterol          String?  @db.VarChar(50)
+  ldl_cholesterol          String?  @db.VarChar(50)
+  triglycerides            String?  @db.VarChar(50)
+  sgpt                     String?  @db.VarChar(50)
+  fbs_conv                 String?  @db.VarChar(50)
+  rbs_conv                 String?  @db.VarChar(50)
+  bun_conv                 String?  @db.VarChar(50)
+  creatinine_conv          String?  @db.VarChar(50)
+  uric_acid_conv           String?  @db.VarChar(50)
+  cholesterol_conv         String?  @db.VarChar(50)
+  hdl_cholesterol_conv     String?  @db.VarChar(50)
+  ldl_cholesterol_conv     String?  @db.VarChar(50)
+  triglycerides_conv       String?  @db.VarChar(50)
+  last_meal                String?  @db.VarChar(100)
+  time_taken               String?  @db.VarChar(100)
+  med_tech_user_id         Int?
+  pth_user_id              Int?
+  result_date              DateTime @default(now()) @db.Date
+  created_at               DateTime @default(now())
+  updated_at               DateTime? @updatedAt
+
+  patient     Patients             @relation(fields: [patient_id], references: [patient_id])
+  lab         LaboratoryRequestItem @relation(fields: [lab_id], references: [item_id], onDelete: Cascade)
+  med_tech    Users?               @relation("ClinicalChemistryResultMedTech", fields: [med_tech_user_id], references: [user_id])
+  pathologist Users?               @relation("ClinicalChemistryResultPathologist", fields: [pth_user_id], references: [user_id])
+
+  @@index([patient_id])
+  @@index([med_tech_user_id])
+  @@index([pth_user_id])
+  @@map("clinical_chemistry_results")
+}
+
+model HbA1cResult {
+  hba_id                  Int      @id @default(autoincrement())
+  patient_id              Int
+  lab_id                  Int      @unique
+  test_method             String?  @db.VarChar(100)
+  lot_no                  String?  @db.VarChar(100)
+  exp_date                DateTime? @db.Date
+  specimen                String?  @db.VarChar(100)
+  result                  String?  @db.VarChar(50)
+  result_interpretation   String?  @db.Text
+  med_tech_user_id        Int?
+  pth_user_id             Int?
+  result_date             DateTime @default(now()) @db.Date
+  created_at              DateTime @default(now())
+  updated_at              DateTime? @updatedAt
+
+  patient     Patients             @relation(fields: [patient_id], references: [patient_id])
+  lab         LaboratoryRequestItem @relation(fields: [lab_id], references: [item_id], onDelete: Cascade)
+  med_tech    Users?               @relation("HbA1cResultMedTech", fields: [med_tech_user_id], references: [user_id])
+  pathologist Users?               @relation("HbA1cResultPathologist", fields: [pth_user_id], references: [user_id])
+
+  @@index([patient_id])
+  @@index([med_tech_user_id])
+  @@index([pth_user_id])
+  @@map("hba1c_results")
+}
+
+model ChemistryResult {
+  c_id                 Int      @id @default(autoincrement())
+  patient_id           Int
+  lab_id               Int      @unique
+  sodium               String?  @db.VarChar(50)
+  potassium            String?  @db.VarChar(50)
+  chloride             String?  @db.VarChar(50)
+  ionized_calcium      String?  @db.VarChar(50)
+  others               String?  @db.Text
+  med_tech_user_id     Int?
+  pth_user_id          Int?
+  result_date          DateTime @default(now()) @db.Date
+  created_at           DateTime @default(now())
+  updated_at           DateTime? @updatedAt
+
+  patient     Patients             @relation(fields: [patient_id], references: [patient_id])
+  lab         LaboratoryRequestItem @relation(fields: [lab_id], references: [item_id], onDelete: Cascade)
+  med_tech    Users?               @relation("ChemistryResultMedTech", fields: [med_tech_user_id], references: [user_id])
+  pathologist Users?               @relation("ChemistryResultPathologist", fields: [pth_user_id], references: [user_id])
+
+  @@index([patient_id])
+  @@index([med_tech_user_id])
+  @@index([pth_user_id])
+  @@map("chemistry_results")
+}
+
+model OgttResult {
+  ogtt_id                Int      @id @default(autoincrement())
+  patient_id             Int
+  lab_id                 Int      @unique
+  test_type              String?  @db.VarChar(100)
+  fbs                    String?  @db.VarChar(50)
+  fbs_conv               String?  @db.VarChar(50)
+  one_hour_after_load    String?  @db.VarChar(50)
+  one_hour_after_load_conv String? @db.VarChar(50)
+  two_hour_after_load    String?  @db.VarChar(50)
+  two_hour_after_load_conv String? @db.VarChar(50)
+  three_hour_after_load  String?  @db.VarChar(50)
+  three_hour_after_load_conv String? @db.VarChar(50)
+  med_tech_user_id       Int?
+  pth_user_id            Int?
+  result_date            DateTime @default(now()) @db.Date
+  created_at             DateTime @default(now())
+  updated_at             DateTime? @updatedAt
+
+  patient     Patients             @relation(fields: [patient_id], references: [patient_id])
+  lab         LaboratoryRequestItem @relation(fields: [lab_id], references: [item_id], onDelete: Cascade)
+  med_tech    Users?               @relation("OgttResultMedTech", fields: [med_tech_user_id], references: [user_id])
+  pathologist Users?               @relation("OgttResultPathologist", fields: [pth_user_id], references: [user_id])
+
+  @@index([patient_id])
+  @@index([med_tech_user_id])
+  @@index([pth_user_id])
+  @@map("ogtt_results")
+}
+
+model MedicalCertificateResult {
+  med_cert_id       Int      @id @default(autoincrement())
+  patient_id        Int
+  request_id        Int?     @unique
+  purpose           String?  @db.Text
+  med_tech_user_id  Int?
+  result_date       DateTime @default(now()) @db.Date
+  created_at        DateTime @default(now())
+  updated_at        DateTime? @updatedAt
+
+  patient    Patients @relation(fields: [patient_id], references: [patient_id])
+  request    Request? @relation(fields: [request_id], references: [req_id])
+  med_tech   Users?   @relation("MedicalCertificateResultMedTech", fields: [med_tech_user_id], references: [user_id])
+
+  @@index([patient_id])
+  @@index([med_tech_user_id])
+  @@map("medical_certificate_results")
 }

@@ -13,10 +13,14 @@ import {
 } from "lucide-react";
 import ModalHeader from "@/components/Modal/ModalHeader";
 import ClinicalChemistryModal from "@/components/Modal/LabModal/ClinicalChemistryModal";
+import ChemistryResultModal from "@/components/Modal/LabModal/chemresultModal";
 import GeneralResultModal from "@/components/Modal/LabModal/GeneralResultModal";
+import HbAIcResultModal from "@/components/Modal/LabModal/HbAIcResultModal";
 import HematologyModal from "@/components/Modal/LabModal/HematologyModal";
 import LabResultPreview from "@/components/Modal/LabModal/LabResultPreview";
+import OGTTResultModal from "@/components/Modal/LabModal/OGTTResultModal";
 import ParasitologyModal from "@/components/Modal/LabModal/ParasitologyModal";
+import SerologyResultModal from "@/components/Modal/LabModal/SerologyResultModal";
 import UrinalysisModal from "@/components/Modal/LabModal/UrinalysisModal";
 import Button from "@/components/ui/Button";
 import {
@@ -45,20 +49,65 @@ type RequestPreviewCard = {
   totalTests: number;
 };
 
-const categoryLabels: Record<LabCategory, string> = {
+type DashboardLabType =
+  | LabCategory
+  | "serology"
+  | "hba1c"
+  | "chemistry"
+  | "ogtt";
+
+const categoryLabels: Record<DashboardLabType, string> = {
   "clinical-chemistry": "Clinical Chemistry",
   hematology: "Hematology",
   parasitology: "Parasitology",
   urinalysis: "Urinalysis",
+  serology: "Serology",
+  hba1c: "HbA1c",
+  chemistry: "Chemistry",
+  ogtt: "OGTT",
   other: "General Result",
 };
 
-function resolveCategory(request: LabRequest): LabCategory {
-  if (request.category) {
+function resolveCategory(request: LabRequest): DashboardLabType {
+  switch (request.schemaKey) {
+    case "hematology":
+      return "hematology";
+    case "parasitology":
+      return "parasitology";
+    case "urinalysis":
+      return "urinalysis";
+    case "clinical_chemistry":
+      return "clinical-chemistry";
+    case "serology":
+      return "serology";
+    case "hba1c":
+      return "hba1c";
+    case "chemistry":
+      return "chemistry";
+    case "ogtt":
+      return "ogtt";
+    default:
+      break;
+  }
+
+  if (request.category && request.category !== "other") {
     return request.category;
   }
 
   const value = request.testType.toLowerCase();
+  if (value.includes("hba1c") || value.includes("hb a1c")) return "hba1c";
+  if (value.includes("ogtt") || value.includes("glucose load")) return "ogtt";
+  if (value.includes("serology") || value.includes("dengue") || value.includes("widal")) {
+    return "serology";
+  }
+  if (
+    value.includes("sodium") ||
+    value.includes("potassium") ||
+    value.includes("chloride") ||
+    value.includes("ionized calcium")
+  ) {
+    return "chemistry";
+  }
   if (value.includes("urinalysis")) return "urinalysis";
   if (
     value.includes("blood count") ||
@@ -75,6 +124,15 @@ function resolveCategory(request: LabRequest): LabCategory {
     return "clinical-chemistry";
   }
   return "other";
+}
+
+function toApiCategory(category: DashboardLabType): LabCategory {
+  if (category === "serology") return "other";
+  if (category === "hba1c" || category === "chemistry" || category === "ogtt") {
+    return "clinical-chemistry";
+  }
+
+  return category;
 }
 
 function getStatusBadgeClasses(status: RequestStatus) {
@@ -103,7 +161,7 @@ export default function DashboardPage() {
   const [activeRequest, setActiveRequest] = useState<LabRequest | null>(null);
   const [previewPayload, setPreviewPayload] = useState<{
     request: LabRequest;
-    category: LabCategory;
+    category: DashboardLabType;
     form: Record<string, string>;
   } | null>(null);
   const [busyRequestId, setBusyRequestId] = useState<number | null>(null);
@@ -250,7 +308,7 @@ export default function DashboardPage() {
       setSavingResults(true);
       const updated = await saveLabResult({
         labId: activeRequest.labId,
-        category: activeCategory,
+        category: toApiCategory(activeCategory),
         form,
       });
 
@@ -295,6 +353,22 @@ export default function DashboardPage() {
 
     if (activeCategory === "clinical-chemistry") {
       return <ClinicalChemistryModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+    }
+
+    if (activeCategory === "serology") {
+      return <SerologyResultModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+    }
+
+    if (activeCategory === "hba1c") {
+      return <HbAIcResultModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+    }
+
+    if (activeCategory === "chemistry") {
+      return <ChemistryResultModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+    }
+
+    if (activeCategory === "ogtt") {
+      return <OGTTResultModal onSubmit={handleSaveResults} onCancel={closeModal} />;
     }
 
     return (
@@ -354,11 +428,11 @@ export default function DashboardPage() {
 
       <div className="min-h-full p-6 md:p-7">
         <div className="mx-auto max-w-7xl space-y-6">
-          <div className="relative overflow-hidden rounded-2xl border border-[#84c7bb]/50 bg-gradient-to-r from-[#182955] via-[#2e4274] to-[#374b7e] p-5 text-white shadow-[0_18px_40px_rgba(8,31,28,0.25)] md:p-6">
+          {/* <div className="relative overflow-hidden rounded-2xl border border-[#84c7bb]/50 bg-gradient-to-r from-[#182955] via-[#2e4274] to-[#374b7e] p-5 text-white shadow-[0_18px_40px_rgba(8,31,28,0.25)] md:p-6"> */}
             <div className="absolute -top-10 right-10 h-36 w-36 rounded-full bg-[#7bd9c3]/20 blur-3xl" />
             <div className="absolute -bottom-10 left-14 h-32 w-32 rounded-full bg-[#ffffff]/10 blur-3xl" />
             <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
+              {/* <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-white/75">Laboratory Operations</p>
                 <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">
                   Laboratory Dashboard
@@ -367,7 +441,7 @@ export default function DashboardPage() {
                   Each requested test now appears as its own laboratory entry, while the patient
                   request only moves to completed when every requested test is finished.
                 </p>
-              </div>
+              </div> */}
               <div className="rounded-xl border border-white/25 bg-white/10 px-4 py-3 backdrop-blur-sm">
                 <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <BellRing size={16} className="text-[#c8ffe8]" />
@@ -375,7 +449,7 @@ export default function DashboardPage() {
                     {queued.length} queued test {queued.length === 1 ? "entry" : "entries"}
                   </span>
                 </div>
-              </div>
+              {/* </div> */}
             </div>
           </div>
 

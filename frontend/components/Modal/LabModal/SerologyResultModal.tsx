@@ -8,10 +8,11 @@ type Props = {
 };
 
 const initialForm: Record<string, string> = {
+  test: "",
   method: "",
   specimen: "",
   result: "",
-  dayoffever: "",
+  day_of_fever: "",
 };
 
 export default function SerologyModal({ onSubmit, onCancel }: Props) {
@@ -49,6 +50,7 @@ export default function SerologyModal({ onSubmit, onCancel }: Props) {
             { label: "Test", name: "test" },
             { label: "Method", name: "method" },
             { label: "Specimen", name: "specimen" },
+            { label: "Day of Fever", name: "day_of_fever" },
           ].map(({ label, name }) => (
             <div key={name} className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-500">{label}</label>

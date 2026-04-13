@@ -8,15 +8,14 @@ type Props = {
 };
 
 const initialForm: Record<string, string> = {
-  test_method: "",
-  lot_no: "",
-  exp_date: "",
-  specimen: "",
-  result: "",
-  result_interpretation: "",
+  sodium: "",
+  potassium: "",
+  chloride: "",
+  ionized_calcium: "",
+  others: "",
 };
 
-export default function HbAIcResultModal({ onSubmit, onCancel }: Props) {
+export default function ChemistryResultModal({ onSubmit, onCancel }: Props) {
   const [form, setForm] = useState<Record<string, string>>(initialForm);
 
   const set = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -32,28 +31,28 @@ export default function HbAIcResultModal({ onSubmit, onCancel }: Props) {
     >
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         {[
-          { label: "Test Method", name: "test_method", type: "text" },
-          { label: "Lot No.", name: "lot_no", type: "text" },
-          { label: "Expiration Date", name: "exp_date", type: "date" },
-          { label: "Specimen", name: "specimen", type: "text" },
-          { label: "HbA1c Result", name: "result", type: "text" },
-        ].map(({ label, name, type }) => (
+          { label: "Sodium", name: "sodium" },
+          { label: "Potassium", name: "potassium" },
+          { label: "Chloride", name: "chloride" },
+          { label: "Ionized Calcium", name: "ionized_calcium" },
+        ].map(({ label, name }) => (
           <div key={name} className="flex flex-col gap-1">
             <label className="text-xs font-medium text-slate-500">{label}</label>
             <input
-              type={type}
+              type="text"
               name={name}
               value={form[name]}
               onChange={set}
+              placeholder="--"
               className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
             />
           </div>
         ))}
         <div className="col-span-2 flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-500">Interpretation</label>
+          <label className="text-xs font-medium text-slate-500">Others</label>
           <textarea
-            name="result_interpretation"
-            value={form.result_interpretation}
+            name="others"
+            value={form.others}
             onChange={set}
             rows={4}
             className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"

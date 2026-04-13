@@ -1,10 +1,7 @@
-import { VitallSign } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
+import { createLaboratoryRequestWithItems } from "../lab/lab.helpers";
+import { splitLabTests } from "../lab/lab.utils";
 import { CreateRequestProps } from "./request.types";
-import {
-  categorizeLabTest,
-  splitLabTests,
-} from "../lab/lab.utils";
 
 export const getPrevVitalSigns = async (patient_id: number) => {
   return prisma.$transaction(async (tx) => {
@@ -21,27 +18,23 @@ export const getPrevVitalSigns = async (patient_id: number) => {
         created_at: true,
         patient: {
           select: {
-            patient_code: true
-          }
-        }
-        
-        
+            patient_code: true,
+          },
+        },
       },
     });
 
-    return prevVitals; // ✅ return it
+    return prevVitals;
   });
 };
 
-
 export const createRequest = async (payload: CreateRequestProps) => {
   return prisma.$transaction(async (tx) => {
-
     const request = await tx.request.create({
       data: {
         patient_id: payload.patient_id,
         req_date: new Date(payload.req_date),
-        req_type: payload.req_type as 'CONSULTATION' | 'LABORATORY',
+        req_type: payload.req_type as "CONSULTATION" | "LABORATORY",
         status: "WAITING",
       },
     });
@@ -76,27 +69,15 @@ export const createRequest = async (payload: CreateRequestProps) => {
         throw new Error("At least one laboratory test is required.");
       }
 
-      const lab = await tx.laboratoryRequest.create({
-        data: {
-          req_id: request.req_id,
-          test: normalizedTests.join(", "),
-          req_by: payload.req_by,
-        },
-      });
-
-      await tx.laboratoryRequestItem.createMany({
-        data: normalizedTests.map((test, index) => ({
-          laboratory_request_id: lab.id,
-          test_name: test,
-          category: categorizeLabTest(test),
-          sort_order: index,
-        })),
+      const lab = await createLaboratoryRequestWithItems(tx, {
+        reqId: request.req_id,
+        requestedBy: payload.req_by,
+        tests: normalizedTests,
       });
 
       return { request, lab };
     }
 
-    // fallback (should never happen)
     throw new Error("Invalid request type");
   });
 };

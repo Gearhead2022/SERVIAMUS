@@ -12,6 +12,8 @@ export type SaveLabResultInput = {
   labId: number;
   category: ApiLabCategory;
   form: Record<string, string>;
+  userId?: number;
+  pathologistUserId?: number | null;
 };
 
 export type UpdateLabRequestStatusInput = {

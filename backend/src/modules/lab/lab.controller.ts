@@ -119,6 +119,7 @@ export const updateLabRequestStatusController = async (req: Request, res: Respon
   try {
     const labId = Number(req.params.labId);
     const status = req.body?.status;
+    const userId = req.user?.user_id;
 
     if (!labId || !["queued", "pending", "done"].includes(status)) {
       return res.status(400).json({
@@ -127,7 +128,7 @@ export const updateLabRequestStatusController = async (req: Request, res: Respon
       });
     }
 
-    const request = await updateLabRequestStatusService(labId, status);
+    const request = await updateLabRequestStatusService(labId, status, userId);
 
     return res.status(200).json({
       success: true,
@@ -144,7 +145,8 @@ export const updateLabRequestStatusController = async (req: Request, res: Respon
 
 export const saveLabResultController = async (req: Request, res: Response) => {
   try {
-    const { labId, category, form } = req.body ?? {};
+    const { labId, category, form, pathologistUserId } = req.body ?? {};
+    const userId = req.user?.user_id;
 
     if (
       !labId ||
@@ -164,6 +166,9 @@ export const saveLabResultController = async (req: Request, res: Response) => {
       labId: Number(labId),
       category,
       form,
+      userId,
+      pathologistUserId:
+        typeof pathologistUserId === "number" ? pathologistUserId : null,
     });
 
     return res.status(201).json({
