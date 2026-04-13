@@ -1,11 +1,7 @@
 import { Request, Response } from "express";
-<<<<<<< HEAD
 import { consultationRecords, createConsultationResult, createPresciptions, getAllConsultationRequest, getStatistics, requestAction } from "./consultation.services";
 import { RequestStatus } from "@prisma/client";
 
-=======
-import { createConsultationResult } from "./consultation.services";
->>>>>>> sub_main
 
 export const createConsultarionResultController = async (req: Request, res: Response) => {
   try {
@@ -127,4 +123,4 @@ export const createPrescriptionController = async (req: Request, res: Response) 
   }
 
 }
-};
+
