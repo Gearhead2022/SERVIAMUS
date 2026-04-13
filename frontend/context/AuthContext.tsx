@@ -68,10 +68,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (staff_user) {
       router.replace("registration");
     }
-
-     if (doctor_user) {
-      router.replace("docDashboard");
-    }
   };
 
   const logout = () => {

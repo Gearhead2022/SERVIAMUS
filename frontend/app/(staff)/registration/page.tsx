@@ -6,7 +6,7 @@ import PatientActionModal from "@/components/Modal/ChildModal/PatientActionModal
 import ModalHeader from "@/components/Modal/ModalHeader";
 import AddPatientForm from "@/components/Modal/ChildModal/AddPatientForm";
 import { useGetAllpatient, useGetPrevVitalSigns } from "@/hooks/Patient/usePatientRegistration";
-import { PatientProps } from "@/types/PatientTypes";
+import { PatientProps } from "@/types/RequestTypes";
 import RoleGuard from "@/guards/RoleGuard";
 import AddRequestForm from "@/components/Modal/NestedModal/AddRequestForm";
 import { useDebounce } from "use-debounce";

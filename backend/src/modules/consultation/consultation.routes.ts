@@ -1,5 +1,9 @@
 import { Router } from "express";
+<<<<<<< HEAD
 import { createConsultarionResultController, createPrescriptionController, getAllPatientRequestController, getPatientRecordController, getStatisticsController, updateRequestStatusController } from "./consultation.controller";
+=======
+import { createConsultarionResultController } from "./consultation.controller";
+>>>>>>> sub_main
 
 const router = Router();
 
