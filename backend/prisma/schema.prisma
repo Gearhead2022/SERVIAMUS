@@ -21,7 +21,8 @@ model Users {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  roles UserRole[]
+  roles         UserRole[]
+  prescriptions Prescription[]
 
   @@map("users")
 }
@@ -64,20 +65,46 @@ model VitallSign {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  phr      PatientHistoricalRecord[]
-  cons_req ConsultationRequest[]
-  patient  Patients                  @relation(fields: [patient_id], references: [patient_id])
+  phr           PatientHistoricalRecord[]
+  cons_req      ConsultationRequest[]
+  patient       Patients                  @relation(fields: [patient_id], references: [patient_id])
+  consultations Consultation[]
 
   @@map("vital_signs")
 }
 
-model PatientHistoricalRecord {
-  phr_id            Int      @id @default(autoincrement())
-  patient_id        Int
-  vs_id             Int
-  hist_illness      String   @db.Text
+model Consultation {
+  consultation_id Int @id @default(autoincrement())
+
+  patient_id Int
+  vs_id      Int?
+  request_id Int?
+
   consultation_date DateTime @db.Date
-  chief_complaint   String   @db.Text
+
+  chief_complaint String?
+  hist_illness    String?
+
+  examination String?
+  assessment  String?
+  plans       String?
+
+  follow_up_date DateTime?
+
+  created_at DateTime @default(now())
+
+  patient Patients    @relation(fields: [patient_id], references: [patient_id])
+  vitals  VitallSign? @relation(fields: [vs_id], references: [vs_id])
+  request Request?    @relation(fields: [request_id], references: [req_id])
+
+  prescriptions Prescription[]
+
+  @@index([patient_id])
+}
+
+model PatientHistoricalRecord {
+  phr_id     Int @id @default(autoincrement())
+  patient_id Int @unique
 
   // PMH
   pmh_allergy     Boolean @default(false)
@@ -124,12 +151,12 @@ model PatientHistoricalRecord {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  patient Patients         @relation(fields: [patient_id], references: [patient_id])
-  vitals  VitallSign       @relation(fields: [vs_id], references: [vs_id])
-  mr      MedicalRecords[]
+  patient         Patients         @relation(fields: [patient_id], references: [patient_id])
+  mr              MedicalRecords[]
+  vitallSign      VitallSign?      @relation(fields: [vitallSignVs_id], references: [vs_id])
+  vitallSignVs_id Int?
 
   @@index([patient_id])
-  @@index([vs_id])
   @@map("consultation_records")
 }
 
@@ -147,9 +174,10 @@ model Request {
 
   patient Patients @relation(fields: [patient_id], references: [patient_id])
 
-  laboratory LaboratoryRequest?
-  consult    ConsultationRequest?
-  billing    Billing?
+  laboratory    LaboratoryRequest?
+  consult       ConsultationRequest?
+  billing       Billing?
+  consultations Consultation[]
 
   @@index([patient_id])
   @@map("request")
@@ -169,14 +197,56 @@ enum RequestStatus {
 }
 
 model ConsultationRequest {
-  id     Int @id @default(autoincrement())
-  req_id Int @unique
-  vs_id  Int
+  cons_id Int @id @default(autoincrement())
+  req_id  Int @unique
+  vs_id   Int
 
   request Request    @relation(fields: [req_id], references: [req_id])
   vitals  VitallSign @relation(fields: [vs_id], references: [vs_id])
 
   @@map("consultation_request")
+}
+
+model Prescription {
+  presc_id Int @id @default(autoincrement())
+
+  consultation_id Int
+  patient_id      Int
+  doctor_id       Int
+
+  gen_notes String?
+
+  consultation Consultation @relation(fields: [consultation_id], references: [consultation_id])
+  patient      Patients     @relation(fields: [patient_id], references: [patient_id])
+  doctor       Users        @relation(fields: [doctor_id], references: [user_id])
+
+  medicines PrescriptionItem[]
+
+  created_at DateTime @default(now())
+
+  @@map("prescriptions")
+}
+
+model PrescriptionItem {
+  item_id Int @id @default(autoincrement())
+
+  presc_id Int
+
+  medicine_name String
+  strength      String?
+
+  form      String
+  dose      String
+  frequency String
+  route     String
+  duration  String
+  quantity  String?
+
+  instruction String?
+
+  prescription Prescription @relation(fields: [presc_id], references: [presc_id], onDelete: Cascade)
+
+  @@map("prescription_items")
 }
 
 model LaboratoryRequest {
@@ -185,7 +255,7 @@ model LaboratoryRequest {
   test   String @db.Text
   req_by String @db.VarChar(50)
 
-  request Request @relation(fields: [req_id], references: [req_id])
+  request Request                 @relation(fields: [req_id], references: [req_id])
   items   LaboratoryRequestItem[]
 
   @@map("laboratory_request")
@@ -206,16 +276,16 @@ enum LaboratoryRequestItemStatus {
 }
 
 model LaboratoryRequestItem {
-  item_id                Int                        @id @default(autoincrement())
-  laboratory_request_id  Int
-  test_name              String                     @db.VarChar(100)
-  category               LaboratoryCategory         @default(OTHER)
-  status                 LaboratoryRequestItemStatus @default(QUEUED)
-  result_payload         Json?
-  sort_order             Int                        @default(0)
-  completed_at           DateTime?
-  created_at             DateTime                   @default(now())
-  updated_at             DateTime?                  @updatedAt
+  item_id               Int                         @id @default(autoincrement())
+  laboratory_request_id Int
+  test_name             String                      @db.VarChar(100)
+  category              LaboratoryCategory          @default(OTHER)
+  status                LaboratoryRequestItemStatus @default(QUEUED)
+  result_payload        Json?
+  sort_order            Int                         @default(0)
+  completed_at          DateTime?
+  created_at            DateTime                    @default(now())
+  updated_at            DateTime?                   @updatedAt
 
   laboratoryRequest LaboratoryRequest @relation(fields: [laboratory_request_id], references: [id], onDelete: Cascade)
 
@@ -239,10 +309,12 @@ model Patients {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  phr     PatientHistoricalRecord[]
-  request Request[]
-  mr      MedicalRecords[]
-  vitals  VitallSign[]
+  phr           PatientHistoricalRecord[]
+  request       Request[]
+  mr            MedicalRecords[]
+  vitals        VitallSign[]
+  prescriptions Prescription[]
+  consultations Consultation[]
 
   @@map("patients")
 }
@@ -267,50 +339,50 @@ model MedicalRecords {
 
 // Service Class
 model ServiceClass {
-  class_id          Int           @id @default(autoincrement())
-  class_code  String        @unique @db.VarChar(20)
-  description String        @db.VarChar(200)
-  is_active   Boolean       @default(true)
+  class_id    Int     @id @default(autoincrement())
+  class_code  String  @unique @db.VarChar(20)
+  description String  @db.VarChar(200)
+  is_active   Boolean @default(true)
 
-  services    Services[]
+  services Services[]
 
   @@map("service_class")
 }
 
 // Services
 model Services {
-  service_id    Int           @id @default(autoincrement())
-  service_code  String        @unique @db.VarChar(20)
-  price         Decimal       @db.Decimal(12, 2)
-  date          DateTime      @db.Date
-  is_active     Boolean       @default(true)
-  class_id      Int
+  service_id   Int      @id @default(autoincrement())
+  service_code String   @unique @db.VarChar(20)
+  price        Decimal  @db.Decimal(12, 2)
+  date         DateTime @db.Date
+  is_active    Boolean  @default(true)
+  class_id     Int
 
-  serviceClass  ServiceClass  @relation(fields: [class_id], references: [class_id])
-  billingItems  BillingService[]
+  serviceClass ServiceClass     @relation(fields: [class_id], references: [class_id])
+  billingItems BillingService[]
 
-  created_at    DateTime      @default(now())
-  updated_at    DateTime      @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@map("services")
 }
 
 // Billing
 model Billing {
-  billing_id   Int              @id @default(autoincrement())
-  billing_code String           @unique @db.VarChar(20)
-  req_id       Int              @unique
-  total_price  Decimal          @db.Decimal(12, 2)
-  date         DateTime         @db.Date
-  discount     Decimal          @db.Decimal(12, 2)
+  billing_id   Int        @id @default(autoincrement())
+  billing_code String     @unique @db.VarChar(20)
+  req_id       Int        @unique
+  total_price  Decimal    @db.Decimal(12, 2)
+  date         DateTime   @db.Date
+  discount     Decimal    @db.Decimal(12, 2)
   status       BillStatus
 
-  services     BillingService[]
-  request      Request          @relation(fields: [req_id], references: [req_id])
-  payments     Payment[]
+  services BillingService[]
+  request  Request          @relation(fields: [req_id], references: [req_id])
+  payments Payment[]
 
-  created_at   DateTime         @default(now())
-  updated_at   DateTime         @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@map("biling")
 }
@@ -322,32 +394,32 @@ enum BillStatus {
 
 // Billing Services (Pivot Table)
 model BillingService {
-  service_list_id   Int         @id @default(autoincrement())
+  service_list_id Int @id @default(autoincrement())
 
-  billing_id        Int
-  service_id        Int
+  billing_id Int
+  service_id Int
 
-  billing           Billing     @relation(fields: [billing_id], references: [billing_id])
-  service           Services  @relation(fields: [service_id], references: [service_id])
+  billing Billing  @relation(fields: [billing_id], references: [billing_id])
+  service Services @relation(fields: [service_id], references: [service_id])
 
-  price             Decimal?    @db.Decimal(12, 2)
+  price Decimal? @db.Decimal(12, 2)
 
   @@map("billing_services")
 }
 
 model Payment {
-  payment_id           Int        @id @default(autoincrement())
+  payment_id Int @id @default(autoincrement())
 
-  billing_id   Int
-  billing      Billing    @relation(fields: [billing_id], references: [billing_id])
+  billing_id Int
+  billing    Billing @relation(fields: [billing_id], references: [billing_id])
 
-  amount       Decimal    @db.Decimal(12, 2)
+  amount       Decimal       @db.Decimal(12, 2)
   method       PaymentMethod
-  payment_date DateTime   @default(now())
+  payment_date DateTime      @default(now())
 
-  reference_no String?    @db.VarChar(50) // for GCash / bank / etc.
+  reference_no String? @db.VarChar(50) // for GCash / bank / etc.
 
-  created_at   DateTime   @default(now())
+  created_at DateTime @default(now())
 }
 
 enum PaymentMethod {

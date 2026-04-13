@@ -3,7 +3,7 @@ import { CreateRequestProps } from "@/types/RequestTypes";
 
 export const getPrevVitalSigns = async (patient_id: number) => {
   const res = await api.get("/api/request/prevVitals", {
-      params: {patient_id}
+    params: { patient_id }
   });
   return res.data.data;
 }

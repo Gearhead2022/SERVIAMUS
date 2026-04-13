@@ -3,7 +3,7 @@ export interface PatientConsultationRecordsPayload {
     phr_id: number;
     vs_id: number;
     patient_id: number;
-    consultation_date: string; 
+    consultation_date: string;
     chief_complaint: string;
     hist_illness: string,
 
@@ -16,7 +16,7 @@ export interface PatientConsultationRecordsPayload {
     fh_ba?: boolean;
     fh_cancer?: boolean;
     fh_others?: boolean;
-    fh_others_text?:string;
+    fh_others_text?: string;
     ob_score?: string;
     ob_nvsd?: boolean;
     ob_cs?: boolean;
@@ -35,13 +35,18 @@ export interface PatientConsultationRecordsPayload {
     coffee_cons?: boolean;
     soda_cons?: boolean;
 
-    sh_allergy?:  boolean
-    sh_admission?:  boolean
+    sh_allergy?: boolean;
+    sh_admission?: boolean;
 
-    travel_history?: string
-    diet?: string
-    stress?: string
-    occupation?: string
+    travel_history?: string;
+    diet?: string;
+    stress?: string;
+    occupation?: string;
+
+    examination?: string;
+    assesment?: string;
+    plans?: string
+    follow_up_date?: string;
 
     //vital signs 
 
@@ -51,4 +56,31 @@ export interface PatientConsultationRecordsPayload {
     rr?: string;
     wt?: string;
     ht?: string;
+
+}
+
+
+export interface PrescriptionPayload {
+    cons_id: number;
+    patient_id: number;
+    doctor_id: number;
+
+    gen_notes?: string;
+    consultationRequestCons_id?: number;
+
+    medicines: PrescriptionMedicine[];
+}
+
+export interface PrescriptionMedicine {
+    medicine_name: string;
+    strength?: string;
+
+    form: string;
+    dose: string;
+    frequency: string;
+    route: string;
+    duration: string;
+
+    quantity?: string;
+    instruction?: string;
 }

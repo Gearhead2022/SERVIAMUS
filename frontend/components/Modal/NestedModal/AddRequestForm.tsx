@@ -20,7 +20,7 @@ const inputCls =
   "w-full bg-[#f0f3fa] border border-[1.5px] border-[#dce3ef] rounded-lg px-3 py-2.5 text-sm text-[#1a2a45] font-['DM_Sans'] outline-none transition focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white placeholder:text-[#b0bcd4]";
 
 interface VitakKeyProps<T extends FieldValues> {
-  prefix: string; 
+  prefix: string;
   register: UseFormRegister<T>;
   errors: FieldErrors<T>;
   label: string;
@@ -36,47 +36,45 @@ function VitalsRow<T extends FieldValues>({
   errors,
   readonly,
 }: VitakKeyProps<T>) {
-    const fields = [
-        { name: "bp", label: "BP (mmHg)", ph: "120/80" },
-        { name: "temp", label: "Temp (°C)", ph: "36.6" },
-        { name: "cr", label: "Pulse (bpm)", ph: "72" },
-        { name: "rr", label: "RR (/min)", ph: "16" },
-        { name: "wt", label: "Weight (kg)", ph: "60" },
-        { name: "ht", label: "Height (cm)", ph: "165" },
-    ];
+  const fields = [
+    { name: "bp", label: "BP (mmHg)", ph: "120/80" },
+    { name: "temp", label: "Temp (°C)", ph: "36.6" },
+    { name: "cr", label: "Pulse (bpm)", ph: "72" },
+    { name: "rr", label: "RR (/min)", ph: "16" },
+    { name: "wt", label: "Weight (kg)", ph: "60" },
+    { name: "ht", label: "Height (cm)", ph: "165" },
+  ];
   return (
-     <div className="mb-5">
-        <h4
-        className={`text-[11px] font-semibold uppercase tracking-widest mb-2 flex items-center gap-2 ${
-            teal ? "text-[#0e7c7b]" : "text-[#6b7da0]"
-        }`}
-        >
+    <div className="mb-5">
+      <h4
+        className={`text-[11px] font-semibold uppercase tracking-widest mb-2 flex items-center gap-2 ${teal ? "text-[#0e7c7b]" : "text-[#6b7da0]"
+          }`}
+      >
         {label}
         <span className="flex-1 h-px bg-[#dce3ef]" />
-        </h4>
-        <div className="grid grid-cols-6 gap-2">
+      </h4>
+      <div className="grid grid-cols-6 gap-2">
         {fields.map((f) => (
-            <div key={f.name}>
+          <div key={f.name}>
             <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#6b7da0] mb-1">
-                {f.name}
+              {f.name}
             </label>
             <input
-                type="text"
-                 {...register(
-                  (prefix ? `${prefix}_${f.name}` : f.name) as Path<T>
-                )}
-                placeholder={f.ph}
-                className={`w-full text-center text-sm rounded-md px-2 py-2 border outline-none transition ${
-                teal
-                    ? "bg-[#e0f4f4] border-[#b0dede] focus:border-[#0e7c7b] focus:shadow-[0_0_0_3px_rgba(14,124,123,0.1)] focus:bg-white"
-                    : "bg-[#f0f3fa] border-[#dce3ef] focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white"
+              type="text"
+              {...register(
+                (prefix ? `${prefix}_${f.name}` : f.name) as Path<T>
+              )}
+              placeholder={f.ph}
+              className={`w-full text-center text-sm rounded-md px-2 py-2 border outline-none transition ${teal
+                ? "bg-[#e0f4f4] border-[#b0dede] focus:border-[#0e7c7b] focus:shadow-[0_0_0_3px_rgba(14,124,123,0.1)] focus:bg-white"
+                : "bg-[#f0f3fa] border-[#dce3ef] focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white"
                 } text-[#1a2a45]`}
-                readOnly={readonly}
+              readOnly={readonly}
             />
             {/* <FieldError message={errors.name?.message} /> */}
-            </div>
+          </div>
         ))}
-        </div>
+      </div>
     </div>
   );
 }
@@ -112,11 +110,11 @@ const RequestForm: React.FC<{
       req_date: new Date().toISOString().split("T")[0],
     },
   });
-  
+
 
   const reqType = watch("req_type");
   const labErrors = errors as FieldErrors<LabForm>;
-  const lastConsultation =  vitals?.created_at ? new Date(vitals?.created_at).toISOString().split("T")[0] : '';
+  const lastConsultation = vitals?.created_at ? new Date(vitals?.created_at).toISOString().split("T")[0] : '';
 
   const onSubmit = async (data: RequestFormValues) => {
     await request(data);
@@ -151,9 +149,8 @@ const RequestForm: React.FC<{
       <div className="bg-[#f7f8fc] border-b border-[#dce3ef] px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white ${
-              reqType === "LABORATORY" ? "bg-[#0e7c7b]" : "bg-[#0f2244]"
-            }`}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white ${reqType === "LABORATORY" ? "bg-[#0e7c7b]" : "bg-[#0f2244]"
+              }`}
           >
             {typeIcon}
           </div>
@@ -165,10 +162,10 @@ const RequestForm: React.FC<{
               Patient:{" "}
               <span className="font-semibold text-[#1a2a45]">{patient.name}</span>
             </p>
-           
+
           </div>
           <div className="flex" style={{ transform: 'translateX(50%)' }}>
-             <h2 className="text-gray-900 italic">Last Consultation - {lastConsultation}</h2>
+            <h2 className="text-gray-900 italic">Last Consultation - {lastConsultation}</h2>
           </div>
         </div>
 
@@ -177,13 +174,12 @@ const RequestForm: React.FC<{
           {(["CONSULTATION", "LABORATORY"] as const).map((type) => (
             <label
               key={type}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${
-                watch("req_type") === type
-                  ? type === "CONSULTATION"
-                    ? "bg-[#0f2244] text-white shadow-sm"
-                    : "bg-[#0e7c7b] text-white shadow-sm"
-                  : "text-[#6b7da0] hover:text-[#1a2a45]"
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${watch("req_type") === type
+                ? type === "CONSULTATION"
+                  ? "bg-[#0f2244] text-white shadow-sm"
+                  : "bg-[#0e7c7b] text-white shadow-sm"
+                : "text-[#6b7da0] hover:text-[#1a2a45]"
+                }`}
             >
               <input
                 type="radio"
@@ -265,15 +261,15 @@ const RequestForm: React.FC<{
         {reqType === "LABORATORY" && (
           <div className="space-y-4">
             <div className="col-span-2">
-            <Input
-              label="Requested By"
-              type="text"
-              {...register("req_by" as const)}
-              className="bg-[#f7f8fc]"
-              placeholder="Enter Requestor Name Here..."
-              error={labErrors.req_by?.message}
-            />
-          </div>
+              <Input
+                label="Requested By"
+                type="text"
+                {...register("req_by" as const)}
+                className="bg-[#f7f8fc]"
+                placeholder="Enter Requestor Name Here..."
+                error={labErrors.req_by?.message}
+              />
+            </div>
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7da0]">
                 Test Details
@@ -329,7 +325,7 @@ const RequestForm: React.FC<{
           >
             Cancel
           </Button>
-        
+
           <Button
             type="submit"
             variant="primary"
