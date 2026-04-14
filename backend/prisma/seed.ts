@@ -6,6 +6,8 @@ import { normalizeLabForm, requestStatusFromItemStatuses } from "../src/modules/
 
 const prisma = new PrismaClient();
 
+await prisma.roleTypes.deleteMany(); // clear first
+
 type SeedUserInput = {
   name: string;
   username: string;
@@ -295,20 +297,51 @@ async function main() {
     title: "MD",
     ptrNo: "PTR-1001",
   });
+  
 
-  const labUser = await ensureUser({
-    name: "Seed MedTech",
+  const labUser1 = await ensureUser({
+    name: "Seed Pathologist 1",
     username: "seed.lab",
     password: "password123",
     roleName: "LABORATORY",
     licenseNo: "RMT-2001",
-    title: "RMT",
+    title: "Pathologist",
+    ptrNo: "PTR-2002",
+  });
+
+  const labUser2 = await ensureUser({
+    name: "Seed MedTech 1",
+    username: "seed.lab",
+    password: "password123",
+    roleName: "LABORATORY",
+    licenseNo: "RMT-2001",
+    title: "Medical Technologist",
     ptrNo: "PTR-2001",
+  });
+
+   const labUser3 = await ensureUser({
+    name: "Seed Pathologist 2",
+    username: "seed.lab",
+    password: "password123",
+    roleName: "LABORATORY",
+    licenseNo: "RMT-2001",
+    title: "Pathologist",
+    ptrNo: "PTR-2002",
+  });
+
+   const labUser4 = await ensureUser({
+    name: "Seed MedTech 2",
+    username: "seed.lab",
+    password: "password123",
+    roleName: "LABORATORY",
+    licenseNo: "RMT-2001",
+    title: "Medical Technologist",
+    ptrNo: "PTR-2002",
   });
 
   const patientA = await ensurePatient({
     patient_code: "LAB-SEED-001",
-    name: "Maria Test Patient",
+    name: "Alexa Test Patient",
     address: "Bacolod City, Seed Street 1",
     contact_number: "09170000001",
     birth_date: "1993-02-11",
@@ -512,13 +545,13 @@ async function main() {
   ];
 
   for (const sample of samples) {
-    await ensureSampleLabRequest(sample, labUser.user_id, doctorUser.user_id);
+    await ensureSampleLabRequest(sample, labUser1.user_id, doctorUser.user_id);
   }
 
   console.log(
     JSON.stringify(
       {
-        seededUsers: [adminUser.username, doctorUser.username, labUser.username],
+        seededUsers: [adminUser.username, doctorUser.username, labUser2.username],
         seededPatients: [patientA.patient_code, patientB.patient_code, patientC.patient_code],
         seededRequests: samples.length,
       },
