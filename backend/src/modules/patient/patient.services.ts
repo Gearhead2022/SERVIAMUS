@@ -55,3 +55,36 @@ export const addPatient = async (payload: PatientPayload) => {
     return updatedPatient;
   });
 };
+
+/**
+ * GET PATIENT BY ID
+ */
+export const getPatientById = async (patientId: number) => {
+  const patient = await prisma.patients.findUnique({
+    where: { patient_id: patientId },
+  });
+
+  if (!patient) {
+    throw new Error("Patient not found");
+  }
+
+  return patient;
+};
+
+/**
+ * UPDATE PATIENT
+ */
+export const updatePatient = async (patientId: number, payload: PatientPayload) => {
+  return prisma.patients.update({
+    where: { patient_id: patientId },
+    data: {
+      name: payload.name,
+      address: payload.address,
+      contact_number: payload.contact_number,
+      birth_date: new Date(payload.birth_date),
+      sex: payload.sex as "male" | "female",
+      age: payload.age,
+      religion: payload.religion,
+    },
+  });
+};
