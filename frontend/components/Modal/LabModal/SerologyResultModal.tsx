@@ -1,43 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import {
+  serologyDefaultValues,
+  SerologyFormValues,
+  serologySchema,
+} from "@/schemas/lab.schema";
 
 type Props = {
-  onSubmit: (form: Record<string, string>) => void;
+  initialValues?: Partial<SerologyFormValues> | null;
+  onSubmit: (form: SerologyFormValues) => void;
   onCancel: () => void;
 };
 
-const initialForm: Record<string, string> = {
-  test: "",
-  method: "",
-  specimen: "",
-  result: "",
-  day_of_fever: "",
-};
-
-export default function SerologyModal({ onSubmit, onCancel }: Props) {
-  const [form, setForm] = useState<Record<string, string>>(initialForm);
-
-  const set = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-
-  const fieldInput = (name: string, placeholder = "—") => (
-    <input
-      type="text"
-      name={name}
-      value={form[name]}
-      onChange={set}
-      placeholder={placeholder}
-      className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
-    />
-  );
+export default function SerologyModal({
+  initialValues,
+  onSubmit,
+  onCancel,
+}: Props) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SerologyFormValues>({
+    resolver: zodResolver(serologySchema),
+    defaultValues: {
+      ...serologyDefaultValues,
+      ...(initialValues ?? {}),
+    },
+  });
 
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(form);
-      }}
+      onSubmit={handleSubmit(onSubmit)}
       className="p-5 space-y-5"
     >
       <div>
@@ -53,8 +51,11 @@ export default function SerologyModal({ onSubmit, onCancel }: Props) {
             { label: "Day of Fever", name: "day_of_fever" },
           ].map(({ label, name }) => (
             <div key={name} className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-500">{label}</label>
-              {fieldInput(name)}
+              <Input
+                label={label}
+                {...register(name as keyof SerologyFormValues)}
+                error={errors[name as keyof SerologyFormValues]?.message}
+              />
             </div>
           ))}
         </div>
@@ -72,27 +73,23 @@ export default function SerologyModal({ onSubmit, onCancel }: Props) {
             { label: "Result", name: "result" },
           ].map(({ label, name }) => (
             <div key={name} className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-500">{label}</label>
-              {fieldInput(name)}
+              <Input
+                label={label}
+                {...register(name as keyof SerologyFormValues)}
+                error={errors[name as keyof SerologyFormValues]?.message}
+              />
             </div>
           ))}
         </div>
       </div>
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-        >
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
-        <button
-          type="submit"
-          className="rounded-lg bg-[#152859] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1c3570]"
-        >
+        </Button>
+        <Button type="submit">
           Save Results
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createPatient, fetchAllPatient } from "@/services/patient.services";
 import { getPrevVitalSigns, createRequest } from "@/services/request.services";
 import SweetAlert from "@/utils/SweetAlert";
-import { PatientProps, VitalSignProps } from "@/types/RequestTypes";
+import { VitalSignProps } from "@/types/RequestTypes";
+import { PatientProps } from "@/types/PatientTypes";
 
 export const useGetAllpatient = (search: string) => {
   return useQuery<PatientProps[]>({

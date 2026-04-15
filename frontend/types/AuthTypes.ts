@@ -13,6 +13,8 @@ export interface LoginResponse {
   user: {
     user_id: number;
     roles: string[];
+    username: string;
+    name: string;
   };
 }
 

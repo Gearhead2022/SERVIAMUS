@@ -3,47 +3,30 @@
 import Image from "next/image";
 import { useRef, type ReactNode } from "react";
 import Button from "@/components/ui/Button";
-
-type LabCategory =
-  | "clinical-chemistry"
-  | "hematology"
-  | "parasitology"
-  | "urinalysis"
-  | "serology"
-  | "hba1c"
-  | "chemistry"
-  | "ogtt"
-  | "other";
-
-type LabRequest = {
-  id: string;
-  patientName: string;
-  patientId: string;
-  testType: string;
-  requestedAt: string;
-  priority: "Routine" | "Urgent";
-  status: "queued" | "pending" | "done";
-  age?: string;
-  Age?: string;
-  address?: string;
-  Address?: string;
-  Requestedby?: string;
-  requestedBy?: string;
-  requested_by?: string;
-  Sex?: string;
-  sex?: string;
-};
+import {
+  DashboardLabType,
+  LabRequest,
+  LabResultPayload,
+} from "@/types/LabTypes";
 
 type Props = {
   request: LabRequest;
-  category: LabCategory;
-  form: Record<string, string>;
+  category: DashboardLabType;
+  form: LabResultPayload;
   onBack: () => void;
   onPrint: () => void;
   onPassToDoctor: () => void;
 };
 
-function getValue(form: Record<string, string>, key: string, fallback = "__________________") {
+type PreviewLabRequest = LabRequest & {
+  Age?: string;
+  Address?: string;
+  Requestedby?: string;
+  requested_by?: string;
+  Sex?: string;
+};
+
+function getValue(form: LabResultPayload, key: string, fallback = "__________________") {
   return form[key]?.trim() || fallback;
 }
 
@@ -56,8 +39,8 @@ function getRequestValue(value?: string, fallback = "__________________") {
 }
 
 function pickRequestValue(
-  request: LabRequest,
-  keys: Array<keyof LabRequest>,
+  request: PreviewLabRequest,
+  keys: Array<keyof PreviewLabRequest>,
   fallback = "__________________"
 ) {
   for (const key of keys) {
@@ -91,7 +74,7 @@ function PreviewShell({ title, children }: { title: string; children: ReactNode 
       <header className="result-header border-b border-slate-300 pb-3">
         <div className="flex items-center gap-3">
           <Image
-            src="/serviamus-logo.jpg"
+            src="/../public/images/serviamus.jpeg"
             alt="Serviamus logo"
             width={64}
             height={64}
@@ -126,7 +109,7 @@ function PreviewShell({ title, children }: { title: string; children: ReactNode 
   );
 }
 
-function PatientBlock({ request }: { request: LabRequest }) {
+function PatientBlock({ request }: { request: PreviewLabRequest }) {
   return (
     <div className="result-patient mt-4 space-y-4">
       <div className="grid grid-cols-2 gap-3">
@@ -146,7 +129,13 @@ function PatientBlock({ request }: { request: LabRequest }) {
   );
 }
 
-function HematologyTemplate({ request, form }: { request: LabRequest; form: Record<string, string> }) {
+function HematologyTemplate({
+  request,
+  form,
+}: {
+  request: PreviewLabRequest;
+  form: LabResultPayload;
+}) {
   return (
     <PreviewShell title="HEMATOLOGY">
       <PatientBlock request={request} />
@@ -199,7 +188,13 @@ function HematologyTemplate({ request, form }: { request: LabRequest; form: Reco
   );
 }
 
-function ParasitologyTemplate({ request, form }: { request: LabRequest; form: Record<string, string> }) {
+function ParasitologyTemplate({
+  request,
+  form,
+}: {
+  request: PreviewLabRequest;
+  form: LabResultPayload;
+}) {
   return (
     <PreviewShell title="PARASITOLOGY">
       <PatientBlock request={request} />
@@ -256,7 +251,13 @@ function ParasitologyTemplate({ request, form }: { request: LabRequest; form: Re
   );
 }
 
-function UrinalysisTemplate({ request, form }: { request: LabRequest; form: Record<string, string> }) {
+function UrinalysisTemplate({
+  request,
+  form,
+}: {
+  request: PreviewLabRequest;
+  form: LabResultPayload;
+}) {
   return (
     <PreviewShell title="URINALYSIS">
       <PatientBlock request={request} />
@@ -301,7 +302,13 @@ function UrinalysisTemplate({ request, form }: { request: LabRequest; form: Reco
   );
 }
 
-function ClinicalChemistryTemplate({ request, form }: { request: LabRequest; form: Record<string, string> }) {
+function ClinicalChemistryTemplate({
+  request,
+  form,
+}: {
+  request: PreviewLabRequest;
+  form: LabResultPayload;
+}) {
   const rows: Array<[string, string, string]> = [
     ["FBS", "FBS", "FBS_conv"],
     ["RBS", "RBS", "RBS_conv"],
@@ -348,9 +355,9 @@ function GenericTemplate({
   title,
   form,
 }: {
-  request: LabRequest;
+  request: PreviewLabRequest;
   title: string;
-  form: Record<string, string>;
+  form: LabResultPayload;
 }) {
   const rows = Object.entries(form).filter(([, value]) => value.trim() !== "");
 

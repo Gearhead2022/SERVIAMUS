@@ -1,58 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import {
+  hematologyDefaultValues,
+  HematologyFormValues,
+  hematologySchema,
+} from "@/schemas/lab.schema";
 
 type Props = {
-  onSubmit: (form: Record<string, string>) => void;
+  initialValues?: Partial<HematologyFormValues> | null;
+  onSubmit: (form: HematologyFormValues) => void;
   onCancel: () => void;
 };
 
-const initialForm: Record<string, string> = {
-  Hemoglobin: "",
-  rbc_count: "",
-  wbc_count: "",
-  platelet_count: "",
-  others_mcv: "",
-  mchc: "",
-  reticulocyte_count: "",
-  nss_1: "",
-  nss_2: "",
-  nss_3: "",
-  lymphocytes: "",
-  monocytes: "",
-  eosinophils: "",
-  basophils: "",
-  others1: "",
-  clotting_time: "",
-  bleeding_time: "",
-  abo_type: "",
-  rh_type: "",
-  others2: "",
-};
-
-export default function HematologyModal({ onSubmit, onCancel }: Props) {
-  const [form, setForm] = useState<Record<string, string>>(initialForm);
-
-  const set = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-
-  const fieldInput = (name: string, placeholder = "—") => (
-    <input
-      type="text"
-      name={name}
-      value={form[name]}
-      onChange={set}
-      placeholder={placeholder}
-      className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
-    />
-  );
+export default function HematologyModal({
+  initialValues,
+  onSubmit,
+  onCancel,
+}: Props) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<HematologyFormValues>({
+    resolver: zodResolver(hematologySchema),
+    defaultValues: {
+      ...hematologyDefaultValues,
+      ...(initialValues ?? {}),
+    },
+  });
 
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(form);
-      }}
+      onSubmit={handleSubmit(onSubmit)}
       className="p-5 space-y-5"
     >
       <div>
@@ -71,8 +55,11 @@ export default function HematologyModal({ onSubmit, onCancel }: Props) {
             { label: "Reticulocyte Count", name: "reticulocyte_count" },
           ].map(({ label, name }) => (
             <div key={name} className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-500">{label}</label>
-              {fieldInput(name)}
+              <Input
+                label={label}
+                {...register(name as keyof HematologyFormValues)}
+                error={errors[name as keyof HematologyFormValues]?.message}
+              />
             </div>
           ))}
         </div>
@@ -97,8 +84,11 @@ export default function HematologyModal({ onSubmit, onCancel }: Props) {
             { label: "Others", name: "others1" },
           ].map(({ label, name }) => (
             <div key={name} className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-500">{label}</label>
-              {fieldInput(name)}
+              <Input
+                label={label}
+                {...register(name as keyof HematologyFormValues)}
+                error={errors[name as keyof HematologyFormValues]?.message}
+              />
             </div>
           ))}
         </div>
@@ -117,8 +107,11 @@ export default function HematologyModal({ onSubmit, onCancel }: Props) {
             { label: "Bleeding Time", name: "bleeding_time" },
           ].map(({ label, name }) => (
             <div key={name} className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-500">{label}</label>
-              {fieldInput(name)}
+              <Input
+                label={label}
+                {...register(name as keyof HematologyFormValues)}
+                error={errors[name as keyof HematologyFormValues]?.message}
+              />
             </div>
           ))}
         </div>
@@ -133,55 +126,48 @@ export default function HematologyModal({ onSubmit, onCancel }: Props) {
         </div>
         <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500">ABO Type</label>
-            <select
-              name="abo_type"
-              value={form.abo_type}
-              onChange={set}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
+            <Select
+              label="ABO Type"
+              {...register("abo_type")}
+              error={errors.abo_type?.message}
             >
               <option value="">Select...</option>
               <option value="A">A</option>
               <option value="B">B</option>
               <option value="AB">AB</option>
               <option value="O">O</option>
-            </select>
+            </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500">Rh Type</label>
-            <select
-              name="rh_type"
-              value={form.rh_type}
-              onChange={set}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
+            <Select
+              label="Rh Type"
+              {...register("rh_type")}
+              error={errors.rh_type?.message}
             >
               <option value="">Select...</option>
               <option value="Positive">Positive (+)</option>
-              <option value="Negative">Negative (−)</option>
-            </select>
+              <option value="Negative">Negative (-)</option>
+            </Select>
           </div>
         </div>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium text-slate-500">Others</label>
-        {fieldInput("others2", "Additional notes")}
+        <Input
+          label="Others"
+          placeholder="Additional notes"
+          {...register("others2")}
+          error={errors.others2?.message}
+        />
       </div>
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-        >
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
-        <button
-          type="submit"
-          className="rounded-lg bg-[#152859] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1c3570]"
-        >
+        </Button>
+        <Button type="submit">
           Save Results
-        </button>
+        </Button>
       </div>
     </form>
   );

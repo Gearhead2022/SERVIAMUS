@@ -1,20 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
+import {
+  generalResultDefaultValues,
+  GeneralResultFormValues,
+  generalResultSchema,
+} from "@/schemas/lab.schema";
 
 type Props = {
   testName: string;
-  initialValues?: Record<string, string> | null;
-  onSubmit: (form: Record<string, string>) => void;
+  initialValues?: Partial<GeneralResultFormValues> | null;
+  onSubmit: (form: GeneralResultFormValues) => void;
   onCancel: () => void;
-};
-
-const defaultForm = {
-  result_summary: "",
-  remarks: "",
 };
 
 export default function GeneralResultModal({
@@ -23,26 +24,21 @@ export default function GeneralResultModal({
   onSubmit,
   onCancel,
 }: Props) {
-  const [form, setForm] = useState<Record<string, string>>({
-    ...defaultForm,
-    ...(initialValues ?? {}),
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<GeneralResultFormValues>({
+    resolver: zodResolver(generalResultSchema),
+    defaultValues: {
+      ...generalResultDefaultValues,
+      ...(initialValues ?? {}),
+    },
   });
-
-  const updateField =
-    (field: keyof typeof defaultForm) =>
-    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setForm((current) => ({
-        ...current,
-        [field]: event.target.value,
-      }));
-    };
 
   return (
     <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit(form);
-      }}
+      onSubmit={handleSubmit(onSubmit)}
       className="space-y-5 p-5"
     >
       <div className="grid gap-4 md:grid-cols-2">
@@ -50,8 +46,8 @@ export default function GeneralResultModal({
         <Input
           label="Result Summary"
           placeholder="Enter the summarized result"
-          value={form.result_summary ?? ""}
-          onChange={updateField("result_summary")}
+          {...register("result_summary")}
+          error={errors.result_summary?.message}
         />
       </div>
 
@@ -59,8 +55,8 @@ export default function GeneralResultModal({
         label="Remarks"
         rows={5}
         placeholder="Add the important findings or completion notes for this request."
-        value={form.remarks ?? ""}
-        onChange={updateField("remarks")}
+        {...register("remarks")}
+        error={errors.remarks?.message}
       />
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">

@@ -1,32 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Textarea from "@/components/ui/Textarea";
+import {
+  chemistryDefaultValues,
+  ChemistryFormValues,
+  chemistrySchema,
+} from "@/schemas/lab.schema";
 
 type Props = {
-  onSubmit: (form: Record<string, string>) => void;
+  initialValues?: Partial<ChemistryFormValues> | null;
+  onSubmit: (form: ChemistryFormValues) => void;
   onCancel: () => void;
 };
 
-const initialForm: Record<string, string> = {
-  sodium: "",
-  potassium: "",
-  chloride: "",
-  ionized_calcium: "",
-  others: "",
-};
-
-export default function ChemistryResultModal({ onSubmit, onCancel }: Props) {
-  const [form, setForm] = useState<Record<string, string>>(initialForm);
-
-  const set = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+export default function ChemistryResultModal({
+  initialValues,
+  onSubmit,
+  onCancel,
+}: Props) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ChemistryFormValues>({
+    resolver: zodResolver(chemistrySchema),
+    defaultValues: {
+      ...chemistryDefaultValues,
+      ...(initialValues ?? {}),
+    },
+  });
 
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(form);
-      }}
+      onSubmit={handleSubmit(onSubmit)}
       className="p-5 space-y-5"
     >
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -37,43 +47,31 @@ export default function ChemistryResultModal({ onSubmit, onCancel }: Props) {
           { label: "Ionized Calcium", name: "ionized_calcium" },
         ].map(({ label, name }) => (
           <div key={name} className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500">{label}</label>
-            <input
-              type="text"
-              name={name}
-              value={form[name]}
-              onChange={set}
+            <Input
+              label={label}
               placeholder="--"
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
+              {...register(name as keyof ChemistryFormValues)}
+              error={errors[name as keyof ChemistryFormValues]?.message}
             />
           </div>
         ))}
         <div className="col-span-2 flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-500">Others</label>
-          <textarea
-            name="others"
-            value={form.others}
-            onChange={set}
+          <Textarea
+            label="Others"
             rows={4}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
+            {...register("others")}
+            error={errors.others?.message}
           />
         </div>
       </div>
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-        >
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
-        <button
-          type="submit"
-          className="rounded-lg bg-[#152859] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1c3570]"
-        >
+        </Button>
+        <Button type="submit">
           Save Results
-        </button>
+        </Button>
       </div>
     </form>
   );

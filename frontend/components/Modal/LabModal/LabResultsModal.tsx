@@ -6,25 +6,12 @@ import ClinicalChemistryModal from "./ClinicalChemistryModal";
 import HematologyModal from "./HematologyModal";
 import ParasitologyModal from "./ParasitologyModal";
 import UrinalysisModal from "./UrinalysisModal";
-
-type LabRequest = {
-  id: string;
-  patientName: string;
-  patientId: string;
-  testType: string;
-  requestedAt: string;
-  priority: "Routine" | "Urgent";
-  status: "queued" | "pending" | "done";
-  age: string;
-  address: string;
-  Requestedby: string;
-  Sex: string;
-};
+import { LabRequest, LabResultPayload } from "@/types/LabTypes";
 
 type Props = {
   request: LabRequest;
   onClose: () => void;
-  onComplete: (id: string, delivery: "print" | "doctor", form: Record<string, string>) => void;
+  onComplete: (id: string, delivery: "print" | "doctor", form: LabResultPayload) => void;
 };
 
 type Category = "clinical-chemistry" | "hematology" | "parasitology" | "urinalysis";
@@ -58,7 +45,7 @@ function formatLabel(key: string) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function getValue(form: Record<string, string>, key: string, fallback = "__________________") {
+function getValue(form: LabResultPayload, key: string, fallback = "__________________") {
   return form[key]?.trim() || fallback;
 }
 
@@ -82,7 +69,7 @@ function ParasitologyPreview({
   form,
 }: {
   request: LabRequest;
-  form: Record<string, string>;
+  form: LabResultPayload;
 }) {
   return (
     <div className="mx-auto w-full max-w-3xl rounded-[28px] bg-white p-6 text-sm shadow-xl print:shadow-none">
@@ -192,7 +179,7 @@ function GenericPreview({
 }: {
   request: LabRequest;
   category: Category;
-  form: Record<string, string>;
+  form: LabResultPayload;
 }) {
   const rows = Object.entries(form).filter(([, value]) => value.trim() !== "");
 
@@ -229,10 +216,10 @@ function GenericPreview({
 }
 
 export default function LabResultsModal({ request, onClose, onComplete }: Props) {
-  const [previewForm, setPreviewForm] = useState<Record<string, string> | null>(null);
+  const [previewForm, setPreviewForm] = useState<LabResultPayload | null>(null);
   const category = useMemo(() => getCategory(request.testType), [request.testType]);
 
-  const handleSaveResults = (form: Record<string, string>) => {
+  const handleSaveResults = (form: LabResultPayload) => {
     setPreviewForm(form);
   };
 
@@ -309,16 +296,32 @@ export default function LabResultsModal({ request, onClose, onComplete }: Props)
       ) : (
         <>
           {category === "clinical-chemistry" && (
-            <ClinicalChemistryModal onSubmit={handleSaveResults} onCancel={onClose} />
+            <ClinicalChemistryModal
+              initialValues={request.resultPayload}
+              onSubmit={handleSaveResults}
+              onCancel={onClose}
+            />
           )}
           {category === "hematology" && (
-            <HematologyModal onSubmit={handleSaveResults} onCancel={onClose} />
+            <HematologyModal
+              initialValues={request.resultPayload}
+              onSubmit={handleSaveResults}
+              onCancel={onClose}
+            />
           )}
           {category === "parasitology" && (
-            <ParasitologyModal onSubmit={handleSaveResults} onCancel={onClose} />
+            <ParasitologyModal
+              initialValues={request.resultPayload}
+              onSubmit={handleSaveResults}
+              onCancel={onClose}
+            />
           )}
           {category === "urinalysis" && (
-            <UrinalysisModal onSubmit={handleSaveResults} onCancel={onClose} />
+            <UrinalysisModal
+              initialValues={request.resultPayload}
+              onSubmit={handleSaveResults}
+              onCancel={onClose}
+            />
           )}
         </>
       )}

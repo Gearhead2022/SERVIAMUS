@@ -22,15 +22,19 @@ import OGTTResultModal from "@/components/Modal/LabModal/OGTTResultModal";
 import ParasitologyModal from "@/components/Modal/LabModal/ParasitologyModal";
 import SerologyResultModal from "@/components/Modal/LabModal/SerologyResultModal";
 import UrinalysisModal from "@/components/Modal/LabModal/UrinalysisModal";
+import {
+  useLabRequests,
+  useSaveLabResult,
+  useUpdateLabRequestStatus,
+} from "@/hooks/Lab/useLab";
 import Button from "@/components/ui/Button";
 import {
-  fetchLabRequests,
-  saveLabResult,
-  updateLabRequestStatus,
-  type LabCategory,
-  type LabRequest,
-  type RequestStatus,
-} from "@/services/lab.service";
+  DashboardLabType,
+  LabCategory,
+  LabRequest,
+  LabResultPayload,
+  RequestStatus,
+} from "@/types/LabTypes";
 import SweetAlert from "@/utils/SweetAlert";
 
 type RequestPreviewCard = {
@@ -48,13 +52,6 @@ type RequestPreviewCard = {
   completedCount: number;
   totalTests: number;
 };
-
-type DashboardLabType =
-  | LabCategory
-  | "serology"
-  | "hba1c"
-  | "chemistry"
-  | "ogtt";
 
 const categoryLabels: Record<DashboardLabType, string> = {
   "clinical-chemistry": "Clinical Chemistry",
@@ -156,32 +153,33 @@ function formatList(items: string[]) {
 }
 
 export default function DashboardPage() {
-  const [requests, setRequests] = useState<LabRequest[]>([]);
-  const [loadingRequests, setLoadingRequests] = useState(true);
   const [activeRequest, setActiveRequest] = useState<LabRequest | null>(null);
   const [previewPayload, setPreviewPayload] = useState<{
     request: LabRequest;
     category: DashboardLabType;
-    form: Record<string, string>;
+    form: LabResultPayload;
   } | null>(null);
   const [busyRequestId, setBusyRequestId] = useState<number | null>(null);
-  const [savingResults, setSavingResults] = useState(false);
-
-  const loadRequests = async () => {
-    try {
-      setLoadingRequests(true);
-      const data = await fetchLabRequests();
-      setRequests(data);
-    } catch {
-      SweetAlert.errorAlert("Load Failed", "Unable to load laboratory requests.");
-    } finally {
-      setLoadingRequests(false);
-    }
-  };
+  const {
+    data: requests = [],
+    error: labRequestsError,
+    isLoading: loadingRequests,
+  } = useLabRequests();
+  const { mutateAsync: updateRequestStatus } = useUpdateLabRequestStatus();
+  const { mutateAsync: persistLabResult, isPending: savingResults } = useSaveLabResult();
 
   useEffect(() => {
-    void loadRequests();
-  }, []);
+    if (!labRequestsError) {
+      return;
+    }
+
+    SweetAlert.errorAlert(
+      "Load Failed",
+      labRequestsError instanceof Error
+        ? labRequestsError.message
+        : "Unable to load laboratory requests."
+    );
+  }, [labRequestsError]);
 
   const queued = useMemo(
     () => requests.filter((item) => item.status === "queued"),
@@ -244,29 +242,7 @@ export default function DashboardPage() {
     return Math.round((done.length / requests.length) * 100);
   }, [done.length, requests.length]);
 
-  const replaceRequest = (updated: LabRequest) => {
-    setRequests((current) =>
-      current.map((item) => {
-        if (item.requestId !== updated.requestId) {
-          return item;
-        }
-
-        if (item.labId === updated.labId) {
-          return updated;
-        }
-
-        return {
-          ...item,
-          requestStatus: updated.requestStatus,
-          tests: updated.tests,
-          completedTests: updated.completedTests,
-          pendingTests: updated.pendingTests,
-          totalTests: updated.totalTests,
-          completedCount: updated.completedCount,
-        };
-      })
-    );
-
+  const syncSelectedRequest = (updated: LabRequest) => {
     if (activeRequest?.labId === updated.labId) {
       setActiveRequest(updated);
     }
@@ -278,13 +254,13 @@ export default function DashboardPage() {
     }
   };
 
-  const acceptRequest = async (requestId: number) => {
+  const acceptRequest = async (labId: number) => {
     try {
-      setBusyRequestId(requestId);
-      const updated = await updateLabRequestStatus(requestId, "pending");
-      replaceRequest(updated);
+      setBusyRequestId(labId);
+      const updated = await updateRequestStatus({ labId, status: "pending" });
+      syncSelectedRequest(updated);
     } catch {
-      SweetAlert.errorAlert("Update Failed", "Unable to accept the laboratory request.");
+      // Alerts are handled in the lab hook.
     } finally {
       setBusyRequestId(null);
     }
@@ -298,26 +274,22 @@ export default function DashboardPage() {
   const closeModal = () => {
     setActiveRequest(null);
     setPreviewPayload(null);
-    setSavingResults(false);
   };
 
-  const handleSaveResults = async (form: Record<string, string>) => {
+  const handleSaveResults = async (form: LabResultPayload) => {
     if (!activeRequest || !activeCategory) return;
 
     try {
-      setSavingResults(true);
-      const updated = await saveLabResult({
+      const updated = await persistLabResult({
         labId: activeRequest.labId,
         category: toApiCategory(activeCategory),
         form,
       });
 
-      replaceRequest(updated);
+      syncSelectedRequest(updated);
       setPreviewPayload({ request: updated, category: activeCategory, form });
     } catch {
-      SweetAlert.errorAlert("Save Failed", "Unable to save laboratory results.");
-    } finally {
-      setSavingResults(false);
+      // Alerts are handled in the lab hook.
     }
   };
 
@@ -326,11 +298,14 @@ export default function DashboardPage() {
 
     try {
       setBusyRequestId(previewPayload.request.labId);
-      const updated = await updateLabRequestStatus(previewPayload.request.labId, "done");
-      replaceRequest(updated);
+      const updated = await updateRequestStatus({
+        labId: previewPayload.request.labId,
+        status: "done",
+      });
+      syncSelectedRequest(updated);
       closeModal();
     } catch {
-      SweetAlert.errorAlert("Completion Failed", "Unable to update the request status.");
+      // Alerts are handled in the lab hook.
     } finally {
       setBusyRequestId(null);
     }
@@ -340,35 +315,83 @@ export default function DashboardPage() {
     if (!activeRequest || !activeCategory) return null;
 
     if (activeCategory === "hematology") {
-      return <HematologyModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+      return (
+        <HematologyModal
+          initialValues={activeRequest.resultPayload}
+          onSubmit={handleSaveResults}
+          onCancel={closeModal}
+        />
+      );
     }
 
     if (activeCategory === "parasitology") {
-      return <ParasitologyModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+      return (
+        <ParasitologyModal
+          initialValues={activeRequest.resultPayload}
+          onSubmit={handleSaveResults}
+          onCancel={closeModal}
+        />
+      );
     }
 
     if (activeCategory === "urinalysis") {
-      return <UrinalysisModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+      return (
+        <UrinalysisModal
+          initialValues={activeRequest.resultPayload}
+          onSubmit={handleSaveResults}
+          onCancel={closeModal}
+        />
+      );
     }
 
     if (activeCategory === "clinical-chemistry") {
-      return <ClinicalChemistryModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+      return (
+        <ClinicalChemistryModal
+          initialValues={activeRequest.resultPayload}
+          onSubmit={handleSaveResults}
+          onCancel={closeModal}
+        />
+      );
     }
 
     if (activeCategory === "serology") {
-      return <SerologyResultModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+      return (
+        <SerologyResultModal
+          initialValues={activeRequest.resultPayload}
+          onSubmit={handleSaveResults}
+          onCancel={closeModal}
+        />
+      );
     }
 
     if (activeCategory === "hba1c") {
-      return <HbAIcResultModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+      return (
+        <HbAIcResultModal
+          initialValues={activeRequest.resultPayload}
+          onSubmit={handleSaveResults}
+          onCancel={closeModal}
+        />
+      );
     }
 
     if (activeCategory === "chemistry") {
-      return <ChemistryResultModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+      return (
+        <ChemistryResultModal
+          initialValues={activeRequest.resultPayload}
+          onSubmit={handleSaveResults}
+          onCancel={closeModal}
+        />
+      );
     }
 
     if (activeCategory === "ogtt") {
-      return <OGTTResultModal onSubmit={handleSaveResults} onCancel={closeModal} />;
+      return (
+        <OGTTResultModal
+          initialValues={activeRequest.resultPayload}
+          onSubmit={handleSaveResults}
+          onCancel={closeModal}
+        />
+      );
     }
 
     return (

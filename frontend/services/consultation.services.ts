@@ -1,5 +1,5 @@
 import api from "./axios";
-import { consultaionResultProps } from "@/types/RequestTypes";
+import { consultaionResultProps } from "@/types/ConsultationTypes";
 
 
 export const consultationResults = async (

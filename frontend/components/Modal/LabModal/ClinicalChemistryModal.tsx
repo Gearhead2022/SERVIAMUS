@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import {
+  clinicalChemistryDefaultValues,
+  ClinicalChemistryFormValues,
+  clinicalChemistrySchema,
+} from "@/schemas/lab.schema";
 
 type Props = {
-  onSubmit: (form: Record<string, string>) => void;
+  initialValues?: Partial<ClinicalChemistryFormValues> | null;
+  onSubmit: (form: ClinicalChemistryFormValues) => void;
   onCancel: () => void;
 };
 
@@ -20,33 +29,26 @@ const testRows: { label: string; name: string; convName?: string }[] = [
   { label: "SGPT", name: "sgpt" },
 ];
 
-const initialForm: Record<string, string> = {
-  FBS: "", FBS_conv: "",
-  RBS: "", RBS_conv: "",
-  BUN: "", BUN_conv: "",
-  creatinine: "", creatinine_conv: "",
-  uric_acid: "", uric_acid_conv: "",
-  cholesterol: "", cholesterol_conv: "",
-  hdl_cholesterol: "", hdl_cholesterol_conv: "",
-  ldl_cholesterol: "", ldl_cholesterol_conv: "",
-  triglycerides: "", triglycerides_conv: "",
-  sgpt: "",
-  last_meal: "",
-  time_taken: "",
-};
-
-export default function ClinicalChemistryModal({ onSubmit, onCancel }: Props) {
-  const [form, setForm] = useState<Record<string, string>>(initialForm);
-
-  const set = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+export default function ClinicalChemistryModal({
+  initialValues,
+  onSubmit,
+  onCancel,
+}: Props) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ClinicalChemistryFormValues>({
+    resolver: zodResolver(clinicalChemistrySchema),
+    defaultValues: {
+      ...clinicalChemistryDefaultValues,
+      ...(initialValues ?? {}),
+    },
+  });
 
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(form);
-      }}
+      onSubmit={handleSubmit(onSubmit)}
       className="p-5 space-y-5"
     >
       <div>
@@ -70,22 +72,18 @@ export default function ClinicalChemistryModal({ onSubmit, onCancel }: Props) {
               className="grid grid-cols-[1fr_6.5rem_6.5rem] items-center px-4 py-2 border-b border-slate-100 last:border-0"
             >
               <span className="text-sm text-slate-700">{row.label}</span>
-              <input
-                type="text"
-                name={row.name}
-                value={form[row.name]}
-                onChange={set}
-                placeholder="—"
-                className="mx-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
+              <Input
+                placeholder="-"
+                className="mx-1"
+                {...register(row.name as keyof ClinicalChemistryFormValues)}
+                error={errors[row.name as keyof ClinicalChemistryFormValues]?.message}
               />
               {row.convName ? (
-                <input
-                  type="text"
-                  name={row.convName}
-                  value={form[row.convName]}
-                  onChange={set}
-                  placeholder="—"
-                  className="mx-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
+                <Input
+                  placeholder="-"
+                  className="mx-1"
+                  {...register(row.convName as keyof ClinicalChemistryFormValues)}
+                  error={errors[row.convName as keyof ClinicalChemistryFormValues]?.message}
                 />
               ) : (
                 <div />
@@ -101,33 +99,23 @@ export default function ClinicalChemistryModal({ onSubmit, onCancel }: Props) {
           { label: "Time Taken", name: "time_taken", placeholder: "e.g. 08:30 AM" },
         ].map(({ label, name, placeholder }) => (
           <div key={name} className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500">{label}</label>
-            <input
-              type="text"
-              name={name}
-              value={form[name]}
-              onChange={set}
+            <Input
+              label={label}
               placeholder={placeholder}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
+              {...register(name as keyof ClinicalChemistryFormValues)}
+              error={errors[name as keyof ClinicalChemistryFormValues]?.message}
             />
           </div>
         ))}
       </div>
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-        >
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
-        <button
-          type="submit"
-          className="rounded-lg bg-[#152859] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1c3570]"
-        >
+        </Button>
+        <Button type="submit">
           Save Results
-        </button>
+        </Button>
       </div>
     </form>
   );
