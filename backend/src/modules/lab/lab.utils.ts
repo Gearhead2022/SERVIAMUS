@@ -108,34 +108,35 @@ export const toSchemaKey = (testName: string) => resolveLabSchemaKey(testName);
 export const categorizeLabTest = (testName: string): LaboratoryCategory => {
   const schemaKey = resolveLabSchemaKey(testName);
 
-  if (schemaKey === "hematology") return "HEMATOLOGY";
-  if (schemaKey === "parasitology") return "PARASITOLOGY";
-  if (schemaKey === "urinalysis") return "URINALYSIS";
+  if (schemaKey === "hematology") return "Hematology";
+  if (schemaKey === "parasitology" || schemaKey === "urinalysis") {
+    return "Clinical_Microscopy";
+  }
+  if (schemaKey === "serology") return "Serology";
   if (
     schemaKey === "clinical_chemistry" ||
     schemaKey === "hba1c" ||
     schemaKey === "chemistry" ||
     schemaKey === "ogtt"
   ) {
-    return "CLINICAL_CHEMISTRY";
+    return "Clinical_Chemistry";
   }
 
   return "OTHER";
 };
 
 export const toApiLabCategory = (category: LaboratoryCategory): ApiLabCategory => {
-  if (category === "HEMATOLOGY") return "hematology";
-  if (category === "PARASITOLOGY") return "parasitology";
-  if (category === "URINALYSIS") return "urinalysis";
-  if (category === "CLINICAL_CHEMISTRY") return "clinical-chemistry";
+  if (category === "Hematology") return "hematology";
+  if (category === "Clinical_Chemistry") return "clinical-chemistry";
   return "other";
 };
 
 export const toDbLabCategory = (category: ApiLabCategory): LaboratoryCategory => {
-  if (category === "hematology") return "HEMATOLOGY";
-  if (category === "parasitology") return "PARASITOLOGY";
-  if (category === "urinalysis") return "URINALYSIS";
-  if (category === "clinical-chemistry") return "CLINICAL_CHEMISTRY";
+  if (category === "hematology") return "Hematology";
+  if (category === "parasitology" || category === "urinalysis") {
+    return "Clinical_Microscopy";
+  }
+  if (category === "clinical-chemistry") return "Clinical_Chemistry";
   return "OTHER";
 };
 
@@ -180,7 +181,7 @@ export const normalizeLabForm = (form: Record<string, string>) => {
   return Object.fromEntries(
     Object.entries(form).map(([key, value]) => [
       key,
-      typeof value === "string" ? value.trim() : "",
+      typeof value === "string" ? value.trim() : String(value ?? ""),
     ])
   ) as Prisma.InputJsonValue;
 };

@@ -42,6 +42,21 @@ const labRequestInclude = Prisma.validator<Prisma.LaboratoryRequestInclude>()({
       patient_id: true,
       req_date: true,
       status: true,
+      billing: {
+        select: {
+          billing_id: true,
+          billing_code: true,
+          total_price: true,
+          status: true,
+          payments: {
+            select: {
+              payment_date: true,
+            },
+            orderBy: [{ payment_date: "desc" }],
+            take: 1,
+          },
+        },
+      },
       patient: {
         select: {
           patient_id: true,
@@ -91,6 +106,8 @@ const toDisplayItem = (
   record: LabRequestRecord,
   item: LabRequestRecord["items"][number]
 ) => {
+  const latestPayment = record.request.billing?.payments[0] ?? null;
+
   const completedTests = record.items
     .filter((entry) => entry.status === "DONE")
     .map((entry) => entry.test.name);
@@ -119,6 +136,11 @@ const toDisplayItem = (
     requestedDate: record.request.req_date.toISOString(),
     requestStatus: toApiLabStatus(requestStatus),
     status: toApiLabStatus(item.status),
+    billingCode: record.request.billing?.billing_code ?? null,
+    billingStatus: record.request.billing?.status === "DONE" ? "paid" : "unpaid",
+    billingTotal: record.request.billing ? Number(record.request.billing.total_price) : 0,
+    isPaid: record.request.billing?.status === "DONE",
+    paidAt: latestPayment?.payment_date?.toISOString() ?? null,
     category: toApiLabCategory(item.test.category),
     schemaKey: item.test.schema_key,
     tests: record.items.map((entry) => entry.test.name),
@@ -373,6 +395,19 @@ export const updateLabRequestStatusService = async (
         item_id: true,
         laboratory_request_id: true,
         processed_by: true,
+        laboratoryRequest: {
+          select: {
+            request: {
+              select: {
+                billing: {
+                  select: {
+                    status: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -381,6 +416,15 @@ export const updateLabRequestStatusService = async (
     }
 
     const dbStatus = toDbLabStatus(status);
+
+    if (
+      dbStatus === "PROCESSING" &&
+      existingItem.laboratoryRequest.request.billing?.status !== "DONE"
+    ) {
+      throw new Error(
+        "Patient billing must be paid before this request can be accepted in the laboratory queue."
+      );
+    }
 
     await tx.laboratoryRequestItem.updateMany({
       where: { item_id: labId },

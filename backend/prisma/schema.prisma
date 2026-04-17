@@ -60,7 +60,7 @@ model UserRole {
   user_id Int
   role_id Int
 
-  user Users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  user Users     @relation(fields: [user_id], references: [user_id])
   role RoleTypes @relation(fields: [role_id], references: [role_id], onDelete: Cascade)
 
   @@id([user_id, role_id])
@@ -247,10 +247,10 @@ model LaboratoryRequestItem {
 }
 
 enum LaboratoryCategory {
-  HEMATOLOGY
-  PARASITOLOGY
-  URINALYSIS
-  CLINICAL_CHEMISTRY
+  Clinical_Chemistry
+  Clinical_Microscopy
+  Serology
+  Hematology
   OTHER
 }
 

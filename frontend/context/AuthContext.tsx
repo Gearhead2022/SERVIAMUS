@@ -50,23 +50,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const admin_user = user.roles.includes('ADMIN');
     const doctor_user = user.roles.includes('DOCTOR');
-    const laboratory_user = user.roles.includes('LAB');
+    const laboratory_user = user.roles.includes('LAB') || user.roles.includes('LABORATORY');
     const staff_user = user.roles.includes('STAFF');
+    const cashier_user = user.roles.includes('CASHIER');
 
     if (admin_user) {
-      router.replace("dashboard"); 
+      router.replace("/dashboard"); 
     }
 
     if (doctor_user) {
-      router.replace("doctordashboard");
+      router.replace("/doctordashboard");
     }
 
     if (laboratory_user) {
-      router.replace("labdashboard");
+      router.replace("/labdashboard");
     }
 
     if (staff_user) {
-      router.replace("registration");
+      router.replace("/registration");
+    }
+
+    if (cashier_user) {
+      router.replace("/billing");
     }
   };
 

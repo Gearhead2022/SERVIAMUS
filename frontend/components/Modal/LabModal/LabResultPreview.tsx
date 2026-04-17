@@ -27,7 +27,8 @@ type PreviewLabRequest = LabRequest & {
 };
 
 function getValue(form: LabResultPayload, key: string, fallback = "__________________") {
-  return form[key]?.trim() || fallback;
+  const value = form[key];
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
 function getRequestValue(value?: string, fallback = "__________________") {
@@ -74,7 +75,7 @@ function PreviewShell({ title, children }: { title: string; children: ReactNode 
       <header className="result-header border-b border-slate-300 pb-3">
         <div className="flex items-center gap-3">
           <Image
-            src="/../public/images/serviamus.jpeg"
+            src="/images/serviamus.jpeg"
             alt="Serviamus logo"
             width={64}
             height={64}

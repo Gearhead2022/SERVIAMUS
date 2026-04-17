@@ -53,6 +53,11 @@ type RequestPreviewCard = {
   totalTests: number;
 };
 
+const pesoFormatter = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+});
+
 const categoryLabels: Record<DashboardLabType, string> = {
   "clinical-chemistry": "Clinical Chemistry",
   hematology: "Hematology",
@@ -152,6 +157,10 @@ function formatList(items: string[]) {
   return items.join(", ");
 }
 
+function formatCurrency(value: number) {
+  return pesoFormatter.format(value);
+}
+
 export default function DashboardPage() {
   const [activeRequest, setActiveRequest] = useState<LabRequest | null>(null);
   const [previewPayload, setPreviewPayload] = useState<{
@@ -167,6 +176,34 @@ export default function DashboardPage() {
   } = useLabRequests();
   const { mutateAsync: updateRequestStatus } = useUpdateLabRequestStatus();
   const { mutateAsync: persistLabResult, isPending: savingResults } = useSaveLabResult();
+
+  useEffect(() => {
+    if (!activeRequest) {
+      return;
+    }
+
+    const latestRequest = requests.find((item) => item.labId === activeRequest.labId);
+
+    if (latestRequest) {
+      setActiveRequest(latestRequest);
+    }
+  }, [activeRequest, requests]);
+
+  useEffect(() => {
+    if (!previewPayload) {
+      return;
+    }
+
+    const latestRequest = requests.find(
+      (item) => item.labId === previewPayload.request.labId
+    );
+
+    if (latestRequest) {
+      setPreviewPayload((current) =>
+        current ? { ...current, request: latestRequest } : current
+      );
+    }
+  }, [previewPayload, requests]);
 
   useEffect(() => {
     if (!labRequestsError) {
@@ -254,10 +291,21 @@ export default function DashboardPage() {
     }
   };
 
-  const acceptRequest = async (labId: number) => {
+  const acceptRequest = async (request: LabRequest) => {
+    if (!request.isPaid) {
+      SweetAlert.errorAlert(
+        "Payment Required",
+        "This laboratory request is locked until the cashier marks the bill as paid."
+      );
+      return;
+    }
+
     try {
-      setBusyRequestId(labId);
-      const updated = await updateRequestStatus({ labId, status: "pending" });
+      setBusyRequestId(request.labId);
+      const updated = await updateRequestStatus({
+        labId: request.labId,
+        status: "pending",
+      });
       syncSelectedRequest(updated);
     } catch {
       // Alerts are handled in the lab hook.
@@ -418,6 +466,12 @@ export default function DashboardPage() {
             <p className="text-xs font-medium text-[#2f5e57]">
               Requested by {activeRequest.requestedBy}
             </p>
+            <p className="mt-1 text-xs font-medium text-[#2f5e57]">
+              {activeRequest.billingCode ?? "Billing not assigned"} •{" "}
+              {activeRequest.isPaid
+                ? `Paid (${formatCurrency(activeRequest.billingTotal)})`
+                : `Unpaid (${formatCurrency(activeRequest.billingTotal)})`}
+            </p>
             <p className="mt-1 text-sm font-semibold text-[#133d37]">
               {activeRequest.completedCount} of {activeRequest.totalTests} test
               {activeRequest.totalTests === 1 ? "" : "s"} completed for this patient request
@@ -548,6 +602,15 @@ export default function DashboardPage() {
                             >
                               Patient Request: {item.requestStatus}
                             </span>
+                            <span
+                              className={`rounded-md px-2 py-1 text-xs font-semibold ${
+                                item.isPaid
+                                  ? "bg-[#e8f7ee] text-[#2f7d4b]"
+                                  : "bg-[#fff4df] text-[#9a6a18]"
+                              }`}
+                            >
+                              Billing: {item.isPaid ? "Paid" : "Unpaid"}
+                            </span>
                           </div>
                           <p className="text-sm font-semibold text-[#173f39]">{item.patientName}</p>
                           <p className="text-xs text-[#577d76]">
@@ -559,14 +622,23 @@ export default function DashboardPage() {
                           <p className="text-xs text-[#6f948d]">
                             Remaining: {formatList(item.pendingTests)}
                           </p>
+                          {!item.isPaid ? (
+                            <p className="text-xs font-medium text-[#9a6a18]">
+                              Locked until cashier posts payment.
+                            </p>
+                          ) : null}
                         </div>
                         <Button
                           type="button"
-                          onClick={() => acceptRequest(item.labId)}
-                          disabled={busyRequestId === item.labId}
+                          onClick={() => acceptRequest(item)}
+                          disabled={busyRequestId === item.labId || !item.isPaid}
                           className="min-w-[148px]"
                         >
-                          {busyRequestId === item.labId ? "Accepting..." : "Accept Request"}
+                          {busyRequestId === item.labId
+                            ? "Accepting..."
+                            : item.isPaid
+                              ? "Accept Request"
+                              : "Awaiting Payment"}
                         </Button>
                       </div>
                     </div>

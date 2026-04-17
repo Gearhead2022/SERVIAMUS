@@ -1,12 +1,20 @@
-import { PrismaClient, LaboratoryRequestItemStatus, Prisma } from "@prisma/client";
+import {
+  BillStatus,
+  LaboratoryRequestItemStatus,
+  PaymentMethod,
+  Prisma,
+  PrismaClient,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
+import {
+  ensureLabBillingForRequest,
+  syncBillingStatusByRequestId,
+} from "../src/modules/billing/billing.helpers";
 import { createLaboratoryRequestWithItems } from "../src/modules/lab/lab.helpers";
 import { upsertStructuredLabResult } from "../src/modules/lab/lab.result-writers";
 import { normalizeLabForm, requestStatusFromItemStatuses } from "../src/modules/lab/lab.utils";
 
 const prisma = new PrismaClient();
-
-await prisma.roleTypes.deleteMany(); // clear first
 
 type SeedUserInput = {
   name: string;
@@ -29,6 +37,8 @@ type SampleLabRequest = {
   reqDate: string;
   requestedBy: string;
   items: SampleLabItem[];
+  billingStatus: BillStatus;
+  paymentMethod?: PaymentMethod;
 };
 
 const ensureRole = async (roleName: string, roleDesc: string) => {
@@ -273,13 +283,29 @@ const ensureSampleLabRequest = async (
         status: requestStatusFromItemStatuses(sample.items.map((item) => item.status)),
       },
     });
+
+    await ensureLabBillingForRequest(tx, {
+      reqId: request.req_id,
+      requestDate: request.req_date,
+      tests: sample.items.map((item) => item.testName),
+    });
+
+    await syncBillingStatusByRequestId(tx, {
+      reqId: request.req_id,
+      status: sample.billingStatus,
+      method: sample.paymentMethod,
+    });
   });
 };
 
 async function main() {
+  await prisma.roleTypes.deleteMany(); // clear first
+
   await ensureRole("ADMIN", "System administrator");
   await ensureRole("DOCTOR", "Attending physician");
+  await ensureRole("STAFF", "Clinic registration staff");
   await ensureRole("LABORATORY", "Laboratory staff");
+  await ensureRole("CASHIER", "Cashier and billing staff");
 
   const adminUser = await ensureUser({
     name: "Seed Admin",
@@ -299,19 +325,19 @@ async function main() {
   });
   
 
-  const labUser1 = await ensureUser({
-    name: "Seed Pathologist 1",
-    username: "seed.lab",
+  const labPathologist = await ensureUser({
+    name: "Seed Pathologist",
+    username: "seed.pathologist",
     password: "password123",
     roleName: "LABORATORY",
-    licenseNo: "RMT-2001",
+    licenseNo: "PATH-2001",
     title: "Pathologist",
     ptrNo: "PTR-2002",
   });
 
-  const labUser2 = await ensureUser({
-    name: "Seed MedTech 1",
-    username: "seed.lab",
+  const labMedTech = await ensureUser({
+    name: "Seed Medical Technologist",
+    username: "seed.medtech",
     password: "password123",
     roleName: "LABORATORY",
     licenseNo: "RMT-2001",
@@ -319,24 +345,18 @@ async function main() {
     ptrNo: "PTR-2001",
   });
 
-   const labUser3 = await ensureUser({
-    name: "Seed Pathologist 2",
-    username: "seed.lab",
+  const cashierUser = await ensureUser({
+    name: "Seed Cashier",
+    username: "seed.cashier",
     password: "password123",
-    roleName: "LABORATORY",
-    licenseNo: "RMT-2001",
-    title: "Pathologist",
-    ptrNo: "PTR-2002",
+    roleName: "CASHIER",
   });
 
-   const labUser4 = await ensureUser({
-    name: "Seed MedTech 2",
-    username: "seed.lab",
+  const staffUser = await ensureUser({
+    name: "Seed Registration Staff",
+    username: "seed.staff",
     password: "password123",
-    roleName: "LABORATORY",
-    licenseNo: "RMT-2001",
-    title: "Medical Technologist",
-    ptrNo: "PTR-2002",
+    roleName: "STAFF",
   });
 
   const patientA = await ensurePatient({
@@ -377,6 +397,8 @@ async function main() {
       patientId: patientA.patient_id,
       reqDate: "2026-04-13",
       requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "CASH",
       items: [
         {
           testName: "CBC",
@@ -410,6 +432,8 @@ async function main() {
       patientId: patientA.patient_id,
       reqDate: "2026-04-14",
       requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
       items: [
         {
           testName: "Fecalysis",
@@ -421,6 +445,8 @@ async function main() {
       patientId: patientB.patient_id,
       reqDate: "2026-04-14",
       requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "CASH",
       items: [
         {
           testName: "Urinalysis",
@@ -453,6 +479,8 @@ async function main() {
       patientId: patientB.patient_id,
       reqDate: "2026-04-15",
       requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "CARD",
       items: [
         {
           testName: "Blood Chemistry",
@@ -487,6 +515,7 @@ async function main() {
       patientId: patientC.patient_id,
       reqDate: "2026-04-15",
       requestedBy: "Dr. Seed Doctor",
+      billingStatus: "PENDING",
       items: [
         {
           testName: "Dengue NS1",
@@ -498,6 +527,8 @@ async function main() {
       patientId: patientC.patient_id,
       reqDate: "2026-04-16",
       requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "BANK_TRANSFER",
       items: [
         {
           testName: "HbA1c",
@@ -517,6 +548,8 @@ async function main() {
       patientId: patientC.patient_id,
       reqDate: "2026-04-16",
       requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "CASH",
       items: [
         {
           testName: "OGTT 75G",
@@ -528,6 +561,8 @@ async function main() {
       patientId: patientC.patient_id,
       reqDate: "2026-04-17",
       requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
       items: [
         {
           testName: "Sodium Potassium Chloride Ionized Calcium",
@@ -545,13 +580,20 @@ async function main() {
   ];
 
   for (const sample of samples) {
-    await ensureSampleLabRequest(sample, labUser1.user_id, doctorUser.user_id);
+    await ensureSampleLabRequest(sample, labMedTech.user_id, labPathologist.user_id);
   }
 
   console.log(
     JSON.stringify(
       {
-        seededUsers: [adminUser.username, doctorUser.username, labUser2.username],
+        seededUsers: [
+          adminUser.username,
+          doctorUser.username,
+          labPathologist.username,
+          labMedTech.username,
+          cashierUser.username,
+          staffUser.username,
+        ],
         seededPatients: [patientA.patient_code, patientB.patient_code, patientC.patient_code],
         seededRequests: samples.length,
       },

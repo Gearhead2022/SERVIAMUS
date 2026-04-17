@@ -20,7 +20,7 @@ export const MENU_ITEMS: MenuItem[] = [
   // ADMIN pages
   {
     label: "Dashboard",
-    path: "/pages/admin/dashboard",
+    path: "/dashboard",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
     roles: ["ADMIN"]
@@ -82,16 +82,16 @@ export const MENU_ITEMS: MenuItem[] = [
 
   {
     label: "Dashboard",
-    path: "/pages/doctor/dashboard",
+    path: "/labdashboard",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
-    roles: ["LAB"]
+    roles: ["LAB", "LABORATORY"]
   },
 
   // STAFF
   {
     label: "Dashboard",
-    path: "/pages/doctor/dashboard",
+    path: "/registration",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
     roles: ["STAFF"]
@@ -100,10 +100,10 @@ export const MENU_ITEMS: MenuItem[] = [
   // CASHIER
    {
     label: "Billing",
-    path: "/pages/cashier/billing",
+    path: "/billing",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
-    roles: ["CASHIER"]
+    roles: ["CASHIER", "ADMIN"]
   },
 
 

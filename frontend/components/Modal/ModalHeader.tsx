@@ -1,4 +1,5 @@
-import { ReactNode, useRef, useEffect } from "react";
+import Image from "next/image";
+import { ReactNode, useEffect, useRef } from "react";
 
 type ModalSize =
   | "2xlarge"
@@ -97,6 +98,17 @@ export default function ModalHeader({
         >
           {/* Left: icon + title block */}
           <div className="flex items-center gap-4 min-w-0">
+            <div className="h-12 w-12 overflow-hidden rounded-2xl border border-white/15 bg-white/10 shadow-[0_8px_24px_rgba(15,34,68,0.18)]">
+              <Image
+                src="/images/serviamus.jpeg"
+                alt="Serviamus logo"
+                width={48}
+                height={48}
+                className="h-full w-full object-cover"
+                priority
+              />
+            </div>
+
             {/* Icon */}
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -115,6 +127,9 @@ export default function ModalHeader({
 
             {/* Title + subtitle + meta */}
             <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-white/55">
+                Serviamus Medical Clinic and Laboratory
+              </p>
               <h2
                 className="text-white text-lg leading-tight truncate"
                 style={{ fontFamily: "'DM Serif Display', serif" }}

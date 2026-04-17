@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { ensureLabBillingForRequest } from "../billing/billing.helpers";
 import { categorizeLabTest, splitLabTests, toSchemaKey } from "./lab.utils";
 
 type CreateLaboratoryRequestWithItemsInput = {
@@ -68,6 +69,20 @@ export const createLaboratoryRequestWithItems = async (
     throw new Error("At least one laboratory test is required.");
   }
 
+  const request = await tx.request.findUnique({
+    where: {
+      req_id: reqId,
+    },
+    select: {
+      req_id: true,
+      req_date: true,
+    },
+  });
+
+  if (!request) {
+    throw new Error("Parent request not found.");
+  }
+
   const laboratoryRequest = await tx.laboratoryRequest.create({
     data: {
       req_id: reqId,
@@ -87,6 +102,12 @@ export const createLaboratoryRequestWithItems = async (
       laboratory_request_id: laboratoryRequest.id,
       test_id: test.test_id,
     })),
+  });
+
+  await ensureLabBillingForRequest(tx, {
+    reqId: request.req_id,
+    requestDate: request.req_date,
+    tests: normalizedTests,
   });
 
   return laboratoryRequest;

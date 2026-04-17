@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import {
@@ -16,18 +17,96 @@ type Props = {
   onCancel: () => void;
 };
 
-const testRows: { label: string; name: string; convName?: string }[] = [
-  { label: "FBS (Fasting Blood Sugar)", name: "FBS", convName: "FBS_conv" },
-  { label: "RBS (Random Blood Sugar)", name: "RBS", convName: "RBS_conv" },
-  { label: "BUN (Blood Urea Nitrogen)", name: "BUN", convName: "BUN_conv" },
-  { label: "Creatinine", name: "creatinine", convName: "creatinine_conv" },
-  { label: "Uric Acid", name: "uric_acid", convName: "uric_acid_conv" },
-  { label: "Total Cholesterol", name: "cholesterol", convName: "cholesterol_conv" },
-  { label: "HDL Cholesterol", name: "hdl_cholesterol", convName: "hdl_cholesterol_conv" },
-  { label: "LDL Cholesterol", name: "ldl_cholesterol", convName: "ldl_cholesterol_conv" },
-  { label: "Triglycerides", name: "triglycerides", convName: "triglycerides_conv" },
+type TestRow = {
+  label: string;
+  name: keyof ClinicalChemistryFormValues;
+  convName?: keyof ClinicalChemistryFormValues;
+  calculateConversion?: (value: number) => number;
+};
+
+const testRows: TestRow[] = [
+  {
+    label: "FBS (Fasting Blood Sugar)",
+    name: "FBS",
+    convName: "FBS_conv",
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.055)*100)/100,
+  },
+  {
+    label: "RBS (Random Blood Sugar)",
+    name: "RBS",
+    convName: "RBS_conv",
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.055)*100)/100,
+  },
+  {
+    label: "BUN (Blood Urea Nitrogen)",
+    name: "BUN",
+    convName: "BUN_conv",
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.357)*100)/100,
+  },
+  {
+    label: "Creatinine",
+    name: "creatinine",
+    convName: "creatinine_conv",
+    calculateConversion: (value) => Math.round(Math.abs(value * 88.4)*100)/100,
+  },
+  {
+    label: "Uric Acid",
+    name: "uric_acid",
+    convName: "uric_acid_conv",
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.059)*100)/100,
+  },
+  {
+    label: "Total Cholesterol",
+    name: "cholesterol",
+    convName: "cholesterol_conv",
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.026) * 100) / 100,
+  },
+  {
+    label: "HDL Cholesterol",
+    name: "hdl_cholesterol",
+    convName: "hdl_cholesterol_conv",
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.026) * 100) / 100,
+  },
+  {
+    label: "LDL Cholesterol",
+    name: "ldl_cholesterol",
+    convName: "ldl_cholesterol_conv",
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.026) * 100) / 100,
+  },
+  {
+    label: "Triglycerides",
+    name: "triglycerides",
+    convName: "triglycerides_conv",
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.011) * 100) / 100,
+  },
   { label: "SGPT", name: "sgpt" },
 ];
+
+function hasConversion(
+  row: TestRow
+): row is TestRow & {
+  convName: keyof ClinicalChemistryFormValues;
+  calculateConversion: (value: number) => number;
+} {
+  return Boolean(row.convName && row.calculateConversion);
+}
+
+const calculatedRows = testRows.filter(hasConversion);
+
+function resolveConversionValue(
+  rawValue: string | number,
+  calculateConversion?: (value: number) => number
+) {
+  const numericValue = typeof rawValue === "number"
+    ? rawValue
+    : Number(rawValue);
+
+  if (isNaN(numericValue)) return "";
+
+  return calculateConversion
+    ? calculateConversion(numericValue)
+    : numericValue;
+}
 
 export default function ClinicalChemistryModal({
   initialValues,
@@ -35,8 +114,11 @@ export default function ClinicalChemistryModal({
   onCancel,
 }: Props) {
   const {
+    control, 
     register,
     handleSubmit,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<ClinicalChemistryFormValues>({
     resolver: zodResolver(clinicalChemistrySchema),
@@ -45,6 +127,30 @@ export default function ClinicalChemistryModal({
       ...(initialValues ?? {}),
     },
   });
+
+  const watchedResultValues = useWatch({
+    control,
+    name: calculatedRows.map((row) => row.name),
+  });
+
+  useEffect(() => {
+    calculatedRows.forEach(({ name, convName, calculateConversion }, index) => {
+      const nextConversionValue = resolveConversionValue(
+        watchedResultValues[index] ?? getValues(name),
+        calculateConversion
+      );
+
+      if (getValues(convName) === nextConversionValue) {
+        return;
+      }
+
+      setValue(convName, nextConversionValue, {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: false,
+      });
+    });
+  }, [getValues, setValue, watchedResultValues]);
 
   return (
     <form
@@ -75,16 +181,20 @@ export default function ClinicalChemistryModal({
               <Input
                 placeholder="-"
                 className="mx-1"
-                {...register(row.name as keyof ClinicalChemistryFormValues)}
-                error={errors[row.name as keyof ClinicalChemistryFormValues]?.message}
+                inputMode="decimal"
+                {...register(row.name)}
+                error={errors[row.name]?.message}
               />
               {row.convName ? (
                 <Input
                   placeholder="-"
-                  className="mx-1"
-                  {...register(row.convName as keyof ClinicalChemistryFormValues)}
-                  error={errors[row.convName as keyof ClinicalChemistryFormValues]?.message}
-                />
+                  className="mx-1 bg-slate-100 text-slate-500"
+                  inputMode="decimal"
+                  readOnly
+                  tabIndex={-1}
+                  {...register(row.convName)}
+                  error={errors[row.convName]?.message}
+                />  
               ) : (
                 <div />
               )}
@@ -108,6 +218,8 @@ export default function ClinicalChemistryModal({
           </div>
         ))}
       </div>
+
+        <div></div>
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
         <Button type="button" variant="secondary" onClick={onCancel}>

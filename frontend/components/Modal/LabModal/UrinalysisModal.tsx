@@ -1,19 +1,33 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import {
-  urinalysisDefaultValues,
-  UrinalysisFormValues,
-  urinalysisSchema,
-} from "@/schemas/lab.schema";
+import { useEffect, useState } from "react";
 
 type Props = {
-  initialValues?: Partial<UrinalysisFormValues> | null;
-  onSubmit: (form: UrinalysisFormValues) => void;
+  initialValues?: Record<string, string> | null;
+  onSubmit: (form: Record<string, string>) => void;
   onCancel: () => void;
+};
+
+const initialForm: Record<string, string> = {
+  color: "",
+  transparency: "",
+  ph_result: "",
+  spec_grav_result: "",
+  protein: "",
+  nitrite: "",
+  glucose: "",
+  ketones: "",
+  leukocytes: "",
+  blood: "",
+  pus_cells: "",
+  rbc: "",
+  bacteria: "",
+  squamous_cell: "",
+  round_cell: "",
+  mucous: "",
+  crystals: "",
+  casts: "",
+  others: "",
 };
 
 export default function UrinalysisModal({
@@ -21,21 +35,35 @@ export default function UrinalysisModal({
   onSubmit,
   onCancel,
 }: Props) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<UrinalysisFormValues>({
-    resolver: zodResolver(urinalysisSchema),
-    defaultValues: {
-      ...urinalysisDefaultValues,
+  const [form, setForm] = useState<Record<string, string>>(initialForm);
+
+  useEffect(() => {
+    setForm({
+      ...initialForm,
       ...(initialValues ?? {}),
-    },
-  });
+    });
+  }, [initialValues]);
+
+  const set = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+
+  const fieldInput = (name: string, placeholder = "—") => (
+    <input
+      type="text"
+      name={name}
+      value={form[name]}
+      onChange={set}
+      placeholder={placeholder}
+      className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-#151c47-500 focus:outline-none focus:ring-1 focus:ring-#151c47-200"
+    />
+  );
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(form);
+      }}
       className="p-5 space-y-5"
     >
       <div>
@@ -51,11 +79,8 @@ export default function UrinalysisModal({
             { label: "Transparency", name: "transparency" },
           ].map(({ label, name }) => (
             <div key={name} className="flex flex-col gap-1">
-              <Input
-                label={label}
-                {...register(name as keyof UrinalysisFormValues)}
-                error={errors[name as keyof UrinalysisFormValues]?.message}
-              />
+              <label className="text-xs font-medium text-slate-500">{label}</label>
+              {fieldInput(name)}
             </div>
           ))}
         </div>
@@ -80,11 +105,8 @@ export default function UrinalysisModal({
             { label: "Blood", name: "blood" },
           ].map(({ label, name }) => (
             <div key={name} className="flex flex-col gap-1">
-              <Input
-                label={label}
-                {...register(name as keyof UrinalysisFormValues)}
-                error={errors[name as keyof UrinalysisFormValues]?.message}
-              />
+              <label className="text-xs font-medium text-slate-500">{label}</label>
+              {fieldInput(name)}
             </div>
           ))}
         </div>
@@ -109,32 +131,36 @@ export default function UrinalysisModal({
             { label: "Casts", name: "casts" },
           ].map(({ label, name }) => (
             <div key={name} className="flex flex-col gap-1">
-              <Input
-                label={label}
-                {...register(name as keyof UrinalysisFormValues)}
-                error={errors[name as keyof UrinalysisFormValues]?.message}
-              />
+              <label className="text-xs font-medium text-slate-500">{label}</label>
+              {fieldInput(name)}
             </div>
           ))}
         </div>
       </div>
 
       <div className="flex flex-col gap-1">
-        <Input
-          label="Others"
-          placeholder="Additional findings"
-          {...register("others")}
-          error={errors.others?.message}
-        />
+        <label className="text-xs font-medium text-slate-500">Others</label>
+        {fieldInput("others", "Additional findings")}
+      </div>
+
+      <div>
+        
       </div>
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <Button type="button" variant="secondary" onClick={onCancel}>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+        >
           Cancel
-        </Button>
-        <Button type="submit">
+        </button>
+        <button
+          type="submit"
+          className="rounded-lg bg-[#152859] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1c3570]"
+        >
           Save Results
-        </Button>
+        </button>
       </div>
     </form>
   );

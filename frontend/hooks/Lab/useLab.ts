@@ -55,6 +55,9 @@ export const useLabRequests = () =>
   useQuery<LabRequest[]>({
     queryKey: LAB_REQUESTS_QUERY_KEY,
     queryFn: fetchLabRequests,
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 
 export const useUpdateLabRequestStatus = () => {

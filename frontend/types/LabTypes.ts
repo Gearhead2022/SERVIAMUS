@@ -1,4 +1,5 @@
 export type LabResultPayload = Record<string, string>;
+export type BillingStatus = "paid" | "unpaid";
 
 export type LabCategory =
   | "clinical-chemistry"
@@ -37,6 +38,11 @@ export type LabRequest = {
   priority: "Routine" | "Urgent";
   status: RequestStatus;
   requestStatus: RequestStatus;
+  billingCode?: string | null;
+  billingStatus: BillingStatus;
+  billingTotal: number;
+  isPaid: boolean;
+  paidAt?: string | null;
   schemaKey?: string | null;
   requestedBy: string;
   address: string;
