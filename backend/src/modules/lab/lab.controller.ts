@@ -1,13 +1,24 @@
 import { Request, Response } from "express";
+import { handleLabModuleError } from "./lab.errors";
 import {
   createLabRequestService,
   getAllUsersService,
   getLabRequestsService,
+  getLabTestsService,
   getPatientRecordsService,
   saveLabResultService,
   searchPatientsService,
   updateLabRequestStatusService,
 } from "./lab.services";
+
+const labStatusValues = ["queued", "pending", "done"] as const;
+const labCategoryValues = [
+  "clinical-chemistry",
+  "hematology",
+  "parasitology",
+  "urinalysis",
+  "other",
+] as const;
 
 export const getAllUsersController = async (_req: Request, res: Response) => {
   try {
@@ -18,10 +29,7 @@ export const getAllUsersController = async (_req: Request, res: Response) => {
       data: users,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to fetch users.",
-    });
+    return handleLabModuleError(res, error, "Failed to fetch users.");
   }
 };
 
@@ -35,10 +43,20 @@ export const searchPatientsController = async (req: Request, res: Response) => {
       data: patients,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to search patients.",
+    return handleLabModuleError(res, error, "Failed to search patients.");
+  }
+};
+
+export const getLabTestsController = async (_req: Request, res: Response) => {
+  try {
+    const tests = await getLabTestsService();
+
+    return res.status(200).json({
+      success: true,
+      data: tests,
     });
+  } catch (error) {
+    return handleLabModuleError(res, error, "Failed to fetch laboratory tests.");
   }
 };
 
@@ -52,10 +70,7 @@ export const getPatientRecordsController = async (req: Request, res: Response) =
       data: records,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to fetch patient records.",
-    });
+    return handleLabModuleError(res, error, "Failed to fetch patient records.");
   }
 };
 
@@ -91,10 +106,7 @@ export const createLabRequestController = async (req: Request, res: Response) =>
       data: request,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to create the lab request.",
-    });
+    return handleLabModuleError(res, error, "Failed to create the lab request.");
   }
 };
 
@@ -108,10 +120,7 @@ export const getLabRequestsController = async (req: Request, res: Response) => {
       data: requests,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to fetch lab requests.",
-    });
+    return handleLabModuleError(res, error, "Failed to fetch lab requests.");
   }
 };
 
@@ -121,7 +130,7 @@ export const updateLabRequestStatusController = async (req: Request, res: Respon
     const status = req.body?.status;
     const userId = req.user?.user_id;
 
-    if (!labId || !["queued", "pending", "done"].includes(status)) {
+    if (!labId || !labStatusValues.includes(status)) {
       return res.status(400).json({
         success: false,
         message: "Invalid lab request status update.",
@@ -135,11 +144,7 @@ export const updateLabRequestStatusController = async (req: Request, res: Respon
       data: request,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message:
-        error instanceof Error ? error.message : "Failed to update the lab request status.",
-    });
+    return handleLabModuleError(res, error, "Failed to update the lab request status.");
   }
 };
 
@@ -150,9 +155,7 @@ export const saveLabResultController = async (req: Request, res: Response) => {
 
     if (
       !labId ||
-      !["clinical-chemistry", "hematology", "parasitology", "urinalysis", "other"].includes(
-        category
-      ) ||
+      !labCategoryValues.includes(category) ||
       !form ||
       typeof form !== "object"
     ) {
@@ -176,9 +179,6 @@ export const saveLabResultController = async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to save the lab result.",
-    });
+    return handleLabModuleError(res, error, "Failed to save the lab result.");
   }
 };

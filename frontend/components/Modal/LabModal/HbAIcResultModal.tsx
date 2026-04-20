@@ -10,9 +10,11 @@ import {
   HbA1cFormValues,
   hbA1cSchema,
 } from "@/schemas/lab.schema";
+import { LabResultPayload } from "@/types/LabTypes";
+import { mergeLabFormDefaults } from "@/utils/lab";
 
 type Props = {
-  initialValues?: Partial<HbA1cFormValues> | null;
+  initialValues?: LabResultPayload | null;
   onSubmit: (form: HbA1cFormValues) => void;
   onCancel: () => void;
 };
@@ -28,10 +30,7 @@ export default function HbAIcResultModal({
     formState: { errors },
   } = useForm<HbA1cFormValues>({
     resolver: zodResolver(hbA1cSchema),
-    defaultValues: {
-      ...hbA1cDefaultValues,
-      ...(initialValues ?? {}),
-    },
+    defaultValues: mergeLabFormDefaults(hbA1cDefaultValues, initialValues),
   });
 
   return (
@@ -51,7 +50,10 @@ export default function HbAIcResultModal({
             <Input
               label={label}
               type={type}
-              {...register(name as keyof HbA1cFormValues)}
+              inputMode={name === "result" ? "decimal" : undefined}
+              {...register(name as keyof HbA1cFormValues, {
+                valueAsNumber: name === "result",
+              })}
               error={errors[name as keyof HbA1cFormValues]?.message}
             />
           </div>

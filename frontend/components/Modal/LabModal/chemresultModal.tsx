@@ -10,9 +10,11 @@ import {
   ChemistryFormValues,
   chemistrySchema,
 } from "@/schemas/lab.schema";
+import { LabResultPayload } from "@/types/LabTypes";
+import { mergeLabFormDefaults } from "@/utils/lab";
 
 type Props = {
-  initialValues?: Partial<ChemistryFormValues> | null;
+  initialValues?: LabResultPayload | null;
   onSubmit: (form: ChemistryFormValues) => void;
   onCancel: () => void;
 };
@@ -28,10 +30,7 @@ export default function ChemistryResultModal({
     formState: { errors },
   } = useForm<ChemistryFormValues>({
     resolver: zodResolver(chemistrySchema),
-    defaultValues: {
-      ...chemistryDefaultValues,
-      ...(initialValues ?? {}),
-    },
+    defaultValues: mergeLabFormDefaults(chemistryDefaultValues, initialValues),
   });
 
   return (
@@ -50,7 +49,10 @@ export default function ChemistryResultModal({
             <Input
               label={label}
               placeholder="--"
-              {...register(name as keyof ChemistryFormValues)}
+              inputMode="decimal"
+              {...register(name as keyof ChemistryFormValues, {
+                valueAsNumber: true,
+              })}
               error={errors[name as keyof ChemistryFormValues]?.message}
             />
           </div>

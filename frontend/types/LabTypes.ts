@@ -1,4 +1,5 @@
-export type LabResultPayload = Record<string, string>;
+export type LabResultValue = string | number;
+export type LabResultPayload = Record<string, LabResultValue>;
 export type BillingStatus = "paid" | "unpaid";
 
 export type LabCategory =
@@ -8,14 +9,56 @@ export type LabCategory =
   | "urinalysis"
   | "other";
 
-export type RequestStatus = "queued" | "pending" | "done";
-
-export type DashboardLabType =
-  | LabCategory
-  | "serology"
+export type LabSchemaKey =
+  | "CBC"
+  | "BT"
+  | "parasitology"
+  | "urinalysis"
+  | "clinical_chemistry"
+  | "FBS"
+  | "RBS"
+  | "BUN"
+  | "uricacid"
+  | "totalcholesterol"
+  | "HDL"
+  | "LDL"
+  | "triglycerides"
+  | "SGPT"
+  | "sodium"
+  | "potassium"
   | "hba1c"
+  | "OGTT"
+  | "onehOGTT"
+  | "twohOGTT"
+  | "FOBT"
+  | "dengue"
+  | "hbsag"
+  | "syphilis"
+  | "serumPT"
+  | "urinePT"
+  | "hematology"
+  | "serology"
   | "chemistry"
-  | "ogtt";
+  | "ogtt"
+  | "general";
+
+export type LabTemplateKey =
+  | "clinical-chemistry-panel"
+  | "cbc"
+  | "blood-typing"
+  | "parasitology"
+  | "urinalysis"
+  | "serology"
+  | "dengue"
+  | "pregnancy-test"
+  | "fecal-occult-blood"
+  | "hba1c"
+  | "chemistry-panel"
+  | "single-chemistry"
+  | "ogtt"
+  | "general";
+
+export type RequestStatus = "queued" | "pending" | "done";
 
 export type LabRequest = {
   labId: number;
@@ -43,11 +86,19 @@ export type LabRequest = {
   billingTotal: number;
   isPaid: boolean;
   paidAt?: string | null;
-  schemaKey?: string | null;
+  schemaKey?: LabSchemaKey | null;
   requestedBy: string;
   address: string;
   sex: string;
   resultPayload?: LabResultPayload | null;
+};
+
+export type LabTestCatalogItem = {
+  testId: number;
+  name: string;
+  displayName: string;
+  category: LabCategory;
+  schemaKey?: LabSchemaKey | null;
 };
 
 export type SearchPatientResult = {

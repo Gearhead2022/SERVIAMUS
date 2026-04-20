@@ -1,5 +1,8 @@
 import { ApiLabCategory, ApiLabRequestStatus } from "./lab.utils";
 
+export type LabResultValue = string | number;
+export type LabResultPayload = Record<string, LabResultValue>;
+
 export type CreateLabRequestInput = {
   patientId: number;
   userId: number;
@@ -11,7 +14,7 @@ export type CreateLabRequestInput = {
 export type SaveLabResultInput = {
   labId: number;
   category: ApiLabCategory;
-  form: Record<string, string>;
+  form: LabResultPayload;
   userId?: number;
   pathologistUserId?: number | null;
 };

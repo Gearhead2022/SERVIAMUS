@@ -12,7 +12,13 @@ import {
 } from "../src/modules/billing/billing.helpers";
 import { createLaboratoryRequestWithItems } from "../src/modules/lab/lab.helpers";
 import { upsertStructuredLabResult } from "../src/modules/lab/lab.result-writers";
-import { normalizeLabForm, requestStatusFromItemStatuses } from "../src/modules/lab/lab.utils";
+import {
+  categorizeLabTest,
+  normalizeLabForm,
+  requestStatusFromItemStatuses,
+  toSchemaKey,
+} from "../src/modules/lab/lab.utils";
+import type { LabResultPayload } from "../src/modules/lab/lab.types";
 
 const prisma = new PrismaClient();
 
@@ -29,7 +35,7 @@ type SeedUserInput = {
 type SampleLabItem = {
   testName: string;
   status: LaboratoryRequestItemStatus;
-  form?: Record<string, string>;
+  form?: LabResultPayload;
 };
 
 type SampleLabRequest = {
@@ -181,6 +187,43 @@ const ensureSampleLabRequest = async (
   pathologistUserId: number
 ) => {
   await prisma.$transaction(async (tx) => {
+    const ensureLaboratoryTest = async (testName: string) => {
+      const existingTest = await tx.laboratoryTest.findFirst({
+        where: {
+          name: testName,
+        },
+        select: {
+          test_id: true,
+        },
+      });
+
+      if (existingTest) {
+        return tx.laboratoryTest.update({
+          where: {
+            test_id: existingTest.test_id,
+          },
+          data: {
+            category: categorizeLabTest(testName),
+            schema_key: toSchemaKey(testName),
+          },
+          select: {
+            test_id: true,
+          },
+        });
+      }
+
+      return tx.laboratoryTest.create({
+        data: {
+          name: testName,
+          category: categorizeLabTest(testName),
+          schema_key: toSchemaKey(testName),
+        },
+        select: {
+          test_id: true,
+        },
+      });
+    };
+
     let request = await tx.request.findFirst({
       where: {
         patient_id: sample.patientId,
@@ -226,6 +269,37 @@ const ensureSampleLabRequest = async (
 
     if (!request.laboratory) {
       throw new Error(`Missing laboratory request for request ${request.req_id}`);
+    }
+
+    const existingItems = await tx.laboratoryRequestItem.findMany({
+      where: {
+        laboratory_request_id: request.laboratory.id,
+      },
+      include: {
+        test: {
+          select: {
+            name: true,
+            schema_key: true,
+          },
+        },
+      },
+    });
+
+    for (const item of sample.items) {
+      const existingItem = existingItems.find((record) => record.test.name === item.testName);
+
+      if (existingItem) {
+        continue;
+      }
+
+      const test = await ensureLaboratoryTest(item.testName);
+
+      await tx.laboratoryRequestItem.create({
+        data: {
+          laboratory_request_id: request.laboratory.id,
+          test_id: test.test_id,
+        },
+      });
     }
 
     const items = await tx.laboratoryRequestItem.findMany({
@@ -299,8 +373,6 @@ const ensureSampleLabRequest = async (
 };
 
 async function main() {
-  await prisma.roleTypes.deleteMany(); // clear first
-
   await ensureRole("ADMIN", "System administrator");
   await ensureRole("DOCTOR", "Attending physician");
   await ensureRole("STAFF", "Clinic registration staff");
@@ -404,20 +476,20 @@ async function main() {
           testName: "CBC",
           status: "DONE",
           form: {
-            Hemoglobin: "13.8",
-            rbc_count: "4.82",
-            wbc_count: "7.10",
-            platelet_count: "288",
-            others_mcv: "90.2",
-            mchc: "33.1",
-            reticulocyte_count: "1.5",
-            nss_1: "58",
-            nss_2: "4",
-            nss_3: "0",
-            lymphocytes: "30",
-            monocytes: "6",
-            eosinophils: "2",
-            basophils: "0",
+            Hemoglobin: 13.8,
+            rbc_count: 4.82,
+            wbc_count: 7.1,
+            platelet_count: 288,
+            others_mcv: 90.2,
+            mchc: 33.1,
+            reticulocyte_count: 1.5,
+            nss_1: 58,
+            nss_2: 4,
+            nss_3: 0,
+            lymphocytes: 30,
+            monocytes: 6,
+            eosinophils: 2,
+            basophils: 0,
             others1: "Within reference range",
             clotting_time: "5 min",
             bleeding_time: "2 min",
@@ -454,8 +526,8 @@ async function main() {
           form: {
             color: "Yellow",
             transparency: "Clear",
-            ph_result: "6.0",
-            spec_grav_result: "1.020",
+            ph_result: 6.0,
+            spec_grav_result: 1.02,
             protein: "Negative",
             nitrite: "Negative",
             glucose: "Negative",
@@ -486,25 +558,25 @@ async function main() {
           testName: "Blood Chemistry",
           status: "PROCESSING",
           form: {
-            FBS: "92",
-            FBS_conv: "5.1",
-            RBS: "104",
-            RBS_conv: "5.8",
-            BUN: "13",
-            BUN_conv: "4.6",
-            creatinine: "0.9",
-            creatinine_conv: "79.6",
-            uric_acid: "4.7",
-            uric_acid_conv: "280",
-            cholesterol: "186",
-            cholesterol_conv: "4.8",
-            hdl_cholesterol: "56",
-            hdl_cholesterol_conv: "1.4",
-            ldl_cholesterol: "98",
-            ldl_cholesterol_conv: "2.5",
-            triglycerides: "130",
-            triglycerides_conv: "1.5",
-            sgpt: "24",
+            FBS: 92,
+            FBS_conv: 5.1,
+            RBS: 104,
+            RBS_conv: 5.8,
+            BUN: 13,
+            BUN_conv: 4.6,
+            creatinine: 0.9,
+            creatinine_conv: 79.6,
+            uric_acid: 4.7,
+            uric_acid_conv: 280,
+            cholesterol: 186,
+            cholesterol_conv: 4.8,
+            hdl_cholesterol: 56,
+            hdl_cholesterol_conv: 1.4,
+            ldl_cholesterol: 98,
+            ldl_cholesterol_conv: 2.5,
+            triglycerides: 130,
+            triglycerides_conv: 1.5,
+            sgpt: 24,
             last_meal: "10 hours fasting",
             time_taken: "08:10 AM",
           },
@@ -538,9 +610,48 @@ async function main() {
             lot_no: "LOT-2026-01",
             exp_date: "2027-12-31",
             specimen: "Whole blood",
-            result: "5.7",
+            result: 5.7,
             result_interpretation: "Borderline glycemic control",
           },
+        },
+      ],
+    },
+    {
+      patientId: patientC.patient_id,
+      reqDate: "2026-04-18",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "CASH",
+      items: [
+        {
+          testName: "CBC",
+          status: "DONE",
+          form: {
+            Hemoglobin: 12.9,
+            rbc_count: 4.54,
+            wbc_count: 8.2,
+            platelet_count: 301,
+            others_mcv: 88.3,
+            mchc: 32.9,
+            reticulocyte_count: 1.1,
+            nss_1: 61,
+            nss_2: 3,
+            nss_3: 0,
+            lymphocytes: 28,
+            monocytes: 6,
+            eosinophils: 2,
+            basophils: 0,
+            others1: "No toxic granulation seen",
+            clotting_time: "4 min",
+            bleeding_time: "2 min",
+            abo_type: "A",
+            rh_type: "Positive",
+            others2: "Completed as part of multi-test request",
+          },
+        },
+        {
+          testName: "Urinalysis",
+          status: "QUEUED",
         },
       ],
     },
@@ -568,10 +679,10 @@ async function main() {
           testName: "Sodium Potassium Chloride Ionized Calcium",
           status: "PROCESSING",
           form: {
-            sodium: "140",
-            potassium: "4.1",
-            chloride: "102",
-            ionized_calcium: "1.15",
+            sodium: 140,
+            potassium: 4.1,
+            chloride: 102,
+            ionized_calcium: 1.15,
             others: "Seed chemistry panel",
           },
         },

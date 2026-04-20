@@ -4,6 +4,7 @@ import {
   Prisma,
   RequestStatus,
 } from "@prisma/client";
+import type { LabResultPayload, LabResultValue } from "./lab.types";
 
 export type ApiLabCategory =
   | "clinical-chemistry"
@@ -15,17 +16,239 @@ export type ApiLabCategory =
 export type ApiLabRequestStatus = "queued" | "pending" | "done";
 
 export type LabSchemaKey =
-  | "hematology"
-  | "serology"
+  | "CBC"
+  | "BT"
   | "parasitology"
   | "urinalysis"
   | "clinical_chemistry"
+  | "FBS"
+  | "RBS"
+  | "BUN"
+  | "uricacid"
+  | "totalcholesterol"
+  | "HDL"
+  | "LDL"
+  | "triglycerides"
+  | "SGPT"
+  | "sodium"
+  | "potassium"
   | "hba1c"
+  | "OGTT"
+  | "onehOGTT"
+  | "twohOGTT"
+  | "FOBT"
+  | "dengue"
+  | "hbsag"
+  | "syphilis"
+  | "serumPT"
+  | "urinePT"
+  | "hematology"
+  | "serology"
   | "chemistry"
   | "ogtt"
   | "general";
 
+type KnownLabSchemaDefinition = {
+  apiCategory: ApiLabCategory;
+  category: LaboratoryCategory;
+  aliases: string[];
+};
+
+const normalizeLookupValue = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 const normalizeTestLabel = (value: string) => value.trim().replace(/\s+/g, " ");
+
+const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> = {
+  CBC: {
+    apiCategory: "hematology",
+    category: "Hematology",
+    aliases: [
+      "cbc",
+      "complete blood count",
+      "complete blood count w platelet count",
+      "complete blood count with platelet count",
+    ],
+  },
+  BT: {
+    apiCategory: "hematology",
+    category: "Hematology",
+    aliases: ["blood typing", "blood type"],
+  },
+  parasitology: {
+    apiCategory: "parasitology",
+    category: "Clinical_Microscopy",
+    aliases: [
+      "routine fecalysis",
+      "fecalysis",
+      "fecal exam",
+      "routine stool exam",
+      "parasitology",
+    ],
+  },
+  urinalysis: {
+    apiCategory: "urinalysis",
+    category: "Clinical_Microscopy",
+    aliases: ["routine urinalysis", "urinalysis"],
+  },
+  clinical_chemistry: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["creatinine", "clinical chemistry", "blood chemistry"],
+  },
+  FBS: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["fbs", "fasting blood sugar", "fasting blood sugar fbs"],
+  },
+  RBS: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["rbs", "random blood sugar", "random blood sugar rbs"],
+  },
+  BUN: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["bun", "urea bun", "urea", "urea blood urea nitrogen"],
+  },
+  uricacid: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["uric acid", "uricacid"],
+  },
+  totalcholesterol: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["total cholesterol", "cholesterol"],
+  },
+  HDL: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["hdl", "hdl cholesterol", "hdl cholesterol"],
+  },
+  LDL: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["ldl", "ldl cholesterol", "ldl cholesterol"],
+  },
+  triglycerides: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["triglycerides", "triglyceride"],
+  },
+  SGPT: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["sgpt", "serum glutamic pyruvic transaminase"],
+  },
+  sodium: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["sodium"],
+  },
+  potassium: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["potassium"],
+  },
+  hba1c: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: [
+      "hba1c",
+      "hb a1c",
+      "glycosylated hemoglobin",
+      "glycated hemoglobin",
+    ],
+  },
+  OGTT: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["ogtt", "oral glucose tolerance test"],
+  },
+  onehOGTT: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["1h ogtt", "1 hour ogtt", "1h oral glucose tolerance test"],
+  },
+  twohOGTT: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["2h ogtt", "2 hour ogtt", "2h oral glucose tolerance test"],
+  },
+  FOBT: {
+    apiCategory: "other",
+    category: "Clinical_Microscopy",
+    aliases: ["fobt", "fecal occult blood test", "faecal occult blood test"],
+  },
+  dengue: {
+    apiCategory: "other",
+    category: "Serology",
+    aliases: ["dengue", "dengue ns1", "ns1"],
+  },
+  hbsag: {
+    apiCategory: "other",
+    category: "Serology",
+    aliases: [
+      "hbsag",
+      "hepatitis b surface antigen",
+      "hepatitis b",
+    ],
+  },
+  syphilis: {
+    apiCategory: "other",
+    category: "Serology",
+    aliases: ["syphilis", "vdrl", "rpr"],
+  },
+  serumPT: {
+    apiCategory: "other",
+    category: "Serology",
+    aliases: ["pregnancy test serum", "serum pregnancy test", "serum pt"],
+  },
+  urinePT: {
+    apiCategory: "other",
+    category: "Serology",
+    aliases: ["pregnancy test urine", "urine pregnancy test", "urine pt"],
+  },
+  hematology: {
+    apiCategory: "hematology",
+    category: "Hematology",
+    aliases: ["hematology"],
+  },
+  serology: {
+    apiCategory: "other",
+    category: "Serology",
+    aliases: ["serology"],
+  },
+  chemistry: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["chemistry", "electrolytes", "electrolyte panel"],
+  },
+  ogtt: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: ["glucose load", "glucose tolerance"],
+  },
+  general: {
+    apiCategory: "other",
+    category: "OTHER",
+    aliases: [],
+  },
+};
+
+const exactAliasToSchemaKey = new Map<string, LabSchemaKey>();
+
+Object.entries(knownLabSchemaDefinitions).forEach(([schemaKey, definition]) => {
+  definition.aliases.forEach((alias) => {
+    exactAliasToSchemaKey.set(normalizeLookupValue(alias), schemaKey as LabSchemaKey);
+  });
+});
 
 export const splitLabTests = (rawValue: string) => {
   return rawValue
@@ -34,95 +257,142 @@ export const splitLabTests = (rawValue: string) => {
     .filter(Boolean);
 };
 
-export const resolveLabSchemaKey = (testName: string): LabSchemaKey => {
-  const value = testName.trim().toLowerCase();
+export const isKnownLabSchemaKey = (value?: string | null): value is LabSchemaKey => {
+  if (!value) {
+    return false;
+  }
+
+  return Object.prototype.hasOwnProperty.call(knownLabSchemaDefinitions, value);
+};
+
+const findSchemaKeyByAlias = (testName: string) => {
+  const normalizedName = normalizeLookupValue(testName);
+  const exactMatch = exactAliasToSchemaKey.get(normalizedName);
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  for (const [schemaKey, definition] of Object.entries(knownLabSchemaDefinitions)) {
+    if (
+      definition.aliases.some((alias) =>
+        normalizedName.includes(normalizeLookupValue(alias))
+      )
+    ) {
+      return schemaKey as LabSchemaKey;
+    }
+  }
+
+  return null;
+};
+
+const inferLabSchemaKey = (testName: string): LabSchemaKey => {
+  const aliasMatch = findSchemaKeyByAlias(testName);
+
+  if (aliasMatch) {
+    return aliasMatch;
+  }
+
+  const value = normalizeLookupValue(testName);
 
   if (
     value.includes("blood count") ||
     value.includes("cbc") ||
-    value.includes("hematology") ||
-    value.includes("blood typing")
+    value.includes("hematology")
   ) {
-    return "hematology";
+    return "CBC";
   }
 
-  if (value.includes("hba1c") || value.includes("hb a1c") || value.includes("glycated")) {
-    return "hba1c";
-  }
-
-  if (value.includes("ogtt") || value.includes("glucose load")) {
-    return "ogtt";
-  }
-
-  if (
-    value.includes("sodium") ||
-    value.includes("potassium") ||
-    value.includes("chloride") ||
-    value.includes("ionized calcium")
-  ) {
-    return "chemistry";
-  }
-
-  if (
-    value.includes("blood chemistry") ||
-    value.includes("fbs") ||
-    value.includes("rbs") ||
-    value.includes("bun") ||
-    value.includes("creatinine") ||
-    value.includes("uric acid") ||
-    value.includes("cholesterol") ||
-    value.includes("triglycerides") ||
-    value.includes("sgpt")
-  ) {
-    return "clinical_chemistry";
-  }
-
-  if (
-    value.includes("fecal") ||
-    value.includes("stool") ||
-    value.includes("parasit")
-  ) {
-    return "parasitology";
+  if (value.includes("blood typing") || value.includes("blood type")) {
+    return "BT";
   }
 
   if (value.includes("urinalysis")) {
     return "urinalysis";
   }
 
+  if (value.includes("fecal") || value.includes("stool") || value.includes("parasit")) {
+    return "parasitology";
+  }
+
   if (
-    value.includes("serology") ||
-    value.includes("ns1") ||
-    value.includes("igg") ||
-    value.includes("igm") ||
     value.includes("dengue") ||
-    value.includes("widal")
+    value.includes("ns1") ||
+    value.includes("syphilis") ||
+    value.includes("hepatitis")
   ) {
     return "serology";
+  }
+
+  if (
+    value.includes("ogtt") ||
+    value.includes("glucose tolerance") ||
+    value.includes("glucose load")
+  ) {
+    return "OGTT";
+  }
+
+  if (value.includes("sodium") || value.includes("potassium")) {
+    return "chemistry";
+  }
+
+  if (
+    value.includes("blood sugar") ||
+    value.includes("bun") ||
+    value.includes("creatinine") ||
+    value.includes("uric acid") ||
+    value.includes("cholesterol") ||
+    value.includes("triglycerides") ||
+    value.includes("sgpt") ||
+    value.includes("hba1c")
+  ) {
+    return "clinical_chemistry";
   }
 
   return "general";
 };
 
-export const toSchemaKey = (testName: string) => resolveLabSchemaKey(testName);
-
-export const categorizeLabTest = (testName: string): LaboratoryCategory => {
-  const schemaKey = resolveLabSchemaKey(testName);
-
-  if (schemaKey === "hematology") return "Hematology";
-  if (schemaKey === "parasitology" || schemaKey === "urinalysis") {
-    return "Clinical_Microscopy";
-  }
-  if (schemaKey === "serology") return "Serology";
-  if (
-    schemaKey === "clinical_chemistry" ||
-    schemaKey === "hba1c" ||
-    schemaKey === "chemistry" ||
-    schemaKey === "ogtt"
-  ) {
-    return "Clinical_Chemistry";
+export const resolveLabSchemaKey = (
+  testName: string,
+  existingSchemaKey?: string | null
+): LabSchemaKey => {
+  if (isKnownLabSchemaKey(existingSchemaKey)) {
+    return existingSchemaKey;
   }
 
-  return "OTHER";
+  return inferLabSchemaKey(testName);
+};
+
+export const toSchemaKey = (testName: string, existingSchemaKey?: string | null) =>
+  resolveLabSchemaKey(testName, existingSchemaKey);
+
+export const categorizeLabTest = (
+  testName: string,
+  existingSchemaKey?: string | null
+): LaboratoryCategory => {
+  const resolvedSchemaKey = resolveLabSchemaKey(testName, existingSchemaKey);
+  return knownLabSchemaDefinitions[resolvedSchemaKey].category;
+};
+
+export const resolveApiLabCategory = ({
+  category,
+  schemaKey,
+  testName,
+}: {
+  category: LaboratoryCategory;
+  schemaKey?: string | null;
+  testName: string;
+}): ApiLabCategory => {
+  const resolvedSchemaKey = resolveLabSchemaKey(testName, schemaKey);
+  const schemaDefinition = knownLabSchemaDefinitions[resolvedSchemaKey];
+
+  if (schemaDefinition) {
+    return schemaDefinition.apiCategory;
+  }
+
+  if (category === "Hematology") return "hematology";
+  if (category === "Clinical_Chemistry") return "clinical-chemistry";
+  return "other";
 };
 
 export const toApiLabCategory = (category: LaboratoryCategory): ApiLabCategory => {
@@ -177,11 +447,23 @@ export const seedItemStatusFromRequestStatus = (
   return "QUEUED";
 };
 
-export const normalizeLabForm = (form: Record<string, string>) => {
+const normalizeLabResultValue = (value: unknown): LabResultValue => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  return String(value ?? "");
+};
+
+export const normalizeLabForm = (form: LabResultPayload) => {
   return Object.fromEntries(
     Object.entries(form).map(([key, value]) => [
       key,
-      typeof value === "string" ? value.trim() : String(value ?? ""),
+      normalizeLabResultValue(value),
     ])
   ) as Prisma.InputJsonValue;
 };
@@ -194,20 +476,22 @@ export const serializeLabResultPayload = (value: Prisma.JsonValue | null) => {
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>).map(([key, itemValue]) => [
       key,
-      typeof itemValue === "string" ? itemValue : String(itemValue ?? ""),
+      normalizeLabResultValue(itemValue),
     ])
-  );
+  ) as LabResultPayload;
 };
 
-export const trimFormValue = (
-  form: Record<string, string>,
-  ...keys: string[]
-) => {
+export const trimFormValue = (form: LabResultPayload, ...keys: string[]) => {
   for (const key of keys) {
     const value = form[key];
 
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value);
+    }
+
     if (typeof value === "string") {
       const trimmed = value.trim();
+
       if (trimmed) {
         return trimmed;
       }

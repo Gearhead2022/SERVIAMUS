@@ -1,17 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  fetchLabTests,
   fetchLabRequests,
   saveLabResult,
   updateLabRequestStatus,
 } from "@/services/lab.service";
 import {
   LabRequest,
+  LabTestCatalogItem,
   SaveLabResultPayload,
   UpdateLabRequestStatusPayload,
 } from "@/types/LabTypes";
+import { getApiErrorMessage } from "@/utils/api-error";
 import SweetAlert from "@/utils/SweetAlert";
 
 const LAB_REQUESTS_QUERY_KEY = ["lab", "requests"];
+const LAB_TESTS_QUERY_KEY = ["lab", "tests"];
 
 const mergeUpdatedLabRequest = (
   requests: LabRequest[] | undefined,
@@ -60,6 +64,13 @@ export const useLabRequests = () =>
     refetchOnWindowFocus: true,
   });
 
+export const useLabTestCatalog = () =>
+  useQuery<LabTestCatalogItem[]>({
+    queryKey: LAB_TESTS_QUERY_KEY,
+    queryFn: fetchLabTests,
+    staleTime: 5 * 60 * 1000,
+  });
+
 export const useUpdateLabRequestStatus = () => {
   const queryClient = useQueryClient();
 
@@ -75,7 +86,7 @@ export const useUpdateLabRequestStatus = () => {
     onError: (error: unknown) => {
       SweetAlert.errorAlert(
         "Update Failed",
-        error instanceof Error ? error.message : "Unable to update the laboratory request."
+        getApiErrorMessage(error, "Unable to update the laboratory request.")
       );
     },
   });
@@ -95,7 +106,7 @@ export const useSaveLabResult = () => {
     onError: (error: unknown) => {
       SweetAlert.errorAlert(
         "Save Failed",
-        error instanceof Error ? error.message : "Unable to save laboratory results."
+        getApiErrorMessage(error, "Unable to save laboratory results.")
       );
     },
   });

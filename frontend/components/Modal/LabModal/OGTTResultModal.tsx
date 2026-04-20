@@ -1,59 +1,99 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import {
-  ogttDefaultValues,
+  createOgttSchema,
+  getOgttDefaultValues,
   OgttFormValues,
-  ogttSchema,
 } from "@/schemas/lab.schema";
+import { LabResultPayload } from "@/types/LabTypes";
+import { mergeLabFormDefaults } from "@/utils/lab";
 
 type Props = {
-  initialValues?: Partial<OgttFormValues> | null;
+  config: {
+    defaultTestType: string;
+    phases: Array<{
+      conversionFieldName: string;
+      fieldName: string;
+      label: string;
+    }>;
+  };
+  initialValues?: LabResultPayload | null;
   onSubmit: (form: OgttFormValues) => void;
   onCancel: () => void;
 };
 
-const testRows: { label: string; name: string; convName?: string }[] = [
-  { label: "FBS (Fasting Blood Sugar)", name: "FBS", convName: "FBS_conv" },
-  { label: "1 Hour After Glucose Load", name: "onehagl", convName: "onehagl_conv" },
-  { label: "2 Hours After Glucose Load", name: "twohagl", convName: "twohagl_conv" },
-  { label: "3 Hours After Glucose Load", name: "threehagl", convName: "threehagl_conv" },
-];
+const calculateOgttConversion = (value: number) => Math.round(value * 0.055 * 100) / 100;
 
 export default function OGTTResultModal({
+  config,
   initialValues,
   onSubmit,
   onCancel,
 }: Props) {
+  const schema = useMemo(() => createOgttSchema({ phases: config.phases }), [config.phases]);
+  const defaultValues = useMemo(
+    () =>
+      mergeLabFormDefaults(
+        getOgttDefaultValues({
+          defaultTestType: config.defaultTestType,
+          phases: config.phases,
+        }),
+        initialValues
+      ),
+    [config.defaultTestType, config.phases, initialValues]
+  );
+
   const {
+    control,
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
-  } = useForm<OgttFormValues>({
-    resolver: zodResolver(ogttSchema),
-    defaultValues: {
-      ...ogttDefaultValues,
-      ...(initialValues ?? {}),
-    },
+  } = useForm<Record<string, unknown>>({
+    resolver: zodResolver(schema),
+    defaultValues,
   });
+
+  const watchedPhaseValues = useWatch({
+    control,
+    name: config.phases.map((phase) => phase.fieldName),
+  });
+
+  useEffect(() => {
+    config.phases.forEach((phase, index) => {
+      const currentValue = watchedPhaseValues[index];
+      const numericValue =
+        typeof currentValue === "number" ? currentValue : Number(currentValue);
+
+      if (!Number.isFinite(numericValue)) {
+        return;
+      }
+
+      setValue(phase.conversionFieldName, calculateOgttConversion(numericValue), {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: false,
+      });
+    });
+  }, [config.phases, setValue, watchedPhaseValues]);
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="p-5 space-y-5"
+      onSubmit={handleSubmit((values) => onSubmit(values as OgttFormValues))}
+      className="space-y-5 p-5"
     >
       <div className="grid grid-cols-1 gap-3">
-        <div className="flex flex-col gap-1">
-          <Input
-            label="Test Type"
-            placeholder="e.g. OGTT / 75G"
-            {...register("test_type")}
-            error={errors.test_type?.message}
-          />
-        </div>
+        <Input
+          label="Test Type"
+          placeholder="e.g. OGTT / 75G"
+          {...register("test_type")}
+          error={errors.test_type?.message as string | undefined}
+        />
       </div>
 
       <div>
@@ -71,23 +111,31 @@ export default function OGTTResultModal({
             <span className="text-center">Conv.</span>
           </div>
 
-          {testRows.map((row) => (
+          {config.phases.map((phase) => (
             <div
-              key={row.name}
+              key={phase.fieldName}
               className="grid grid-cols-[1fr_6.5rem_6.5rem] items-center border-b border-slate-100 px-4 py-2 last:border-0"
             >
-              <span className="text-sm text-slate-700">{row.label}</span>
+              <span className="text-sm text-slate-700">{phase.label}</span>
               <Input
                 placeholder="--"
                 className="mx-1"
-                {...register(row.name as keyof OgttFormValues)}
-                error={errors[row.name as keyof OgttFormValues]?.message}
+                inputMode="decimal"
+                {...register(phase.fieldName, {
+                  valueAsNumber: true,
+                })}
+                error={errors[phase.fieldName]?.message as string | undefined}
               />
               <Input
                 placeholder="--"
-                className="mx-1"
-                {...register(row.convName as keyof OgttFormValues)}
-                error={errors[row.convName as keyof OgttFormValues]?.message}
+                className="mx-1 bg-slate-100 text-slate-500"
+                inputMode="decimal"
+                readOnly
+                tabIndex={-1}
+                {...register(phase.conversionFieldName, {
+                  valueAsNumber: true,
+                })}
+                error={errors[phase.conversionFieldName]?.message as string | undefined}
               />
             </div>
           ))}
@@ -98,9 +146,7 @@ export default function OGTTResultModal({
         <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit">
-          Save Results
-        </Button>
+        <Button type="submit">Save Results</Button>
       </div>
     </form>
   );

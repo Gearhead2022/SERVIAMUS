@@ -12,29 +12,17 @@ import {
   UserRound,
 } from "lucide-react";
 import ModalHeader from "@/components/Modal/ModalHeader";
-import ClinicalChemistryModal from "@/components/Modal/LabModal/ClinicalChemistryModal";
-import ChemistryResultModal from "@/components/Modal/LabModal/chemresultModal";
-import GeneralResultModal from "@/components/Modal/LabModal/GeneralResultModal";
-import HbAIcResultModal from "@/components/Modal/LabModal/HbAIcResultModal";
-import HematologyModal from "@/components/Modal/LabModal/HematologyModal";
+import LabResultEditor from "@/components/Modal/LabModal/LabResultEditor";
 import LabResultPreview from "@/components/Modal/LabModal/LabResultPreview";
-import OGTTResultModal from "@/components/Modal/LabModal/OGTTResultModal";
-import ParasitologyModal from "@/components/Modal/LabModal/ParasitologyModal";
-import SerologyResultModal from "@/components/Modal/LabModal/SerologyResultModal";
-import UrinalysisModal from "@/components/Modal/LabModal/UrinalysisModal";
 import {
   useLabRequests,
   useSaveLabResult,
   useUpdateLabRequestStatus,
 } from "@/hooks/Lab/useLab";
 import Button from "@/components/ui/Button";
-import {
-  DashboardLabType,
-  LabCategory,
-  LabRequest,
-  LabResultPayload,
-  RequestStatus,
-} from "@/types/LabTypes";
+import { LabRequest, LabResultPayload, RequestStatus } from "@/types/LabTypes";
+import { getApiErrorMessage } from "@/utils/api-error";
+import { getLabTemplateLabel, resolveLabTemplate } from "@/utils/lab-templates";
 import SweetAlert from "@/utils/SweetAlert";
 
 type RequestPreviewCard = {
@@ -57,85 +45,6 @@ const pesoFormatter = new Intl.NumberFormat("en-PH", {
   style: "currency",
   currency: "PHP",
 });
-
-const categoryLabels: Record<DashboardLabType, string> = {
-  "clinical-chemistry": "Clinical Chemistry",
-  hematology: "Hematology",
-  parasitology: "Parasitology",
-  urinalysis: "Urinalysis",
-  serology: "Serology",
-  hba1c: "HbA1c",
-  chemistry: "Chemistry",
-  ogtt: "OGTT",
-  other: "General Result",
-};
-
-function resolveCategory(request: LabRequest): DashboardLabType {
-  switch (request.schemaKey) {
-    case "hematology":
-      return "hematology";
-    case "parasitology":
-      return "parasitology";
-    case "urinalysis":
-      return "urinalysis";
-    case "clinical_chemistry":
-      return "clinical-chemistry";
-    case "serology":
-      return "serology";
-    case "hba1c":
-      return "hba1c";
-    case "chemistry":
-      return "chemistry";
-    case "ogtt":
-      return "ogtt";
-    default:
-      break;
-  }
-
-  if (request.category && request.category !== "other") {
-    return request.category;
-  }
-
-  const value = request.testType.toLowerCase();
-  if (value.includes("hba1c") || value.includes("hb a1c")) return "hba1c";
-  if (value.includes("ogtt") || value.includes("glucose load")) return "ogtt";
-  if (value.includes("serology") || value.includes("dengue") || value.includes("widal")) {
-    return "serology";
-  }
-  if (
-    value.includes("sodium") ||
-    value.includes("potassium") ||
-    value.includes("chloride") ||
-    value.includes("ionized calcium")
-  ) {
-    return "chemistry";
-  }
-  if (value.includes("urinalysis")) return "urinalysis";
-  if (
-    value.includes("blood count") ||
-    value.includes("cbc") ||
-    value.includes("hematology") ||
-    value.includes("blood typing")
-  ) {
-    return "hematology";
-  }
-  if (value.includes("fecal") || value.includes("stool") || value.includes("parasit")) {
-    return "parasitology";
-  }
-  if (value.includes("blood chemistry")) {
-    return "clinical-chemistry";
-  }
-  return "other";
-}
-
-function toApiCategory(category: DashboardLabType): LabCategory {
-  if (category === "serology") return "other";
-  if (category === "hba1c" || category === "chemistry" || category === "ogtt") {
-    return "clinical-chemistry";
-  }
-
-  return category;
-}
 
 function getStatusBadgeClasses(status: RequestStatus) {
   if (status === "done") {
@@ -165,7 +74,6 @@ export default function DashboardPage() {
   const [activeRequest, setActiveRequest] = useState<LabRequest | null>(null);
   const [previewPayload, setPreviewPayload] = useState<{
     request: LabRequest;
-    category: DashboardLabType;
     form: LabResultPayload;
   } | null>(null);
   const [busyRequestId, setBusyRequestId] = useState<number | null>(null);
@@ -212,9 +120,7 @@ export default function DashboardPage() {
 
     SweetAlert.errorAlert(
       "Load Failed",
-      labRequestsError instanceof Error
-        ? labRequestsError.message
-        : "Unable to load laboratory requests."
+      getApiErrorMessage(labRequestsError, "Unable to load laboratory requests.")
     );
   }, [labRequestsError]);
 
@@ -259,7 +165,7 @@ export default function DashboardPage() {
     );
   }, [requests]);
 
-  const activeCategory = activeRequest ? resolveCategory(activeRequest) : null;
+  const activeTemplate = activeRequest ? resolveLabTemplate(activeRequest) : null;
 
   const inProgressRequests = useMemo(
     () => requestPreviews.filter((item) => item.requestStatus === "pending").length,
@@ -325,24 +231,28 @@ export default function DashboardPage() {
   };
 
   const handleSaveResults = async (form: LabResultPayload) => {
-    if (!activeRequest || !activeCategory) return;
+    if (!activeRequest || !activeTemplate) {
+      return;
+    }
 
     try {
       const updated = await persistLabResult({
         labId: activeRequest.labId,
-        category: toApiCategory(activeCategory),
+        category: activeTemplate.apiCategory,
         form,
       });
 
       syncSelectedRequest(updated);
-      setPreviewPayload({ request: updated, category: activeCategory, form });
+      setPreviewPayload({ request: updated, form });
     } catch {
       // Alerts are handled in the lab hook.
     }
   };
 
   const completeRequest = async () => {
-    if (!previewPayload) return;
+    if (!previewPayload) {
+      return;
+    }
 
     try {
       setBusyRequestId(previewPayload.request.labId);
@@ -359,107 +269,14 @@ export default function DashboardPage() {
     }
   };
 
-  const renderSelectedModal = () => {
-    if (!activeRequest || !activeCategory) return null;
-
-    if (activeCategory === "hematology") {
-      return (
-        <HematologyModal
-          initialValues={activeRequest.resultPayload}
-          onSubmit={handleSaveResults}
-          onCancel={closeModal}
-        />
-      );
-    }
-
-    if (activeCategory === "parasitology") {
-      return (
-        <ParasitologyModal
-          initialValues={activeRequest.resultPayload}
-          onSubmit={handleSaveResults}
-          onCancel={closeModal}
-        />
-      );
-    }
-
-    if (activeCategory === "urinalysis") {
-      return (
-        <UrinalysisModal
-          initialValues={activeRequest.resultPayload}
-          onSubmit={handleSaveResults}
-          onCancel={closeModal}
-        />
-      );
-    }
-
-    if (activeCategory === "clinical-chemistry") {
-      return (
-        <ClinicalChemistryModal
-          initialValues={activeRequest.resultPayload}
-          onSubmit={handleSaveResults}
-          onCancel={closeModal}
-        />
-      );
-    }
-
-    if (activeCategory === "serology") {
-      return (
-        <SerologyResultModal
-          initialValues={activeRequest.resultPayload}
-          onSubmit={handleSaveResults}
-          onCancel={closeModal}
-        />
-      );
-    }
-
-    if (activeCategory === "hba1c") {
-      return (
-        <HbAIcResultModal
-          initialValues={activeRequest.resultPayload}
-          onSubmit={handleSaveResults}
-          onCancel={closeModal}
-        />
-      );
-    }
-
-    if (activeCategory === "chemistry") {
-      return (
-        <ChemistryResultModal
-          initialValues={activeRequest.resultPayload}
-          onSubmit={handleSaveResults}
-          onCancel={closeModal}
-        />
-      );
-    }
-
-    if (activeCategory === "ogtt") {
-      return (
-        <OGTTResultModal
-          initialValues={activeRequest.resultPayload}
-          onSubmit={handleSaveResults}
-          onCancel={closeModal}
-        />
-      );
-    }
-
-    return (
-      <GeneralResultModal
-        testName={activeRequest.testType}
-        initialValues={activeRequest.resultPayload}
-        onSubmit={handleSaveResults}
-        onCancel={closeModal}
-      />
-    );
-  };
-
   return (
     <>
       {activeRequest && !previewPayload ? (
         <ModalHeader
           showModal={!!activeRequest}
-          title={`Laboratory Request - ${categoryLabels[activeCategory ?? "other"]}`}
-          subtitle={`${activeRequest.patientName} • ${activeRequest.testType}`}
-          meta={`${activeRequest.id} • ${activeRequest.patientId}`}
+          title={`Laboratory Request - ${activeTemplate?.label ?? "General Result"}`}
+          subtitle={`${activeRequest.patientName} - ${activeRequest.testType}`}
+          meta={`${activeRequest.id} - ${activeRequest.patientId}`}
           onClose={closeModal}
         >
           <div className="border-b border-[#d2ebe6] bg-[#f5fbfa] px-5 py-3">
@@ -467,7 +284,7 @@ export default function DashboardPage() {
               Requested by {activeRequest.requestedBy}
             </p>
             <p className="mt-1 text-xs font-medium text-[#2f5e57]">
-              {activeRequest.billingCode ?? "Billing not assigned"} •{" "}
+              {activeRequest.billingCode ?? "Billing not assigned"} -{" "}
               {activeRequest.isPaid
                 ? `Paid (${formatCurrency(activeRequest.billingTotal)})`
                 : `Unpaid (${formatCurrency(activeRequest.billingTotal)})`}
@@ -477,10 +294,17 @@ export default function DashboardPage() {
               {activeRequest.totalTests === 1 ? "" : "s"} completed for this patient request
             </p>
             {savingResults ? (
-              <p className="mt-2 text-xs font-medium text-[#2f5e57]">Saving encoded results...</p>
+              <p className="mt-2 text-xs font-medium text-[#2f5e57]">
+                Saving encoded results...
+              </p>
             ) : null}
           </div>
-          {renderSelectedModal()}
+
+          <LabResultEditor
+            request={activeRequest}
+            onSubmit={handleSaveResults}
+            onCancel={closeModal}
+          />
         </ModalHeader>
       ) : null}
 
@@ -489,12 +313,11 @@ export default function DashboardPage() {
           showModal={!!previewPayload}
           title={`Result Preview - ${previewPayload.request.patientName}`}
           subtitle={previewPayload.request.testType}
-          meta={`${previewPayload.request.id} • ${previewPayload.request.patientId}`}
+          meta={`${previewPayload.request.id} - ${previewPayload.request.patientId}`}
           onClose={closeModal}
         >
           <LabResultPreview
             request={previewPayload.request}
-            category={previewPayload.category}
             form={previewPayload.form}
             onBack={() => setPreviewPayload(null)}
             onPrint={completeRequest}
@@ -505,20 +328,23 @@ export default function DashboardPage() {
 
       <div className="min-h-full p-6 md:p-7">
         <div className="mx-auto max-w-7xl space-y-6">
-          {/* <div className="relative overflow-hidden rounded-2xl border border-[#84c7bb]/50 bg-gradient-to-r from-[#182955] via-[#2e4274] to-[#374b7e] p-5 text-white shadow-[0_18px_40px_rgba(8,31,28,0.25)] md:p-6"> */}
+          <section className="relative overflow-hidden rounded-3xl border border-[#84c7bb]/50 bg-gradient-to-r from-[#182955] via-[#2e4274] to-[#374b7e] p-5 text-white shadow-[0_18px_40px_rgba(8,31,28,0.25)] md:p-6">
             <div className="absolute -top-10 right-10 h-36 w-36 rounded-full bg-[#7bd9c3]/20 blur-3xl" />
             <div className="absolute -bottom-10 left-14 h-32 w-32 rounded-full bg-[#ffffff]/10 blur-3xl" />
             <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              {/* <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-white/75">Laboratory Operations</p>
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-white/75">
+                  Laboratory Operations
+                </p>
                 <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">
                   Laboratory Dashboard
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm text-white/75">
-                  Each requested test now appears as its own laboratory entry, while the patient
-                  request only moves to completed when every requested test is finished.
+                  Each requested test stays visible on its own queue entry, while the patient
+                  request is only marked done once every requested test has been completed.
                 </p>
-              </div> */}
+              </div>
+
               <div className="rounded-xl border border-white/25 bg-white/10 px-4 py-3 backdrop-blur-sm">
                 <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <BellRing size={16} className="text-[#c8ffe8]" />
@@ -526,9 +352,9 @@ export default function DashboardPage() {
                     {queued.length} queued test {queued.length === 1 ? "entry" : "entries"}
                   </span>
                 </div>
-              {/* </div> */}
+              </div>
             </div>
-          </div>
+          </section>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
@@ -614,7 +440,7 @@ export default function DashboardPage() {
                           </div>
                           <p className="text-sm font-semibold text-[#173f39]">{item.patientName}</p>
                           <p className="text-xs text-[#577d76]">
-                            {item.patientId} • Current Test: {item.testType}
+                            {item.patientId} - Current Test: {item.testType}
                           </p>
                           <p className="text-xs text-[#6f948d]">
                             Completed: {formatList(item.completedTests)}
@@ -664,34 +490,43 @@ export default function DashboardPage() {
                       No pending requests.
                     </div>
                   ) : (
-                    pending.map((item) => (
-                      <div key={item.labId} className="rounded-xl border border-[#d5ebe6] bg-[#fbfefe] p-3.5">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold text-[#173f39]">{item.patientName}</p>
-                            <p className="text-xs text-[#63867f]">
-                              {item.testType} • {categoryLabels[resolveCategory(item)]}
-                            </p>
-                            <p className="text-xs text-[#6f948d]">
-                              Done: {item.completedCount} / {item.totalTests}
-                            </p>
-                          </div>
-                          <span className="rounded-md bg-[#ecf6f4] px-2 py-1 text-[11px] font-medium text-[#396f66]">
-                            {item.id}
-                          </span>
-                        </div>
+                    pending.map((item) => {
+                      const template = resolveLabTemplate(item);
 
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            onClick={() => openModal(item)}
-                            className="min-w-[150px]"
-                          >
-                            {resolveCategory(item) === "other" ? "Update Result" : "Encode Result"}
-                          </Button>
+                      return (
+                        <div
+                          key={item.labId}
+                          className="rounded-xl border border-[#d5ebe6] bg-[#fbfefe] p-3.5"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <p className="text-sm font-semibold text-[#173f39]">
+                                {item.patientName}
+                              </p>
+                              <p className="text-xs text-[#63867f]">
+                                {item.testType} - {getLabTemplateLabel(item)}
+                              </p>
+                              <p className="text-xs text-[#6f948d]">
+                                Done: {item.completedCount} / {item.totalTests}
+                              </p>
+                            </div>
+                            <span className="rounded-md bg-[#ecf6f4] px-2 py-1 text-[11px] font-medium text-[#396f66]">
+                              {item.id}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              onClick={() => openModal(item)}
+                              className="min-w-[150px]"
+                            >
+                              {template.key === "general" ? "Update Result" : "Encode Result"}
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -705,7 +540,10 @@ export default function DashboardPage() {
                       <span>{acceptanceRate}%</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-[#e3f3ef]">
-                      <div className="h-full rounded-full bg-[#152859]" style={{ width: `${acceptanceRate}%` }} />
+                      <div
+                        className="h-full rounded-full bg-[#152859]"
+                        style={{ width: `${acceptanceRate}%` }}
+                      />
                     </div>
                   </div>
                   <div>
@@ -714,7 +552,10 @@ export default function DashboardPage() {
                       <span>{completionRate}%</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-[#e3f3ef]">
-                      <div className="h-full rounded-full bg-[#152859]" style={{ width: `${completionRate}%` }} />
+                      <div
+                        className="h-full rounded-full bg-[#152859]"
+                        style={{ width: `${completionRate}%` }}
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 pt-1">
@@ -723,7 +564,9 @@ export default function DashboardPage() {
                         <UserRound size={14} />
                         <span className="text-xs font-medium">Patient Requests</span>
                       </div>
-                      <p className="mt-2 text-xl font-bold text-[#143a35]">{requestPreviews.length}</p>
+                      <p className="mt-2 text-xl font-bold text-[#143a35]">
+                        {requestPreviews.length}
+                      </p>
                     </div>
                     <div className="rounded-lg bg-[#f4faf8] p-3">
                       <div className="flex items-center gap-2 text-[#326a61]">
@@ -762,7 +605,10 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 requestPreviews.map((request) => (
-                  <div key={request.requestId} className="rounded-2xl border border-[#d5ebe6] bg-[#fbfefe] p-4">
+                  <div
+                    key={request.requestId}
+                    className="rounded-2xl border border-[#d5ebe6] bg-[#fbfefe] p-4"
+                  >
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -774,12 +620,14 @@ export default function DashboardPage() {
                               request.requestStatus
                             )}`}
                           >
-                            {request.requestStatus === "done" ? "All Tests Done" : request.requestStatus}
+                            {request.requestStatus === "done"
+                              ? "All Tests Done"
+                              : request.requestStatus}
                           </span>
                         </div>
                         <p className="text-base font-semibold text-[#173f39]">{request.patientName}</p>
                         <p className="text-xs text-[#63867f]">
-                          {request.patientId} • Requested by {request.requestedBy}
+                          {request.patientId} - Requested by {request.requestedBy}
                         </p>
                       </div>
 

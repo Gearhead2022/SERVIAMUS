@@ -2,11 +2,13 @@ import api from "./axios";
 import {
   CreateLabRequestPayload,
   LabRequest,
+  LabTestCatalogItem,
   PatientRecord,
   RequestStatus,
   SaveLabResultPayload,
   SearchPatientResult,
 } from "@/types/LabTypes";
+import { normalizeLabPayload } from "@/utils/lab";
 
 type LabRequestApiResponse = LabRequest;
 
@@ -21,6 +23,7 @@ const toFrontendRequest = (item: LabRequestApiResponse): LabRequest => {
       hour12: true,
     }),
     requestedDate: requestedAtDate.toISOString(),
+    resultPayload: normalizeLabPayload(item.resultPayload),
   };
 };
 
@@ -49,6 +52,11 @@ export const fetchLabRequests = async () => {
   const res = await api.get("/api/lab/requests");
   const items = (res.data.data ?? []) as LabRequestApiResponse[];
   return items.map(toFrontendRequest);
+};
+
+export const fetchLabTests = async () => {
+  const res = await api.get("/api/lab/tests");
+  return (res.data.data ?? []) as LabTestCatalogItem[];
 };
 
 export const updateLabRequestStatus = async (labId: number, status: RequestStatus) => {

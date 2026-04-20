@@ -1,19 +1,26 @@
-import { Prisma } from "@prisma/client";
+import { LaboratoryCategory, Prisma } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
+import { LabModuleError } from "./lab.errors";
 import { CreateLabRequestInput, SaveLabResultInput } from "./lab.types";
 import { createLaboratoryRequestWithItems } from "./lab.helpers";
 import { upsertStructuredLabResult } from "./lab.result-writers";
 import {
   normalizeLabForm,
   requestStatusFromItemStatuses,
+  resolveApiLabCategory,
   serializeLabResultPayload,
   splitLabTests,
-  toApiLabCategory,
   toApiLabStatus,
-  toDbLabCategory,
   toDbLabStatus,
   toSchemaKey,
 } from "./lab.utils";
+
+type LabCatalogItem = {
+  test_id: number;
+  name: string;
+  category: LaboratoryCategory;
+  schema_key: string | null;
+};
 
 type RawPatientRow = {
   patient_id: number;
@@ -102,11 +109,32 @@ const normalizeRequestedBy = (value?: string | null) => {
   return trimmed ? trimmed : null;
 };
 
+const parseRequestedDate = (value?: string) => {
+  if (!value) {
+    return new Date();
+  }
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    throw new LabModuleError("Requested date is invalid.", 400);
+  }
+
+  return parsedDate;
+};
+
+const ensurePaidBilling = (isPaid: boolean, message: string) => {
+  if (!isPaid) {
+    throw new LabModuleError(message, 409);
+  }
+};
+
 const toDisplayItem = (
   record: LabRequestRecord,
   item: LabRequestRecord["items"][number]
 ) => {
   const latestPayment = record.request.billing?.payments[0] ?? null;
+  const isPaid = record.request.billing?.status === "DONE";
 
   const completedTests = record.items
     .filter((entry) => entry.status === "DONE")
@@ -137,11 +165,15 @@ const toDisplayItem = (
     requestStatus: toApiLabStatus(requestStatus),
     status: toApiLabStatus(item.status),
     billingCode: record.request.billing?.billing_code ?? null,
-    billingStatus: record.request.billing?.status === "DONE" ? "paid" : "unpaid",
+    billingStatus: isPaid ? "paid" : "unpaid",
     billingTotal: record.request.billing ? Number(record.request.billing.total_price) : 0,
-    isPaid: record.request.billing?.status === "DONE",
+    isPaid,
     paidAt: latestPayment?.payment_date?.toISOString() ?? null,
-    category: toApiLabCategory(item.test.category),
+    category: resolveApiLabCategory({
+      category: item.test.category,
+      schemaKey: item.test.schema_key,
+      testName: item.test.name,
+    }),
     schemaKey: item.test.schema_key,
     tests: record.items.map((entry) => entry.test.name),
     testType: item.test.name,
@@ -182,13 +214,13 @@ const getDisplayItemById = async (tx: Prisma.TransactionClient, labId: number) =
   });
 
   if (!record) {
-    throw new Error("Lab request not found.");
+    throw new LabModuleError("Lab request not found.", 404);
   }
 
   const item = record.items.find((entry) => entry.item_id === labId);
 
   if (!item) {
-    throw new Error("Lab request item not found.");
+    throw new LabModuleError("Lab request item not found.", 404);
   }
 
   return toDisplayItem(record, item);
@@ -211,7 +243,7 @@ const syncParentRequestStatus = async (
   });
 
   if (!parentRequest) {
-    throw new Error("Lab request not found.");
+    throw new LabModuleError("Lab request not found.", 404);
   }
 
   await tx.request.update({
@@ -234,6 +266,71 @@ export const getAllUsersService = async () => {
       },
     },
   });
+};
+
+const getCatalogPreferenceScore = (item: LabCatalogItem) => {
+  const normalizedName = item.name.trim().toLowerCase();
+
+  if (item.schema_key === "onehOGTT" && normalizedName.includes("1h")) {
+    return 100;
+  }
+
+  if (item.schema_key === "twohOGTT" && normalizedName.includes("2h")) {
+    return 100;
+  }
+
+  if (item.schema_key === "OGTT" && normalizedName === "ogtt") {
+    return 100;
+  }
+
+  return normalizedName.length > 4 ? 10 : 0;
+};
+
+export const getLabTestsService = async () => {
+  const tests = await prisma.laboratoryTest.findMany({
+    select: {
+      test_id: true,
+      name: true,
+      category: true,
+      schema_key: true,
+    },
+    orderBy: [{ name: "asc" }, { test_id: "asc" }],
+  });
+
+  const groupedByKey = new Map<string, LabCatalogItem[]>();
+
+  tests.forEach((test) => {
+    const groupingKey = test.schema_key?.trim() || test.name.trim().toLowerCase();
+    const currentGroup = groupedByKey.get(groupingKey) ?? [];
+    currentGroup.push(test);
+    groupedByKey.set(groupingKey, currentGroup);
+  });
+
+  return Array.from(groupedByKey.values())
+    .map((group) =>
+      [...group].sort((left, right) => {
+        const scoreDiff =
+          getCatalogPreferenceScore(right) - getCatalogPreferenceScore(left);
+
+        if (scoreDiff !== 0) {
+          return scoreDiff;
+        }
+
+        return left.name.localeCompare(right.name);
+      })[0]
+    )
+    .map((test) => ({
+      testId: test.test_id,
+      name: test.name,
+      displayName: test.name,
+      category: resolveApiLabCategory({
+        category: test.category,
+        schemaKey: test.schema_key,
+        testName: test.name,
+      }),
+      schemaKey: test.schema_key,
+    }))
+    .sort((left, right) => left.displayName.localeCompare(right.displayName));
 };
 
 export const searchPatientsService = async (search?: string) => {
@@ -320,7 +417,7 @@ export const createLabRequestService = async ({
     const normalizedTests = splitLabTests(tests.join(", "));
 
     if (!normalizedTests.length) {
-      throw new Error("At least one laboratory test is required.");
+      throw new LabModuleError("At least one laboratory test is required.", 400);
     }
 
     const patient = await tx.patients.findUnique({
@@ -329,18 +426,19 @@ export const createLabRequestService = async ({
     });
 
     if (!patient) {
-      throw new Error("Selected patient was not found.");
+      throw new LabModuleError("Selected patient was not found.", 404);
     }
 
     const finalRequestedBy =
       normalizeRequestedBy(requestedBy) ?? (await getUserName(tx, userId));
+    const resolvedRequestedDate = parseRequestedDate(requestedDate);
 
     const request = await tx.request.create({
       data: {
         patient_id: patientId,
         req_type: "LABORATORY",
         status: "WAITING",
-        req_date: requestedDate ? new Date(requestedDate) : new Date(),
+        req_date: resolvedRequestedDate,
       },
     });
 
@@ -395,6 +493,8 @@ export const updateLabRequestStatusService = async (
         item_id: true,
         laboratory_request_id: true,
         processed_by: true,
+        status: true,
+        result_payload: true,
         laboratoryRequest: {
           select: {
             request: {
@@ -412,17 +512,30 @@ export const updateLabRequestStatusService = async (
     });
 
     if (!existingItem) {
-      throw new Error("Lab request item not found.");
+      throw new LabModuleError("Lab request item not found.", 404);
     }
 
     const dbStatus = toDbLabStatus(status);
+    const isBillingPaid = existingItem.laboratoryRequest.request.billing?.status === "DONE";
 
-    if (
-      dbStatus === "PROCESSING" &&
-      existingItem.laboratoryRequest.request.billing?.status !== "DONE"
-    ) {
-      throw new Error(
-        "Patient billing must be paid before this request can be accepted in the laboratory queue."
+    if (dbStatus !== "QUEUED") {
+      ensurePaidBilling(
+        isBillingPaid,
+        "Patient billing must be paid before this request can move forward in the laboratory."
+      );
+    }
+
+    if (dbStatus === "DONE" && existingItem.status === "QUEUED") {
+      throw new LabModuleError(
+        "Accept the laboratory request before marking it as completed.",
+        409
+      );
+    }
+
+    if (dbStatus === "DONE" && !existingItem.result_payload) {
+      throw new LabModuleError(
+        "Save laboratory results before marking this request as completed.",
+        409
       );
     }
 
@@ -469,6 +582,11 @@ export const saveLabResultService = async ({
             request: {
               select: {
                 patient_id: true,
+                billing: {
+                  select: {
+                    status: true,
+                  },
+                },
               },
             },
           },
@@ -477,16 +595,29 @@ export const saveLabResultService = async ({
     });
 
     if (!existingItem) {
-      throw new Error("Lab request item not found.");
+      throw new LabModuleError("Lab request item not found.", 404);
     }
 
-    await tx.laboratoryTest.update({
-      where: { test_id: existingItem.test_id },
-      data: {
-        category: toDbLabCategory(category),
-        schema_key: toSchemaKey(existingItem.test.name),
-      },
-    });
+    ensurePaidBilling(
+      existingItem.laboratoryRequest.request.billing?.status === "DONE",
+      "Patient billing must be paid before laboratory results can be encoded."
+    );
+
+    if (existingItem.status === "QUEUED") {
+      throw new LabModuleError(
+        "Accept the laboratory request before encoding results.",
+        409
+      );
+    }
+
+    if (!existingItem.test.schema_key) {
+      await tx.laboratoryTest.update({
+        where: { test_id: existingItem.test_id },
+        data: {
+          schema_key: toSchemaKey(existingItem.test.name),
+        },
+      });
+    }
 
     await tx.laboratoryRequestItem.updateMany({
       where: { item_id: labId },

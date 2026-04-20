@@ -9,9 +9,11 @@ import {
   ParasitologyFormValues,
   parasitologySchema,
 } from "@/schemas/lab.schema";
+import { LabResultPayload } from "@/types/LabTypes";
+import { mergeLabFormDefaults } from "@/utils/lab";
 
 type Props = {
-  initialValues?: Partial<ParasitologyFormValues> | null;
+  initialValues?: LabResultPayload | null;
   onSubmit: (form: ParasitologyFormValues) => void;
   onCancel: () => void;
 };
@@ -27,10 +29,16 @@ export default function ParasitologyModal({
     formState: { errors },
   } = useForm<ParasitologyFormValues>({
     resolver: zodResolver(parasitologySchema),
-    defaultValues: {
-      ...parasitologyDefaultValues,
-      ...(initialValues ?? {}),
-    },
+    defaultValues: mergeLabFormDefaults(
+      parasitologyDefaultValues,
+      initialValues
+        ? {
+            ...initialValues,
+            time_received:
+              initialValues.time_received ?? initialValues.time_recieved,
+          }
+        : initialValues
+    ),
   });
 
   return (
@@ -46,7 +54,7 @@ export default function ParasitologyModal({
         <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           {[
             { label: "Time Collected", name: "time_collected" },
-            { label: "Time Received", name: "time_recieved" },
+            { label: "Time Received", name: "time_received" },
             { label: "Color", name: "color" },
             { label: "Consistency", name: "consistency" },
           ].map(({ label, name }) => (
@@ -63,7 +71,7 @@ export default function ParasitologyModal({
 
       <div>
         <div className="mb-2 flex items-center gap-2">
-          <div className="h-4 w-1 shrink-0 rounded-full bg-#23324a-600" />
+          <div className="h-4 w-1 shrink-0 rounded-full bg-teal-600" />
           <h6 className="text-xs font-bold uppercase tracking-widest text-teal-700">
             Microscopic Findings
           </h6>

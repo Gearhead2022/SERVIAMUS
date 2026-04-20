@@ -5,6 +5,7 @@ import {
   toNullableDate,
   trimFormValue,
 } from "./lab.utils";
+import type { LabResultPayload } from "./lab.types";
 
 type UpsertStructuredLabResultInput = {
   tx: Prisma.TransactionClient;
@@ -12,7 +13,7 @@ type UpsertStructuredLabResultInput = {
   labId: number;
   testName: string;
   schemaKey?: string | null;
-  form: Record<string, string>;
+  form: LabResultPayload;
   medTechUserId?: number | null;
   pathologistUserId?: number | null;
 };
@@ -27,14 +28,36 @@ const resultAuditFields = (
 });
 
 const knownSchemaKeys = new Set<LabSchemaKey>([
+  "CBC",
+  "BT",
   "hematology",
+  "dengue",
+  "hbsag",
+  "syphilis",
+  "serumPT",
+  "urinePT",
   "serology",
   "parasitology",
   "urinalysis",
+  "FBS",
+  "RBS",
+  "BUN",
+  "uricacid",
+  "totalcholesterol",
+  "HDL",
+  "LDL",
+  "triglycerides",
+  "SGPT",
   "clinical_chemistry",
   "hba1c",
+  "sodium",
+  "potassium",
   "chemistry",
+  "OGTT",
+  "onehOGTT",
+  "twohOGTT",
   "ogtt",
+  "FOBT",
   "general",
 ]);
 
@@ -53,7 +76,7 @@ export const upsertStructuredLabResult = async ({
       ? (schemaKey as LabSchemaKey)
       : resolveLabSchemaKey(testName);
 
-  if (resolvedSchemaKey === "hematology") {
+  if (resolvedSchemaKey === "CBC" || resolvedSchemaKey === "BT" || resolvedSchemaKey === "hematology") {
     const data = {
       patient_id: patientId,
       hemoglobin: trimFormValue(form, "Hemoglobin", "hemoglobin"),
@@ -92,7 +115,14 @@ export const upsertStructuredLabResult = async ({
     return;
   }
 
-  if (resolvedSchemaKey === "serology") {
+  if (
+    resolvedSchemaKey === "dengue" ||
+    resolvedSchemaKey === "hbsag" ||
+    resolvedSchemaKey === "syphilis" ||
+    resolvedSchemaKey === "serumPT" ||
+    resolvedSchemaKey === "urinePT" ||
+    resolvedSchemaKey === "serology"
+  ) {
     const data = {
       patient_id: patientId,
       test_name: trimFormValue(form, "test", "test_name") ?? testName,
@@ -186,7 +216,18 @@ export const upsertStructuredLabResult = async ({
     return;
   }
 
-  if (resolvedSchemaKey === "clinical_chemistry") {
+  if (
+    resolvedSchemaKey === "FBS" ||
+    resolvedSchemaKey === "RBS" ||
+    resolvedSchemaKey === "BUN" ||
+    resolvedSchemaKey === "uricacid" ||
+    resolvedSchemaKey === "totalcholesterol" ||
+    resolvedSchemaKey === "HDL" ||
+    resolvedSchemaKey === "LDL" ||
+    resolvedSchemaKey === "triglycerides" ||
+    resolvedSchemaKey === "SGPT" ||
+    resolvedSchemaKey === "clinical_chemistry"
+  ) {
     const data = {
       patient_id: patientId,
       fbs: trimFormValue(form, "FBS", "fbs"),
@@ -249,7 +290,11 @@ export const upsertStructuredLabResult = async ({
     return;
   }
 
-  if (resolvedSchemaKey === "chemistry") {
+  if (
+    resolvedSchemaKey === "sodium" ||
+    resolvedSchemaKey === "potassium" ||
+    resolvedSchemaKey === "chemistry"
+  ) {
     const data = {
       patient_id: patientId,
       sodium: trimFormValue(form, "sodium"),
@@ -272,10 +317,21 @@ export const upsertStructuredLabResult = async ({
     return;
   }
 
-  if (resolvedSchemaKey === "ogtt") {
+  if (
+    resolvedSchemaKey === "OGTT" ||
+    resolvedSchemaKey === "onehOGTT" ||
+    resolvedSchemaKey === "twohOGTT" ||
+    resolvedSchemaKey === "ogtt"
+  ) {
     const data = {
       patient_id: patientId,
-      test_type: trimFormValue(form, "test_type") ?? "OGTT",
+      test_type:
+        trimFormValue(form, "test_type") ??
+        (resolvedSchemaKey === "onehOGTT"
+          ? "1H-OGTT"
+          : resolvedSchemaKey === "twohOGTT"
+            ? "2H-OGTT"
+            : "OGTT"),
       fbs: trimFormValue(form, "FBS", "fbs"),
       fbs_conv: trimFormValue(form, "FBS_conv", "fbs_conv"),
       one_hour_after_load: trimFormValue(form, "onehagl", "one_hour_after_load"),

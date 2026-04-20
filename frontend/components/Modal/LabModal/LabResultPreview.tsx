@@ -3,51 +3,33 @@
 import Image from "next/image";
 import { useRef, type ReactNode } from "react";
 import Button from "@/components/ui/Button";
+import { LabRequest, LabResultPayload } from "@/types/LabTypes";
 import {
-  DashboardLabType,
-  LabRequest,
-  LabResultPayload,
-} from "@/types/LabTypes";
+  formatLabResultValue,
+  hasDisplayableLabResultValue,
+} from "@/utils/lab";
+import { resolveLabTemplate } from "@/utils/lab-templates";
 
 type Props = {
   request: LabRequest;
-  category: DashboardLabType;
   form: LabResultPayload;
   onBack: () => void;
   onPrint: () => void;
   onPassToDoctor: () => void;
 };
 
-type PreviewLabRequest = LabRequest & {
-  Age?: string;
-  Address?: string;
-  Requestedby?: string;
-  requested_by?: string;
-  Sex?: string;
-};
-
-function getValue(form: LabResultPayload, key: string, fallback = "__________________") {
-  const value = form[key];
-  return typeof value === "string" && value.trim() ? value.trim() : fallback;
-}
-
-function getRequestValue(value?: string, fallback = "__________________") {
-  if (!value?.trim()) return fallback;
-  return value
-    .trim()
-    .replace(/ï¼š/g, ":")
-    .replace(/â€¢/g, "•");
-}
-
-function pickRequestValue(
-  request: PreviewLabRequest,
-  keys: Array<keyof PreviewLabRequest>,
+function getValue(
+  form: LabResultPayload,
+  keys: string | string[],
   fallback = "__________________"
 ) {
-  for (const key of keys) {
-    const value = request[key];
-    if (typeof value === "string" && value.trim()) {
-      return getRequestValue(value, fallback);
+  const valueKeys = Array.isArray(keys) ? keys : [keys];
+
+  for (const key of valueKeys) {
+    const value = form[key];
+
+    if (hasDisplayableLabResultValue(value)) {
+      return formatLabResultValue(value, fallback);
     }
   }
 
@@ -57,16 +39,12 @@ function pickRequestValue(
 function PreviewField({ label, value }: { label: string; value: string }) {
   return (
     <div className="result-field">
-      <p className="result-label text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">{label}</p>
+      <p className="result-label text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+        {label}
+      </p>
       <p className="result-value mt-1 text-sm text-slate-700">{value}</p>
     </div>
   );
-}
-
-function formatLabel(key: string) {
-  return key
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function PreviewShell({ title, children }: { title: string; children: ReactNode }) {
@@ -93,7 +71,9 @@ function PreviewShell({ title, children }: { title: string; children: ReactNode 
             </p>
           </div>
         </div>
-        <h2 className="result-department mt-2 text-center font-semibold tracking-[0.3em] text-amber-600">{title}</h2>
+        <h2 className="result-department mt-2 text-center font-semibold tracking-[0.3em] text-amber-600">
+          {title}
+        </h2>
       </header>
       {children}
       <footer className="result-footer mt-8 flex justify-between gap-6 border-t border-slate-200 pt-5 text-xs">
@@ -110,38 +90,46 @@ function PreviewShell({ title, children }: { title: string; children: ReactNode 
   );
 }
 
-function PatientBlock({ request }: { request: PreviewLabRequest }) {
+function PatientBlock({ request }: { request: LabRequest }) {
   return (
     <div className="result-patient mt-4 space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <PreviewField label="Name" value={getRequestValue(request.patientName)} />
+        <PreviewField label="Name" value={request.patientName} />
         <PreviewField label="Date" value={new Date().toLocaleDateString("en-CA")} />
-        <PreviewField label="Age" value={pickRequestValue(request, ["age", "Age"], "______")} />
-        <PreviewField label="Sex" value={pickRequestValue(request, ["Sex", "sex"], "______")} />
-        <PreviewField
-          label="Requested By"
-          value={pickRequestValue(request, ["Requestedby", "requestedBy", "requested_by"])}
-        />
+        <PreviewField label="Age" value={request.age || "______"} />
+        <PreviewField label="Sex" value={request.sex || "______"} />
+        <PreviewField label="Requested By" value={request.requestedBy || "__________________"} />
+        <PreviewField label="Patient ID" value={request.patientId} />
       </div>
       <div className="grid grid-cols-1 gap-3">
-        <PreviewField label="Address" value={pickRequestValue(request, ["address", "Address"])} />
+        <PreviewField label="Address" value={request.address || "__________________"} />
       </div>
     </div>
   );
 }
 
-function HematologyTemplate({
-  request,
-  form,
+function Section({
+  children,
+  title,
 }: {
-  request: PreviewLabRequest;
-  form: LabResultPayload;
+  children: ReactNode;
+  title: string;
 }) {
+  return (
+    <section className="mt-5">
+      <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function CbcPreview({ request, form }: { request: LabRequest; form: LabResultPayload }) {
   return (
     <PreviewShell title="HEMATOLOGY">
       <PatientBlock request={request} />
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">CBC</h3>
+      <Section title="COMPLETE BLOOD COUNT">
         <div className="result-grid mt-3 grid grid-cols-2 gap-3">
           <PreviewField label="Hemoglobin" value={getValue(form, "Hemoglobin")} />
           <PreviewField label="RBC Count" value={getValue(form, "rbc_count")} />
@@ -151,9 +139,8 @@ function HematologyTemplate({
           <PreviewField label="MCHC" value={getValue(form, "mchc")} />
           <PreviewField label="Reticulocyte Count" value={getValue(form, "reticulocyte_count")} />
         </div>
-      </section>
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">DIFFERENTIAL COUNT</h3>
+      </Section>
+      <Section title="DIFFERENTIAL COUNT">
         <div className="result-grid mt-3 grid grid-cols-2 gap-3">
           <PreviewField label="Neutrophils (Seg)" value={getValue(form, "nss_1")} />
           <PreviewField label="Neutrophils (Stab)" value={getValue(form, "nss_2")} />
@@ -162,77 +149,92 @@ function HematologyTemplate({
           <PreviewField label="Monocytes" value={getValue(form, "monocytes")} />
           <PreviewField label="Eosinophils" value={getValue(form, "eosinophils")} />
           <PreviewField label="Basophils" value={getValue(form, "basophils")} />
-          <PreviewField label="Others" value={getValue(form, "others1")} />
+          <PreviewField label="Remarks" value={getValue(form, "others1", "No additional remarks")} />
         </div>
-      </section>
-      <section className="result-two-column mt-5 grid gap-5 sm:grid-cols-2">
-        <div>
-          <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">CLOTTING STUDIES</h3>
-          <div className="result-stack mt-3 grid gap-3">
-            <PreviewField label="Clotting Time" value={getValue(form, "clotting_time")} />
-            <PreviewField label="Bleeding Time" value={getValue(form, "bleeding_time")} />
-          </div>
-        </div>
-        <div>
-          <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">BLOOD TYPING</h3>
-          <div className="result-stack mt-3 grid gap-3">
-            <PreviewField label="ABO Type" value={getValue(form, "abo_type")} />
-            <PreviewField label="Rh Type" value={getValue(form, "rh_type")} />
-          </div>
-        </div>
-      </section>
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">REMARKS</h3>
-        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">{getValue(form, "others2", "No additional remarks")}</p>
-      </section>
+      </Section>
+      <Section title="FINAL REMARKS">
+        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
+          {getValue(form, "others2", "No additional remarks")}
+        </p>
+      </Section>
     </PreviewShell>
   );
 }
 
-function ParasitologyTemplate({
+function BloodTypingPreview({
   request,
   form,
 }: {
-  request: PreviewLabRequest;
+  request: LabRequest;
+  form: LabResultPayload;
+}) {
+  return (
+    <PreviewShell title="BLOOD TYPING">
+      <PatientBlock request={request} />
+      <Section title="RESULT">
+        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
+          <PreviewField label="ABO Type" value={getValue(form, "abo_type")} />
+          <PreviewField label="Rh Type" value={getValue(form, "rh_type")} />
+        </div>
+      </Section>
+      <Section title="REMARKS">
+        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
+          {getValue(form, "others2", "No additional remarks")}
+        </p>
+      </Section>
+    </PreviewShell>
+  );
+}
+
+function ParasitologyPreview({
+  request,
+  form,
+}: {
+  request: LabRequest;
   form: LabResultPayload;
 }) {
   return (
     <PreviewShell title="PARASITOLOGY">
       <PatientBlock request={request} />
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">MACROSCOPIC</h3>
+      <Section title="MACROSCOPIC">
         <div className="result-grid mt-3 grid grid-cols-2 gap-3">
           <PreviewField label="Color" value={getValue(form, "color")} />
-          <PreviewField label="Time Collected" value={getValue(form, "time_collected")} />
+          <PreviewField
+            label="Time Collected"
+            value={getValue(form, "time_collected")}
+          />
           <PreviewField label="Consistency" value={getValue(form, "consistency")} />
-          <PreviewField label="Time Received" value={getValue(form, "time_recieved")} />
+          <PreviewField
+            label="Time Received"
+            value={getValue(form, ["time_received", "time_recieved"])}
+          />
         </div>
-      </section>
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">MICROSCOPIC</h3>
-        <div className="result-grid mt-9 grid grid-cols-2 gap-3">
+      </Section>
+      <Section title="MICROSCOPIC">
+        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
           <PreviewField label="Pus Cells" value={`${getValue(form, "pus_cells", "____")} /HPF`} />
           <PreviewField label="RBC" value={`${getValue(form, "rbc", "____")} /HPF`} />
           <PreviewField label="Bacteria" value={`${getValue(form, "bacteria", "____")} /HPF`} />
         </div>
-      </section>
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">PARASITES</h3>
+      </Section>
+      <Section title="PARASITES">
         <div className="result-grid mt-3 grid gap-2 sm:grid-cols-2">
           <PreviewField label="Hookworm" value={`${getValue(form, "hookworm", "____")} /smear`} />
-          <PreviewField label="Ascaris lumbricoides" value={`${getValue(form, "ascaris", "____")} /smear`} />
-          <PreviewField label="Trichuris trichiura" value={`${getValue(form, "trichuris", "____")} /smear`} />
+          <PreviewField label="Ascaris" value={`${getValue(form, "ascaris", "____")} /smear`} />
+          <PreviewField label="Trichuris" value={`${getValue(form, "trichuris", "____")} /smear`} />
           <PreviewField label="Strongyloides" value={`${getValue(form, "strongloides", "____")} /smear`} />
         </div>
-      </section>
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">AMOEBA</h3>
+      </Section>
+      <Section title="AMOEBA">
         <div className="result-two-column mt-3 grid gap-4 sm:grid-cols-2">
           <div className="result-card rounded-2xl border border-slate-200 p-4">
             <p className="font-semibold text-slate-700">Entamoeba histolytica</p>
             <div className="result-stack mt-3 grid gap-3">
               <PreviewField label="Cyst" value={`${getValue(form, "histolytica_cyst", "____")} /HPF`} />
-              <PreviewField label="Trophozoite" value={`${getValue(form, "histolytica_trophozoite", "____")} /HPF`} />
+              <PreviewField
+                label="Trophozoite"
+                value={`${getValue(form, "histolytica_trophozoite", "____")} /HPF`}
+              />
             </div>
           </div>
           <div className="result-card rounded-2xl border border-slate-200 p-4">
@@ -243,34 +245,33 @@ function ParasitologyTemplate({
             </div>
           </div>
         </div>
-      </section>
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">REMARKS</h3>
-        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">{getValue(form, "others", "NO INTESTINAL PARASITE SEEN IN DIRECT FECAL SMEAR")}</p>
-      </section>
+      </Section>
+      <Section title="REMARKS">
+        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
+          {getValue(form, "others", "No intestinal parasite seen in direct fecal smear")}
+        </p>
+      </Section>
     </PreviewShell>
   );
 }
 
-function UrinalysisTemplate({
+function UrinalysisPreview({
   request,
   form,
 }: {
-  request: PreviewLabRequest;
+  request: LabRequest;
   form: LabResultPayload;
 }) {
   return (
     <PreviewShell title="URINALYSIS">
       <PatientBlock request={request} />
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">PHYSICAL EXAMINATION</h3>
+      <Section title="PHYSICAL EXAMINATION">
         <div className="result-grid mt-3 grid grid-cols-2 gap-3">
           <PreviewField label="Color" value={getValue(form, "color")} />
           <PreviewField label="Transparency" value={getValue(form, "transparency")} />
         </div>
-      </section>
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">CHEMICAL EXAMINATION</h3>
+      </Section>
+      <Section title="CHEMICAL EXAMINATION">
         <div className="result-grid mt-3 grid grid-cols-2 gap-3">
           <PreviewField label="pH" value={getValue(form, "ph_result")} />
           <PreviewField label="Specific Gravity" value={getValue(form, "spec_grav_result")} />
@@ -281,9 +282,8 @@ function UrinalysisTemplate({
           <PreviewField label="Leukocytes" value={getValue(form, "leukocytes")} />
           <PreviewField label="Blood" value={getValue(form, "blood")} />
         </div>
-      </section>
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">MICROSCOPIC EXAMINATION</h3>
+      </Section>
+      <Section title="MICROSCOPIC EXAMINATION">
         <div className="result-grid mt-3 grid grid-cols-2 gap-3">
           <PreviewField label="Pus Cells" value={getValue(form, "pus_cells")} />
           <PreviewField label="RBC" value={getValue(form, "rbc")} />
@@ -294,23 +294,24 @@ function UrinalysisTemplate({
           <PreviewField label="Crystals" value={getValue(form, "crystals")} />
           <PreviewField label="Casts" value={getValue(form, "casts")} />
         </div>
-      </section>
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">REMARKS</h3>
-        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">{getValue(form, "others", "No additional remarks")}</p>
-      </section>
+      </Section>
+      <Section title="REMARKS">
+        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
+          {getValue(form, "others", "No additional remarks")}
+        </p>
+      </Section>
     </PreviewShell>
   );
 }
 
-function ClinicalChemistryTemplate({
+function ClinicalChemistryPreview({
   request,
   form,
 }: {
-  request: PreviewLabRequest;
+  request: LabRequest;
   form: LabResultPayload;
 }) {
-  const rows: Array<[string, string, string]> = [
+  const rows: Array<[string, string, string?]> = [
     ["FBS", "FBS", "FBS_conv"],
     ["RBS", "RBS", "RBS_conv"],
     ["BUN", "BUN", "BUN_conv"],
@@ -320,14 +321,13 @@ function ClinicalChemistryTemplate({
     ["HDL Cholesterol", "hdl_cholesterol", "hdl_cholesterol_conv"],
     ["LDL Cholesterol", "ldl_cholesterol", "ldl_cholesterol_conv"],
     ["Triglycerides", "triglycerides", "triglycerides_conv"],
-    ["SGPT", "sgpt", ""],
+    ["SGPT", "sgpt"],
   ];
 
   return (
     <PreviewShell title="CLINICAL CHEMISTRY">
       <PatientBlock request={request} />
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">TEST RESULTS</h3>
+      <Section title="TEST RESULTS">
         <div className="result-table mt-3 overflow-hidden rounded-2xl border border-slate-200">
           <div className="result-table-head grid grid-cols-[1.2fr_1fr_1fr] bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
             <span>Test</span>
@@ -335,77 +335,263 @@ function ClinicalChemistryTemplate({
             <span>Conv.</span>
           </div>
           {rows.map(([label, valueKey, convKey]) => (
-            <div key={valueKey} className="result-table-row grid grid-cols-[1.2fr_1fr_1fr] border-t border-slate-200 px-4 py-3 text-sm text-slate-700">
+            <div
+              key={valueKey}
+              className="result-table-row grid grid-cols-[1.2fr_1fr_1fr] border-t border-slate-200 px-4 py-3 text-sm text-slate-700"
+            >
               <span>{label}</span>
               <span>{getValue(form, valueKey, "____")}</span>
               <span>{convKey ? getValue(form, convKey, "____") : "N/A"}</span>
             </div>
           ))}
         </div>
-      </section>
-      <section className="result-two-column mt-5 grid gap-4 sm:grid-cols-2">
+      </Section>
+      <div className="result-two-column mt-5 grid gap-4 sm:grid-cols-2">
         <PreviewField label="Last Meal" value={getValue(form, "last_meal")} />
         <PreviewField label="Time Taken" value={getValue(form, "time_taken")} />
-      </section>
+      </div>
     </PreviewShell>
   );
 }
 
-function GenericTemplate({
+function SingleChemistryPreview({
   request,
-  title,
   form,
 }: {
-  request: PreviewLabRequest;
-  title: string;
+  request: LabRequest;
   form: LabResultPayload;
 }) {
-  const rows = Object.entries(form).filter(([, value]) => value.trim() !== "");
+  const template = resolveLabTemplate(request);
+  const config = template.singleChemistry;
+
+  if (!config) {
+    return <GenericPreview request={request} form={form} title={template.label.toUpperCase()} />;
+  }
+
+  return (
+    <PreviewShell title={template.label.toUpperCase()}>
+      <PatientBlock request={request} />
+      <Section title="RESULT">
+        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
+          <PreviewField label={config.fieldLabel} value={getValue(form, config.fieldName)} />
+          {config.conversionFieldName ? (
+            <PreviewField
+              label={config.conversionLabel ?? "Conversion"}
+              value={getValue(form, config.conversionFieldName)}
+            />
+          ) : null}
+          {config.showMealFields ? (
+            <>
+              <PreviewField label="Last Meal" value={getValue(form, "last_meal")} />
+              <PreviewField label="Time Taken" value={getValue(form, "time_taken")} />
+            </>
+          ) : null}
+        </div>
+      </Section>
+      <Section title="REMARKS">
+        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
+          {getValue(form, "remarks", "No additional remarks")}
+        </p>
+      </Section>
+    </PreviewShell>
+  );
+}
+
+function SerologyPreview({
+  request,
+  form,
+}: {
+  request: LabRequest;
+  form: LabResultPayload;
+}) {
+  const template = resolveLabTemplate(request);
+
+  return (
+    <PreviewShell title={template.label.toUpperCase()}>
+      <PatientBlock request={request} />
+      <Section title="TEST DETAILS">
+        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
+          <PreviewField label="Test" value={getValue(form, "test")} />
+          <PreviewField label="Method" value={getValue(form, "method")} />
+          <PreviewField label="Specimen" value={getValue(form, "specimen")} />
+          {template.serology?.showDayOfFever ? (
+            <PreviewField label="Day of Fever" value={getValue(form, "day_of_fever")} />
+          ) : null}
+        </div>
+      </Section>
+      <Section title="RESULT">
+        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
+          {getValue(form, "result", "No result entered")}
+        </p>
+      </Section>
+    </PreviewShell>
+  );
+}
+
+function FecalOccultBloodPreview({
+  request,
+  form,
+}: {
+  request: LabRequest;
+  form: LabResultPayload;
+}) {
+  return (
+    <PreviewShell title="FECAL OCCULT BLOOD TEST">
+      <PatientBlock request={request} />
+      <Section title="TEST DETAILS">
+        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
+          <PreviewField label="Test" value={getValue(form, "test")} />
+          <PreviewField label="Method" value={getValue(form, "method")} />
+          <PreviewField label="Specimen" value={getValue(form, "specimen")} />
+          <PreviewField label="Result" value={getValue(form, "result")} />
+        </div>
+      </Section>
+      <Section title="REMARKS">
+        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
+          {getValue(form, "remarks", "No additional remarks")}
+        </p>
+      </Section>
+    </PreviewShell>
+  );
+}
+
+function Hba1cPreview({ request, form }: { request: LabRequest; form: LabResultPayload }) {
+  return (
+    <PreviewShell title="HBA1C">
+      <PatientBlock request={request} />
+      <Section title="TEST DETAILS">
+        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
+          <PreviewField label="Test Method" value={getValue(form, "test_method")} />
+          <PreviewField label="Lot No." value={getValue(form, "lot_no")} />
+          <PreviewField label="Expiration Date" value={getValue(form, "exp_date")} />
+          <PreviewField label="Specimen" value={getValue(form, "specimen")} />
+          <PreviewField label="Result" value={getValue(form, "result")} />
+        </div>
+      </Section>
+      <Section title="INTERPRETATION">
+        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
+          {getValue(form, "result_interpretation", "No interpretation entered")}
+        </p>
+      </Section>
+    </PreviewShell>
+  );
+}
+
+function ChemistryPanelPreview({
+  request,
+  form,
+}: {
+  request: LabRequest;
+  form: LabResultPayload;
+}) {
+  return (
+    <PreviewShell title="CHEMISTRY">
+      <PatientBlock request={request} />
+      <Section title="TEST RESULTS">
+        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
+          <PreviewField label="Sodium" value={getValue(form, "sodium")} />
+          <PreviewField label="Potassium" value={getValue(form, "potassium")} />
+          <PreviewField label="Chloride" value={getValue(form, "chloride")} />
+          <PreviewField label="Ionized Calcium" value={getValue(form, "ionized_calcium")} />
+        </div>
+      </Section>
+      <Section title="REMARKS">
+        <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
+          {getValue(form, "others", "No additional remarks")}
+        </p>
+      </Section>
+    </PreviewShell>
+  );
+}
+
+function OgttPreview({ request, form }: { request: LabRequest; form: LabResultPayload }) {
+  const template = resolveLabTemplate(request);
+  const phases = template.ogtt?.phases ?? [];
+
+  return (
+    <PreviewShell title={template.label.toUpperCase()}>
+      <PatientBlock request={request} />
+      <Section title="TEST RESULTS">
+        <div className="result-table mt-3 overflow-hidden rounded-2xl border border-slate-200">
+          <div className="result-table-head grid grid-cols-[1.2fr_1fr_1fr] bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            <span>Phase</span>
+            <span>Result</span>
+            <span>Conv.</span>
+          </div>
+          {phases.map((phase) => (
+            <div
+              key={phase.fieldName}
+              className="result-table-row grid grid-cols-[1.2fr_1fr_1fr] border-t border-slate-200 px-4 py-3 text-sm text-slate-700"
+            >
+              <span>{phase.label}</span>
+              <span>{getValue(form, phase.fieldName, "____")}</span>
+              <span>{getValue(form, phase.conversionFieldName, "____")}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+    </PreviewShell>
+  );
+}
+
+function GenericPreview({
+  request,
+  form,
+  title,
+}: {
+  request: LabRequest;
+  form: LabResultPayload;
+  title: string;
+}) {
+  const rows = Object.entries(form).filter(([, value]) =>
+    hasDisplayableLabResultValue(value)
+  );
 
   return (
     <PreviewShell title={title}>
       <PatientBlock request={request} />
-      <section className="mt-5">
-        <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">
-          TEST DETAILS
-        </h3>
+      <Section title="TEST DETAILS">
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {rows.length ? (
             rows.map(([key, value]) => (
               <div key={key} className="result-card rounded-2xl border border-slate-200 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  {formatLabel(key)}
+                  {key.replace(/_/g, " ")}
                 </p>
-                <p className="mt-2 text-sm text-slate-700">{value}</p>
+                <p className="mt-2 text-sm text-slate-700">
+                  {formatLabResultValue(value)}
+                </p>
               </div>
             ))
           ) : (
             <p className="text-sm text-slate-500">No values entered yet.</p>
           )}
         </div>
-      </section>
+      </Section>
     </PreviewShell>
   );
 }
 
 export default function LabResultPreview({
   request,
-  category,
   form,
   onBack,
   onPrint,
   onPassToDoctor,
 }: Props) {
   const printableRef = useRef<HTMLDivElement | null>(null);
+  const template = resolveLabTemplate(request);
 
   const handlePrint = () => {
     const printableNode = printableRef.current;
+
     if (!printableNode) {
       onPrint();
       return;
     }
 
     const printWindow = window.open("", "_blank", "width=900,height=1200");
+
     if (!printWindow) {
       onPrint();
       return;
@@ -490,9 +676,6 @@ export default function LabResultPreview({
             .result-patient {
               margin-top: 0.12in;
             }
-            .col-span-2 {
-              grid-column: span 2 / span 2;
-            }
             .result-label {
               margin: 0;
               font-size: 10px;
@@ -569,24 +752,6 @@ export default function LabResultPreview({
               border-top: 1px solid #cbd5e1;
               font-size: 10px;
             }
-            @media print {
-              html, body {
-                background: #ffffff;
-              }
-              .result-paper {
-                margin: 0 auto !important;
-              }
-              .print-shell {
-                min-height: auto;
-                background: #ffffff;
-                padding: 0;
-                display: block;
-              }
-              .print-shell > * {
-                max-width: none;
-                width: 100%;
-              }
-            }
           </style>
         </head>
         <body>
@@ -613,24 +778,37 @@ export default function LabResultPreview({
   return (
     <div className="lab-print-sheet space-y-5 bg-slate-100 p-5 print:bg-white print:p-0">
       <div ref={printableRef}>
-        {category === "hematology" ? <HematologyTemplate request={request} form={form} /> : null}
-        {category === "parasitology" ? <ParasitologyTemplate request={request} form={form} /> : null}
-        {category === "urinalysis" ? <UrinalysisTemplate request={request} form={form} /> : null}
-        {category === "clinical-chemistry" ? <ClinicalChemistryTemplate request={request} form={form} /> : null}
-        {category === "serology" ? (
-          <GenericTemplate request={request} title="SEROLOGY" form={form} />
+        {template.key === "cbc" ? <CbcPreview request={request} form={form} /> : null}
+        {template.key === "blood-typing" ? (
+          <BloodTypingPreview request={request} form={form} />
         ) : null}
-        {category === "hba1c" ? (
-          <GenericTemplate request={request} title="HBA1C" form={form} />
+        {template.key === "parasitology" ? (
+          <ParasitologyPreview request={request} form={form} />
         ) : null}
-        {category === "chemistry" ? (
-          <GenericTemplate request={request} title="CHEMISTRY" form={form} />
+        {template.key === "urinalysis" ? (
+          <UrinalysisPreview request={request} form={form} />
         ) : null}
-        {category === "ogtt" ? (
-          <GenericTemplate request={request} title="OGTT" form={form} />
+        {template.key === "clinical-chemistry-panel" ? (
+          <ClinicalChemistryPreview request={request} form={form} />
         ) : null}
-        {category === "other" ? (
-          <GenericTemplate request={request} title={request.testType.toUpperCase()} form={form} />
+        {template.key === "single-chemistry" ? (
+          <SingleChemistryPreview request={request} form={form} />
+        ) : null}
+        {template.key === "serology" ||
+        template.key === "dengue" ||
+        template.key === "pregnancy-test" ? (
+          <SerologyPreview request={request} form={form} />
+        ) : null}
+        {template.key === "fecal-occult-blood" ? (
+          <FecalOccultBloodPreview request={request} form={form} />
+        ) : null}
+        {template.key === "hba1c" ? <Hba1cPreview request={request} form={form} /> : null}
+        {template.key === "chemistry-panel" ? (
+          <ChemistryPanelPreview request={request} form={form} />
+        ) : null}
+        {template.key === "ogtt" ? <OgttPreview request={request} form={form} /> : null}
+        {template.key === "general" ? (
+          <GenericPreview request={request} form={form} title={request.testType.toUpperCase()} />
         ) : null}
       </div>
 

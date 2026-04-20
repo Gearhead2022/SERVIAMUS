@@ -5,7 +5,7 @@ import {
   Package,
   Users,
   BarChart,
-  Newspaper
+  FileStack
 } from "lucide-react";
 
 export interface MenuItem {
@@ -88,6 +88,14 @@ export const MENU_ITEMS: MenuItem[] = [
     roles: ["LAB", "LABORATORY"]
   },
 
+  {
+    label: "Laboratory Records",
+    path: "/labrecords",
+    icon: <FileStack size={18} />,
+    iconOnly: <FileStack size={30} />,
+    roles: ["LAB", "LABORATORY"]
+  },
+
   // STAFF
   {
     label: "Dashboard",
@@ -98,7 +106,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
 
   // CASHIER
-   {
+  {
     label: "Billing",
     path: "/billing",
     icon: <Home size={18} />,

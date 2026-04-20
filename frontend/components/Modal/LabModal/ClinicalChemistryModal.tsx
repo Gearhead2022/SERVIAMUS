@@ -10,9 +10,11 @@ import {
   ClinicalChemistryFormValues,
   clinicalChemistrySchema,
 } from "@/schemas/lab.schema";
+import { LabResultPayload } from "@/types/LabTypes";
+import { mergeLabFormDefaults } from "@/utils/lab";
 
 type Props = {
-  initialValues?: Partial<ClinicalChemistryFormValues> | null;
+  initialValues?: LabResultPayload | null;
   onSubmit: (form: ClinicalChemistryFormValues) => void;
   onCancel: () => void;
 };
@@ -122,10 +124,7 @@ export default function ClinicalChemistryModal({
     formState: { errors },
   } = useForm<ClinicalChemistryFormValues>({
     resolver: zodResolver(clinicalChemistrySchema),
-    defaultValues: {
-      ...clinicalChemistryDefaultValues,
-      ...(initialValues ?? {}),
-    },
+    defaultValues: mergeLabFormDefaults(clinicalChemistryDefaultValues, initialValues),
   });
 
   const watchedResultValues = useWatch({
@@ -182,7 +181,7 @@ export default function ClinicalChemistryModal({
                 placeholder="-"
                 className="mx-1"
                 inputMode="decimal"
-                {...register(row.name)}
+                {...register(row.name, { valueAsNumber: true })}
                 error={errors[row.name]?.message}
               />
               {row.convName ? (
@@ -192,7 +191,7 @@ export default function ClinicalChemistryModal({
                   inputMode="decimal"
                   readOnly
                   tabIndex={-1}
-                  {...register(row.convName)}
+                  {...register(row.convName, { valueAsNumber: true })}
                   error={errors[row.convName]?.message}
                 />  
               ) : (

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchBillings, payBilling } from "@/services/billing.service";
 import { BillingRecord, PaymentMethod } from "@/types/BillingTypes";
+import { getApiErrorMessage } from "@/utils/api-error";
 import SweetAlert from "@/utils/SweetAlert";
 
 const BILLINGS_QUERY_KEY = ["billing", "records"];
@@ -52,7 +53,7 @@ export const usePayBilling = () => {
     onError: (error: unknown) => {
       SweetAlert.errorAlert(
         "Payment Failed",
-        error instanceof Error ? error.message : "Unable to update the billing record."
+        getApiErrorMessage(error, "Unable to update the billing record.")
       );
     },
   });

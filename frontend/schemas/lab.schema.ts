@@ -1,27 +1,58 @@
 import { z } from "zod";
 
+const requiredText = (message: string) => z.string().trim().min(1, message);
+const optionalText = () => z.string().trim();
+const numericResult = (label = "Result") =>
+  z
+    .number()
+    .finite(`${label} must be a valid number.`);
+
+type DynamicSchemaField =
+  | { name: string; type: "number"; label?: string }
+  | { name: string; type: "text"; label?: string; required?: boolean };
+
+const createDynamicSchema = (fields: DynamicSchemaField[]) =>
+  z.object(
+    Object.fromEntries(
+      fields.map((field) => {
+        if (field.type === "number") {
+          return [field.name, numericResult(field.label ?? field.name)];
+        }
+
+        if (field.required) {
+          return [
+            field.name,
+            requiredText(`${field.label ?? field.name} is required`),
+          ];
+        }
+
+        return [field.name, optionalText()];
+      })
+    )
+  );
+
 export const clinicalChemistrySchema = z.object({
-  FBS: z.coerce.number().optional(),
-  FBS_conv: z.coerce.number().optional(),
-  RBS: z.coerce.number().optional(),
-  RBS_conv: z.coerce.number().optional(),
-  BUN: z.coerce.number().optional(),
-  BUN_conv: z.coerce.number().optional(),
-  creatinine: z.coerce.number().optional(),
-  creatinine_conv: z.coerce.number().optional(),
-  uric_acid: z.coerce.number().optional(),
-  uric_acid_conv: z.coerce.number().optional(),
-  cholesterol: z.coerce.number().optional(),
-  cholesterol_conv: z.coerce.number().optional(),
-  hdl_cholesterol: z.coerce.number().optional(),
-  hdl_cholesterol_conv: z.coerce.number().optional(),
-  ldl_cholesterol: z.coerce.number().optional(),
-  ldl_cholesterol_conv: z.coerce.number().optional(),
-  triglycerides: z.coerce.number().optional(),
-  triglycerides_conv: z.coerce.number().optional(),
-  sgpt: z.coerce.number().optional(),
-  last_meal: z.string().optional(),
-  time_taken: z.string().optional(),
+  FBS: numericResult("FBS"),
+  FBS_conv: numericResult("FBS conversion"),
+  RBS: numericResult("RBS"),
+  RBS_conv: numericResult("RBS conversion"),
+  BUN: numericResult("BUN"),
+  BUN_conv: numericResult("BUN conversion"),
+  creatinine: numericResult("Creatinine"),
+  creatinine_conv: numericResult("Creatinine conversion"),
+  uric_acid: numericResult("Uric acid"),
+  uric_acid_conv: numericResult("Uric acid conversion"),
+  cholesterol: numericResult("Total cholesterol"),
+  cholesterol_conv: numericResult("Total cholesterol conversion"),
+  hdl_cholesterol: numericResult("HDL cholesterol"),
+  hdl_cholesterol_conv: numericResult("HDL cholesterol conversion"),
+  ldl_cholesterol: numericResult("LDL cholesterol"),
+  ldl_cholesterol_conv: numericResult("LDL cholesterol conversion"),
+  triglycerides: numericResult("Triglycerides"),
+  triglycerides_conv: numericResult("Triglycerides conversion"),
+  sgpt: numericResult("SGPT"),
+  last_meal: optionalText(),
+  time_taken: optionalText(),
 });
 
 export type ClinicalChemistryFormValues = z.infer<typeof clinicalChemistrySchema>;
@@ -50,32 +81,28 @@ export const clinicalChemistryDefaultValues: ClinicalChemistryFormValues = {
   time_taken: "",
 };
 
-export const hematologySchema = z.object({
-  Hemoglobin: z.number(),
-  rbc_count: z.number(),
-  wbc_count: z.number(),
-  platelet_count: z.number(),
-  others_mcv: z.number(),
-  mchc: z.number(),
-  reticulocyte_count: z.number(),
-  nss_1: z.number(),
-  nss_2: z.number(),
-  nss_3: z.number(),
-  lymphocytes: z.number(),
-  monocytes: z.number(),
-  eosinophils: z.number(),
-  basophils: z.number(),
-  others1: z.string(),
-  clotting_time: z.string(),
-  bleeding_time: z.string(),
-  abo_type: z.string(),
-  rh_type: z.string(),
-  others2: z.string(),
+export const cbcSchema = z.object({
+  Hemoglobin: numericResult("Hemoglobin"),
+  rbc_count: numericResult("RBC count"),
+  wbc_count: numericResult("WBC count"),
+  platelet_count: numericResult("Platelet count"),
+  others_mcv: numericResult("MCV"),
+  mchc: numericResult("MCHC"),
+  reticulocyte_count: numericResult("Reticulocyte count"),
+  nss_1: numericResult("Neutrophils (Seg)"),
+  nss_2: numericResult("Neutrophils (Stab)"),
+  nss_3: numericResult("NSS 3"),
+  lymphocytes: numericResult("Lymphocytes"),
+  monocytes: numericResult("Monocytes"),
+  eosinophils: numericResult("Eosinophils"),
+  basophils: numericResult("Basophils"),
+  others1: optionalText(),
+  others2: optionalText(),
 });
 
-export type HematologyFormValues = z.infer<typeof hematologySchema>;
+export type CbcFormValues = z.infer<typeof cbcSchema>;
 
-export const hematologyDefaultValues: HematologyFormValues = {
+export const cbcDefaultValues: CbcFormValues = {
   Hemoglobin: 0,
   rbc_count: 0,
   wbc_count: 0,
@@ -91,37 +118,47 @@ export const hematologyDefaultValues: HematologyFormValues = {
   eosinophils: 0,
   basophils: 0,
   others1: "",
-  clotting_time: "",
-  bleeding_time: "",
+  others2: "",
+};
+
+export const bloodTypingSchema = z.object({
+  abo_type: requiredText("ABO type is required"),
+  rh_type: requiredText("Rh type is required"),
+  others2: optionalText(),
+});
+
+export type BloodTypingFormValues = z.infer<typeof bloodTypingSchema>;
+
+export const bloodTypingDefaultValues: BloodTypingFormValues = {
   abo_type: "",
   rh_type: "",
   others2: "",
 };
 
 export const parasitologySchema = z.object({
-  time_collected: z.string().min(1, "This field is required"),
-  time_recieved: z.string().min(1, "This field is required"),
-  color: z.string(),
-  consistency: z.string(),
-  pus_cells: z.string(),
-  rbc: z.string(),
-  bacteria: z.string(),
-  hookworm: z.string(),
-  ascaris: z.string(),
-  trichuris: z.string(),
-  strongloides: z.string(),
-  histolytica_cyst: z.string(),
-  histolytica_trophozoite: z.string(),
-  coli_cyst: z.string(),
-  coli_trophozoite: z.string(),
-  others: z.string(),
+  time_collected: requiredText("Time collected is required"),
+  time_received: requiredText("Time received is required"),
+  color: optionalText(),
+  consistency: optionalText(),
+  pus_cells: optionalText(),
+  rbc: optionalText(),
+  bacteria: optionalText(),
+  hookworm: optionalText(),
+  ascaris: optionalText(),
+  trichuris: optionalText(),
+  strongloides: optionalText(),
+  histolytica_cyst: optionalText(),
+  histolytica_trophozoite: optionalText(),
+  coli_cyst: optionalText(),
+  coli_trophozoite: optionalText(),
+  others: optionalText(),
 });
 
 export type ParasitologyFormValues = z.infer<typeof parasitologySchema>;
 
 export const parasitologyDefaultValues: ParasitologyFormValues = {
   time_collected: "",
-  time_recieved: "",
+  time_received: "",
   color: "",
   consistency: "",
   pus_cells: "",
@@ -137,26 +174,27 @@ export const parasitologyDefaultValues: ParasitologyFormValues = {
   coli_trophozoite: "",
   others: "",
 };
+
 export const urinalysisSchema = z.object({
-  color: z.string(),
-  transparency: z.string(),
-  ph_result: z.string(),
-  spec_grav_result: z.string(),
-  protein: z.string(),
-  nitrite: z.string(),
-  glucose: z.string(),
-  ketones: z.string(),
-  leukocytes: z.string(),
-  blood: z.string(),
-  pus_cells: z.string(),
-  rbc: z.string(),
-  bacteria: z.string(),
-  squamous_cell: z.string(),
-  round_cell: z.string(),
-  mucous: z.string(),
-  crystals: z.string(),
-  casts: z.string(),
-  others: z.string(),
+  color: optionalText(),
+  transparency: optionalText(),
+  ph_result: optionalText(),
+  spec_grav_result: optionalText(),
+  protein: optionalText(),
+  nitrite: optionalText(),
+  glucose: optionalText(),
+  ketones: optionalText(),
+  leukocytes: optionalText(),
+  blood: optionalText(),
+  pus_cells: optionalText(),
+  rbc: optionalText(),
+  bacteria: optionalText(),
+  squamous_cell: optionalText(),
+  round_cell: optionalText(),
+  mucous: optionalText(),
+  crystals: optionalText(),
+  casts: optionalText(),
+  others: optionalText(),
 });
 
 export type UrinalysisFormValues = z.infer<typeof urinalysisSchema>;
@@ -183,15 +221,28 @@ export const urinalysisDefaultValues: UrinalysisFormValues = {
   others: "",
 };
 
-export const serologySchema = z.object({
-  test: z.string().min(1, "Test  Declaration is required"),
-  method: z.string().min(1, "Method is required"),
-  specimen: z.string().min(1, "Specimen is required"),
-  result: z.string().min(1, "Result is required"),
-  day_of_fever: z.string().optional(),
-});
+export const createSerologySchema = ({
+  requireDayOfFever = false,
+}: {
+  requireDayOfFever?: boolean;
+} = {}) =>
+  z.object({
+    test: requiredText("Test is required"),
+    method: optionalText(),
+    specimen: requiredText("Specimen is required"),
+    result: requiredText("Result is required"),
+    day_of_fever: requireDayOfFever
+      ? requiredText("Day of fever is required")
+      : optionalText(),
+  });
 
-export type SerologyFormValues = z.infer<typeof serologySchema>;
+export type SerologyFormValues = {
+  day_of_fever: string;
+  method: string;
+  result: string;
+  specimen: string;
+  test: string;
+};
 
 export const serologyDefaultValues: SerologyFormValues = {
   test: "",
@@ -201,13 +252,31 @@ export const serologyDefaultValues: SerologyFormValues = {
   day_of_fever: "",
 };
 
+export const fecalOccultBloodSchema = z.object({
+  test: requiredText("Test is required"),
+  method: optionalText(),
+  specimen: requiredText("Specimen is required"),
+  result: requiredText("Result is required"),
+  remarks: optionalText(),
+});
+
+export type FecalOccultBloodFormValues = z.infer<typeof fecalOccultBloodSchema>;
+
+export const fecalOccultBloodDefaultValues: FecalOccultBloodFormValues = {
+  test: "Fecal Occult Blood Test",
+  method: "",
+  specimen: "Stool",
+  result: "",
+  remarks: "",
+};
+
 export const hbA1cSchema = z.object({
-  test_method: z.string().min(1, "Test Method is required"),
-  lot_no: z.string(),
-  exp_date: z.string(),
-  specimen: z.string().min(1, "Specimen is required"),
-  result: z.string().min(1, "Result is required"),
-  result_interpretation: z.string(),
+  test_method: requiredText("Test method is required"),
+  lot_no: optionalText(),
+  exp_date: optionalText(),
+  specimen: requiredText("Specimen is required"),
+  result: numericResult("HbA1c result"),
+  result_interpretation: optionalText(),
 });
 
 export type HbA1cFormValues = z.infer<typeof hbA1cSchema>;
@@ -217,57 +286,134 @@ export const hbA1cDefaultValues: HbA1cFormValues = {
   lot_no: "",
   exp_date: "",
   specimen: "",
-  result: "",
+  result: 0,
   result_interpretation: "",
 };
 
 export const chemistrySchema = z.object({
-  sodium: z.string(),
-  potassium: z.string(),
-  chloride: z.string(),
-  ionized_calcium: z.string(),
-  others: z.string(),
+  sodium: numericResult("Sodium"),
+  potassium: numericResult("Potassium"),
+  chloride: numericResult("Chloride"),
+  ionized_calcium: numericResult("Ionized calcium"),
+  others: optionalText(),
 });
 
 export type ChemistryFormValues = z.infer<typeof chemistrySchema>;
 
 export const chemistryDefaultValues: ChemistryFormValues = {
-  sodium: "",
-  potassium: "",
-  chloride: "",
-  ionized_calcium: "",
+  sodium: 0,
+  potassium: 0,
+  chloride: 0,
+  ionized_calcium: 0,
   others: "",
 };
 
-export const ogttSchema = z.object({
-  test_type: z.string(),
-  FBS: z.string(),
-  FBS_conv: z.string(),
-  onehagl: z.string(),
-  onehagl_conv: z.string(),
-  twohagl: z.string(),
-  twohagl_conv: z.string(),
-  threehagl: z.string(),
-  threehagl_conv: z.string(),
-});
+export const createSingleChemistrySchema = ({
+  conversionFieldName,
+  fieldName,
+  fieldLabel,
+  showMealFields = false,
+}: {
+  conversionFieldName?: string;
+  fieldLabel: string;
+  fieldName: string;
+  showMealFields?: boolean;
+}) => {
+  const dynamicFields: DynamicSchemaField[] = [
+    { name: fieldName, type: "number", label: fieldLabel },
+  ];
 
-export type OgttFormValues = z.infer<typeof ogttSchema>;
+  if (conversionFieldName) {
+    dynamicFields.push({
+      name: conversionFieldName,
+      type: "number",
+      label: `${fieldLabel} conversion`,
+    });
+  }
 
-export const ogttDefaultValues: OgttFormValues = {
-  test_type: "OGTT",
-  FBS: "",
-  FBS_conv: "",
-  onehagl: "",
-  onehagl_conv: "",
-  twohagl: "",
-  twohagl_conv: "",
-  threehagl: "",
-  threehagl_conv: "",
+  if (showMealFields) {
+    dynamicFields.push({ name: "last_meal", type: "text", label: "Last meal" });
+    dynamicFields.push({ name: "time_taken", type: "text", label: "Time taken" });
+  }
+
+  dynamicFields.push({ name: "remarks", type: "text", label: "Remarks" });
+
+  return createDynamicSchema(dynamicFields);
+};
+
+export type SingleChemistryFormValues = Record<string, number | string>;
+
+export const getSingleChemistryDefaultValues = ({
+  conversionFieldName,
+  fieldName,
+  showMealFields = false,
+}: {
+  conversionFieldName?: string;
+  fieldName: string;
+  showMealFields?: boolean;
+}) => {
+  const defaultValues: SingleChemistryFormValues = {
+    [fieldName]: 0,
+    remarks: "",
+  };
+
+  if (conversionFieldName) {
+    defaultValues[conversionFieldName] = 0;
+  }
+
+  if (showMealFields) {
+    defaultValues.last_meal = "";
+    defaultValues.time_taken = "";
+  }
+
+  return defaultValues;
+};
+
+export const createOgttSchema = ({
+  phases,
+}: {
+  phases: Array<{ conversionFieldName: string; fieldName: string; label: string }>;
+}) =>
+  createDynamicSchema([
+    { name: "test_type", type: "text", label: "Test type" },
+    ...phases.flatMap((phase) => [
+      {
+        name: phase.fieldName,
+        type: "number" as const,
+        label: phase.label,
+      },
+      {
+        name: phase.conversionFieldName,
+        type: "number" as const,
+        label: `${phase.label} conversion`,
+      },
+    ]),
+  ]);
+
+export type OgttFormValues = Record<string, number | string>;
+
+export const getOgttDefaultValues = ({
+  defaultTestType,
+  phases,
+}: {
+  defaultTestType: string;
+  phases: Array<{ conversionFieldName: string; fieldName: string }>;
+}) => {
+  const defaultValues: OgttFormValues = {
+    test_type: defaultTestType,
+  };
+
+  phases.forEach((phase) => {
+    defaultValues[phase.fieldName] = 0;
+    defaultValues[phase.conversionFieldName] = 0;
+  });
+
+  return defaultValues;
 };
 
 export const generalResultSchema = z.object({
-  result_summary: z.string(),
-  remarks: z.string(),
+  result_summary: optionalText(),
+  remarks: optionalText(),
 });
 
 export type GeneralResultFormValues = z.infer<typeof generalResultSchema>;

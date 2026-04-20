@@ -12,6 +12,9 @@ const findOrCreateLaboratoryTest = async (
   tx: Prisma.TransactionClient,
   testName: string
 ) => {
+  const resolvedSchemaKey = toSchemaKey(testName);
+  const resolvedCategory = categorizeLabTest(testName, resolvedSchemaKey);
+
   const existingTest = await tx.laboratoryTest.findFirst({
     where: {
       name: testName,
@@ -25,20 +28,17 @@ const findOrCreateLaboratoryTest = async (
   });
 
   if (existingTest) {
-    const nextCategory = categorizeLabTest(testName);
-    const nextSchemaKey = toSchemaKey(testName);
+    const shouldSyncMetadata =
+      !existingTest.schema_key || existingTest.category === "OTHER";
 
-    if (
-      existingTest.category !== nextCategory ||
-      existingTest.schema_key !== nextSchemaKey
-    ) {
+    if (shouldSyncMetadata) {
       await tx.laboratoryTest.update({
         where: {
           test_id: existingTest.test_id,
         },
         data: {
-          category: nextCategory,
-          schema_key: nextSchemaKey,
+          category: resolvedCategory,
+          schema_key: resolvedSchemaKey,
         },
       });
     }
@@ -49,8 +49,8 @@ const findOrCreateLaboratoryTest = async (
   return tx.laboratoryTest.create({
     data: {
       name: testName,
-      category: categorizeLabTest(testName),
-      schema_key: toSchemaKey(testName),
+      category: resolvedCategory,
+      schema_key: resolvedSchemaKey,
     },
     select: {
       test_id: true,

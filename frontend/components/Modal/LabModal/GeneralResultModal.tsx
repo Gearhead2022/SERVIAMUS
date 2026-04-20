@@ -10,10 +10,12 @@ import {
   GeneralResultFormValues,
   generalResultSchema,
 } from "@/schemas/lab.schema";
+import { LabResultPayload } from "@/types/LabTypes";
+import { mergeLabFormDefaults } from "@/utils/lab";
 
 type Props = {
   testName: string;
-  initialValues?: Partial<GeneralResultFormValues> | null;
+  initialValues?: LabResultPayload | null;
   onSubmit: (form: GeneralResultFormValues) => void;
   onCancel: () => void;
 };
@@ -30,10 +32,7 @@ export default function GeneralResultModal({
     formState: { errors },
   } = useForm<GeneralResultFormValues>({
     resolver: zodResolver(generalResultSchema),
-    defaultValues: {
-      ...generalResultDefaultValues,
-      ...(initialValues ?? {}),
-    },
+    defaultValues: mergeLabFormDefaults(generalResultDefaultValues, initialValues),
   });
 
   return (
