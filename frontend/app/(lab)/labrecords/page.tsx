@@ -110,29 +110,29 @@ export default function LabRecordsPage() {
           background: "linear-gradient(135deg, #0f2244 0%, #1a3560 55%, #0e3d5c 100%)",
         }}
       >
-        <div className="border-b border-white/10 px-8 py-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
+        {/* <div className="border-b border-white/10 px-8 py-5"> */}
+          {/* <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"> */}
+            {/* <div>
               <h1 className="font-['DM_Serif_Display'] text-2xl text-white tracking-wide">
                 Laboratory Records
-              </h1>
-              <p className="mt-1 max-w-2xl text-sm text-white/55">
+              </h1> */}
+              {/* <p className="mt-1 max-w-2xl text-sm text-white/55">
                 Select a patient card to review encoded laboratory records, edit saved results,
                 and reprint official result forms from a dedicated print page.
-              </p>
-              <p className="mt-1 text-xs text-white/40">
+              </p> */}
+              {/* <p className="mt-1 text-xs text-white/40">
                 {isLoading
                   ? "Loading patient directory..."
                   : `${patients.length} patient${patients.length === 1 ? "" : "s"} available for laboratory record review`}
-              </p>
-            </div>
+              </p> */}
+            {/* </div> */}
 
-            <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white/75 backdrop-blur-sm">
+            {/* <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white/75 backdrop-blur-sm">
               Use the filters inside each patient record modal to narrow results by date and test
               category.
-            </div>
-          </div>
-        </div>
+            </div> */}
+          {/* </div> */}
+        {/* </div> */}
 
         <div className="px-8 py-5">
           <div className="relative max-w-md">

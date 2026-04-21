@@ -360,33 +360,33 @@ export default function DashboardPage() {
 
       <div className="min-h-full p-6 md:p-7">
         <div className="mx-auto max-w-7xl space-y-6">
-          <section className="relative overflow-hidden rounded-3xl border border-[#84c7bb]/50 bg-gradient-to-r from-[#182955] via-[#2e4274] to-[#374b7e] p-5 text-white shadow-[0_18px_40px_rgba(8,31,28,0.25)] md:p-6">
+          {/* <section className="relative overflow-hidden rounded-3xl border border-[#84c7bb]/50 bg-gradient-to-r from-[#182955] via-[#2e4274] to-[#374b7e] p-5 text-white shadow-[0_18px_40px_rgba(8,31,28,0.25)] md:p-6"> */}
             <div className="absolute -top-10 right-10 h-36 w-36 rounded-full bg-[#7bd9c3]/20 blur-3xl" />
             <div className="absolute -bottom-10 left-14 h-32 w-32 rounded-full bg-[#ffffff]/10 blur-3xl" />
-            <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-white/75">
+            {/* <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between"> */}
+              {/* <div> */}
+                {/* <p className="text-xs uppercase tracking-[0.3em] text-white/75">
                   Laboratory Operations
-                </p>
-                <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">
+                </p> */}
+                {/* <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">
                   Laboratory Dashboard
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm text-white/75">
+                </h1> */}
+                {/* <p className="mt-2 max-w-2xl text-sm text-white/75">
                   Each requested test stays visible on its own queue entry, while the patient
                   request is only marked done once every requested test has been completed.
-                </p>
-              </div>
+                </p> */}
+              {/* </div> */}
 
-              <div className="rounded-xl border border-white/25 bg-white/10 px-4 py-3 backdrop-blur-sm">
-                <div className="flex items-center gap-2 text-sm font-medium text-white">
-                  <BellRing size={16} className="text-[#c8ffe8]" />
-                  <span>
+              {/* <div className="rounded-xl border border-white/25 bg-white/10 px-4 py-3 backdrop-blur-sm"> */}
+                {/* <div className="flex items-center gap-2 text-sm font-medium text-white">
+                  <BellRing size={16} className="text-[#c8ffe8]" /> */}
+                  {/* <span>
                     {queued.length} queued test {queued.length === 1 ? "entry" : "entries"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
+                  </span> */}
+                {/* </div> */}
+              {/* </div> */}
+            {/* </div> */}
+          {/* </section> */}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
