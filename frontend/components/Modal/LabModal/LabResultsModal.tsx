@@ -40,7 +40,7 @@ export default function LabResultsModal({ request, onClose, onComplete }: Props)
           form={previewForm}
           onBack={() => setPreviewForm(null)}
           onPassToDoctor={() => finishSubmission("doctor")}
-          onPrint={() => finishSubmission("print")}
+          onOpenPrintPage={() => finishSubmission("print")}
         />
       ) : (
         <LabResultEditor

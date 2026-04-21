@@ -3,8 +3,10 @@ import { handleLabModuleError } from "./lab.errors";
 import {
   createLabRequestService,
   getAllUsersService,
+  getLabRequestByIdService,
   getLabRequestsService,
   getLabTestsService,
+  getPatientLabRecordsService,
   getPatientRecordsService,
   saveLabResultService,
   searchPatientsService,
@@ -18,6 +20,13 @@ const labCategoryValues = [
   "parasitology",
   "urinalysis",
   "other",
+] as const;
+const labRecordGroupValues = [
+  "clinical-chemistry",
+  "clinical-microscopy",
+  "hematology",
+  "other",
+  "serology",
 ] as const;
 
 export const getAllUsersController = async (_req: Request, res: Response) => {
@@ -74,6 +83,53 @@ export const getPatientRecordsController = async (req: Request, res: Response) =
   }
 };
 
+export const getPatientLabRecordsController = async (req: Request, res: Response) => {
+  try {
+    const patientId = Number(req.params.patientId);
+    const dateFrom =
+      typeof req.query.dateFrom === "string" ? req.query.dateFrom : undefined;
+    const dateTo = typeof req.query.dateTo === "string" ? req.query.dateTo : undefined;
+    const recordGroup =
+      typeof req.query.recordGroup === "string" ? req.query.recordGroup : undefined;
+
+    if (!Number.isInteger(patientId) || patientId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid patient record request.",
+      });
+    }
+
+    if (
+      recordGroup &&
+      !labRecordGroupValues.includes(
+        recordGroup as (typeof labRecordGroupValues)[number]
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid laboratory record category filter.",
+      });
+    }
+
+    const records = await getPatientLabRecordsService(patientId, {
+      dateFrom,
+      dateTo,
+      recordGroup,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: records,
+    });
+  } catch (error) {
+    return handleLabModuleError(
+      res,
+      error,
+      "Failed to fetch patient laboratory records."
+    );
+  }
+};
+
 export const createLabRequestController = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.user_id;
@@ -121,6 +177,28 @@ export const getLabRequestsController = async (req: Request, res: Response) => {
     });
   } catch (error) {
     return handleLabModuleError(res, error, "Failed to fetch lab requests.");
+  }
+};
+
+export const getLabRequestByIdController = async (req: Request, res: Response) => {
+  try {
+    const labId = Number(req.params.labId);
+
+    if (!Number.isInteger(labId) || labId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid laboratory request id.",
+      });
+    }
+
+    const request = await getLabRequestByIdService(labId);
+
+    return res.status(200).json({
+      success: true,
+      data: request,
+    });
+  } catch (error) {
+    return handleLabModuleError(res, error, "Failed to fetch the lab request.");
   }
 };
 

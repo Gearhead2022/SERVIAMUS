@@ -1,5 +1,6 @@
 import {
   LabCategory,
+  LabRecordGroup,
   LabRequest,
   LabSchemaKey,
   LabTemplateKey,
@@ -495,3 +496,23 @@ export const resolveLabTemplate = (
 
 export const getLabTemplateLabel = (request: Pick<LabRequest, "category" | "schemaKey" | "testType">) =>
   resolveLabTemplate(request).label;
+
+export const getLabRecordGroupLabel = (recordGroup: LabRecordGroup) => {
+  if (recordGroup === "hematology") {
+    return "Hematology";
+  }
+
+  if (recordGroup === "serology") {
+    return "Serology";
+  }
+
+  if (recordGroup === "clinical-chemistry") {
+    return "Clinical Chemistry";
+  }
+
+  if (recordGroup === "clinical-microscopy") {
+    return "Clinical Microscopy";
+  }
+
+  return "Other Tests";
+};

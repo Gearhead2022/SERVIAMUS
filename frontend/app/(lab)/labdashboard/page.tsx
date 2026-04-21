@@ -11,6 +11,7 @@ import {
   Microscope,
   UserRound,
 } from "lucide-react";
+import Input from "@/components/ui/Input";
 import ModalHeader from "@/components/Modal/ModalHeader";
 import LabResultEditor from "@/components/Modal/LabModal/LabResultEditor";
 import LabResultPreview from "@/components/Modal/LabModal/LabResultPreview";
@@ -22,7 +23,8 @@ import {
 import Button from "@/components/ui/Button";
 import { LabRequest, LabResultPayload, RequestStatus } from "@/types/LabTypes";
 import { getApiErrorMessage } from "@/utils/api-error";
-import { getLabTemplateLabel, resolveLabTemplate } from "@/utils/lab-templates";
+import { openLabPrintPage } from "@/utils/lab-print";
+import { resolveLabTemplate } from "@/utils/lab-templates";
 import SweetAlert from "@/utils/SweetAlert";
 
 type RequestPreviewCard = {
@@ -70,6 +72,14 @@ function formatCurrency(value: number) {
   return pesoFormatter.format(value);
 }
 
+function matchesRequestDateFilter(requestedDate: string, dateFilter: string) {
+  if (!dateFilter) {
+    return true;
+  }
+
+  return requestedDate.slice(0, 10) === dateFilter;
+}
+
 export default function DashboardPage() {
   const [activeRequest, setActiveRequest] = useState<LabRequest | null>(null);
   const [previewPayload, setPreviewPayload] = useState<{
@@ -77,6 +87,8 @@ export default function DashboardPage() {
     form: LabResultPayload;
   } | null>(null);
   const [busyRequestId, setBusyRequestId] = useState<number | null>(null);
+  const [requestPreviewDate, setRequestPreviewDate] = useState("");
+  const [showAllRequestPreviews, setShowAllRequestPreviews] = useState(false);
   const {
     data: requests = [],
     error: labRequestsError,
@@ -165,6 +177,26 @@ export default function DashboardPage() {
     );
   }, [requests]);
 
+  const filteredRequestPreviews = useMemo(
+    () =>
+      requestPreviews.filter((item) =>
+        matchesRequestDateFilter(item.requestedDate, requestPreviewDate)
+      ),
+    [requestPreviewDate, requestPreviews]
+  );
+
+  const visibleRequestPreviews = useMemo(
+    () =>
+      showAllRequestPreviews
+        ? filteredRequestPreviews
+        : filteredRequestPreviews.slice(0, 4),
+    [filteredRequestPreviews, showAllRequestPreviews]
+  );
+
+  const hiddenPreviewCount = Math.max(
+    filteredRequestPreviews.length - visibleRequestPreviews.length,
+    0
+  );
   const activeTemplate = activeRequest ? resolveLabTemplate(activeRequest) : null;
 
   const inProgressRequests = useMemo(
@@ -273,7 +305,7 @@ export default function DashboardPage() {
     <>
       {activeRequest && !previewPayload ? (
         <ModalHeader
-          showModal={!!activeRequest}
+          showModal={true}
           title={`Laboratory Request - ${activeTemplate?.label ?? "General Result"}`}
           subtitle={`${activeRequest.patientName} - ${activeRequest.testType}`}
           meta={`${activeRequest.id} - ${activeRequest.patientId}`}
@@ -310,7 +342,7 @@ export default function DashboardPage() {
 
       {previewPayload ? (
         <ModalHeader
-          showModal={!!previewPayload}
+          showModal={true}
           title={`Result Preview - ${previewPayload.request.patientName}`}
           subtitle={previewPayload.request.testType}
           meta={`${previewPayload.request.id} - ${previewPayload.request.patientId}`}
@@ -320,7 +352,7 @@ export default function DashboardPage() {
             request={previewPayload.request}
             form={previewPayload.form}
             onBack={() => setPreviewPayload(null)}
-            onPrint={completeRequest}
+            onOpenPrintPage={() => openLabPrintPage(previewPayload.request.labId, true)}
             onPassToDoctor={completeRequest}
           />
         </ModalHeader>
@@ -504,7 +536,7 @@ export default function DashboardPage() {
                                 {item.patientName}
                               </p>
                               <p className="text-xs text-[#63867f]">
-                                {item.testType} - {getLabTemplateLabel(item)}
+                                {item.testType} - {template.label}
                               </p>
                               <p className="text-xs text-[#6f948d]">
                                 Done: {item.completedCount} / {item.totalTests}
@@ -582,29 +614,61 @@ export default function DashboardPage() {
           </div>
 
           <section className="rounded-2xl border border-[#c8e4de] bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-[#133d37]">Patient Request Preview</h2>
                 <p className="mt-1 text-sm text-[#5f8a83]">
-                  Review the overall progress of every patient request before it is elevated to done.
+                  A shorter snapshot of patient-level request progress, with a date filter when you
+                  need to review a specific day.
                 </p>
               </div>
-              <span className="rounded-full bg-[#e3f6f2] px-3 py-1 text-xs font-medium text-[#2e6e64]">
-                {requestPreviews.length} patient request{requestPreviews.length === 1 ? "" : "s"}
-              </span>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="min-w-[220px]">
+                  <Input
+                    label="Filter by Request Date"
+                    type="date"
+                    value={requestPreviewDate}
+                    onChange={(event) => {
+                      setRequestPreviewDate(event.target.value);
+                      setShowAllRequestPreviews(false);
+                    }}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setRequestPreviewDate("");
+                    setShowAllRequestPreviews(false);
+                  }}
+                >
+                  Clear Filter
+                </Button>
+              </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+              <span className="rounded-full bg-[#e3f6f2] px-3 py-1 text-xs font-medium text-[#2e6e64]">
+                {filteredRequestPreviews.length} patient request
+                {filteredRequestPreviews.length === 1 ? "" : "s"}
+              </span>
+              <p className="text-xs text-[#5f8a83]">
+                Showing {visibleRequestPreviews.length} of {filteredRequestPreviews.length}
+              </p>
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
               {loadingRequests ? (
                 <div className="rounded-xl border border-dashed border-[#cbe6e1] bg-[#f5fbfa] px-4 py-6 text-center text-sm text-[#5c8b84] lg:col-span-2">
                   Loading patient previews...
                 </div>
-              ) : requestPreviews.length === 0 ? (
+              ) : filteredRequestPreviews.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[#cbe6e1] bg-[#f5fbfa] px-4 py-6 text-center text-sm text-[#5c8b84] lg:col-span-2">
-                  No patient request previews available.
+                  No patient request previews matched the selected date.
                 </div>
               ) : (
-                requestPreviews.map((request) => (
+                visibleRequestPreviews.map((request) => (
                   <div
                     key={request.requestId}
                     className="rounded-2xl border border-[#d5ebe6] bg-[#fbfefe] p-4"
@@ -629,6 +693,10 @@ export default function DashboardPage() {
                         <p className="text-xs text-[#63867f]">
                           {request.patientId} - Requested by {request.requestedBy}
                         </p>
+                        <p className="text-xs text-[#6f948d]">
+                          Request date: {new Date(request.requestedDate).toLocaleDateString()} at{" "}
+                          {request.requestedAt}
+                        </p>
                       </div>
 
                       <div className="rounded-xl bg-[#f4faf8] px-3 py-2 text-right">
@@ -641,53 +709,54 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 space-y-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#63867f]">
+                    <div className="mt-4 grid gap-3 text-xs text-[#5f8a83] sm:grid-cols-2">
+                      <div className="rounded-xl bg-[#f4faf8] px-3 py-2.5">
+                        <p className="font-semibold uppercase tracking-[0.18em] text-[#63867f]">
                           Completed Tests
                         </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {request.completedTests.length ? (
-                            request.completedTests.map((test) => (
-                              <span
-                                key={`${request.requestId}-${test}-done`}
-                                className="rounded-full bg-[#e3f6ea] px-3 py-1 text-xs font-medium text-[#237a4e]"
-                              >
-                                {test}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-[#6f948d]">No completed tests yet.</span>
-                          )}
-                        </div>
+                        <p className="mt-2 leading-5 text-[#476d67]">
+                          {request.completedTests.length
+                            ? formatList(request.completedTests)
+                            : "No completed tests yet."}
+                        </p>
                       </div>
-
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#63867f]">
+                      <div className="rounded-xl bg-[#f4faf8] px-3 py-2.5">
+                        <p className="font-semibold uppercase tracking-[0.18em] text-[#63867f]">
                           Remaining Tests
                         </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {request.pendingTests.length ? (
-                            request.pendingTests.map((test) => (
-                              <span
-                                key={`${request.requestId}-${test}-pending`}
-                                className="rounded-full bg-[#f4efe0] px-3 py-1 text-xs font-medium text-[#8a6a18]"
-                              >
-                                {test}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-[#237a4e]">
-                              All requested tests are already complete.
-                            </span>
-                          )}
-                        </div>
+                        <p className="mt-2 leading-5 text-[#476d67]">
+                          {request.pendingTests.length
+                            ? formatList(request.pendingTests)
+                            : "All requested tests are already complete."}
+                        </p>
                       </div>
                     </div>
                   </div>
                 ))
               )}
             </div>
+
+            {hiddenPreviewCount > 0 ? (
+              <div className="mt-4 flex justify-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowAllRequestPreviews(true)}
+                >
+                  See More ({hiddenPreviewCount})
+                </Button>
+              </div>
+            ) : showAllRequestPreviews && filteredRequestPreviews.length > 4 ? (
+              <div className="mt-4 flex justify-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowAllRequestPreviews(false)}
+                >
+                  Show Less
+                </Button>
+              </div>
+            ) : null}
           </section>
         </div>
       </div>

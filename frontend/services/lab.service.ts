@@ -3,6 +3,7 @@ import {
   CreateLabRequestPayload,
   LabRequest,
   LabTestCatalogItem,
+  PatientLabRecordFilters,
   PatientRecord,
   RequestStatus,
   SaveLabResultPayload,
@@ -54,6 +55,11 @@ export const fetchLabRequests = async () => {
   return items.map(toFrontendRequest);
 };
 
+export const fetchLabRequest = async (labId: number) => {
+  const res = await api.get(`/api/lab/requests/${labId}`);
+  return toFrontendRequest(res.data.data as LabRequestApiResponse);
+};
+
 export const fetchLabTests = async () => {
   const res = await api.get("/api/lab/tests");
   return (res.data.data ?? []) as LabTestCatalogItem[];
@@ -67,4 +73,29 @@ export const updateLabRequestStatus = async (labId: number, status: RequestStatu
 export const saveLabResult = async (payload: SaveLabResultPayload) => {
   const res = await api.post("/api/lab/results", payload);
   return toFrontendRequest(res.data.data as LabRequestApiResponse);
+};
+
+export const fetchPatientLabRecords = async (
+  patientId: number,
+  filters: PatientLabRecordFilters = {}
+) => {
+  const params = new URLSearchParams();
+
+  if (filters.dateFrom) {
+    params.set("dateFrom", filters.dateFrom);
+  }
+
+  if (filters.dateTo) {
+    params.set("dateTo", filters.dateTo);
+  }
+
+  if (filters.recordGroup && filters.recordGroup !== "all") {
+    params.set("recordGroup", filters.recordGroup);
+  }
+
+  const res = await api.get(`/api/lab/patients/${patientId}/records`, {
+    params,
+  });
+  const items = (res.data.data ?? []) as LabRequestApiResponse[];
+  return items.map(toFrontendRequest);
 };

@@ -15,6 +15,13 @@ export type ApiLabCategory =
 
 export type ApiLabRequestStatus = "queued" | "pending" | "done";
 
+export type LabRecordGroup =
+  | "clinical-chemistry"
+  | "clinical-microscopy"
+  | "hematology"
+  | "other"
+  | "serology";
+
 export type LabSchemaKey =
   | "CBC"
   | "BT"
@@ -392,6 +399,87 @@ export const resolveApiLabCategory = ({
 
   if (category === "Hematology") return "hematology";
   if (category === "Clinical_Chemistry") return "clinical-chemistry";
+  return "other";
+};
+
+const hematologySchemaKeys = new Set<LabSchemaKey>(["BT", "CBC", "hematology"]);
+const clinicalChemistrySchemaKeys = new Set<LabSchemaKey>([
+  "BUN",
+  "FBS",
+  "HDL",
+  "LDL",
+  "OGTT",
+  "RBS",
+  "SGPT",
+  "clinical_chemistry",
+  "chemistry",
+  "hba1c",
+  "ogtt",
+  "onehOGTT",
+  "potassium",
+  "sodium",
+  "totalcholesterol",
+  "triglycerides",
+  "twohOGTT",
+  "uricacid",
+]);
+const clinicalMicroscopySchemaKeys = new Set<LabSchemaKey>([
+  "FOBT",
+  "parasitology",
+  "urinalysis",
+]);
+const serologySchemaKeys = new Set<LabSchemaKey>([
+  "dengue",
+  "hbsag",
+  "serology",
+  "serumPT",
+  "syphilis",
+  "urinePT",
+]);
+
+export const resolveLabRecordGroup = ({
+  category,
+  schemaKey,
+  testName,
+}: {
+  category: LaboratoryCategory;
+  schemaKey?: string | null;
+  testName: string;
+}): LabRecordGroup => {
+  const resolvedSchemaKey = resolveLabSchemaKey(testName, schemaKey);
+
+  if (hematologySchemaKeys.has(resolvedSchemaKey)) {
+    return "hematology";
+  }
+
+  if (clinicalChemistrySchemaKeys.has(resolvedSchemaKey)) {
+    return "clinical-chemistry";
+  }
+
+  if (clinicalMicroscopySchemaKeys.has(resolvedSchemaKey)) {
+    return "clinical-microscopy";
+  }
+
+  if (serologySchemaKeys.has(resolvedSchemaKey)) {
+    return "serology";
+  }
+
+  if (category === "Hematology") {
+    return "hematology";
+  }
+
+  if (category === "Clinical_Chemistry") {
+    return "clinical-chemistry";
+  }
+
+  if (category === "Clinical_Microscopy") {
+    return "clinical-microscopy";
+  }
+
+  if (category === "Serology") {
+    return "serology";
+  }
+
   return "other";
 };
 

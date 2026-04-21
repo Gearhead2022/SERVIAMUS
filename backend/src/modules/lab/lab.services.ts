@@ -8,6 +8,7 @@ import {
   normalizeLabForm,
   requestStatusFromItemStatuses,
   resolveApiLabCategory,
+  resolveLabRecordGroup,
   serializeLabResultPayload,
   splitLabTests,
   toApiLabStatus,
@@ -40,6 +41,12 @@ type RawPatientRecordRow = RawPatientRow & {
   medical_records_count: number;
   history_count: number;
   vital_signs_count: number;
+};
+
+type PatientLabRecordsFilters = {
+  dateFrom?: string;
+  dateTo?: string;
+  recordGroup?: string;
 };
 
 const labRequestInclude = Prisma.validator<Prisma.LaboratoryRequestInclude>()({
@@ -123,6 +130,27 @@ const parseRequestedDate = (value?: string) => {
   return parsedDate;
 };
 
+const parseRecordFilterDate = (
+  value: string | undefined,
+  label: string,
+  endOfDay = false
+) => {
+  if (!value?.trim()) {
+    return null;
+  }
+
+  const normalizedValue = value.includes("T")
+    ? value
+    : `${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}`;
+  const parsedDate = new Date(normalizedValue);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    throw new LabModuleError(`${label} is invalid.`, 400);
+  }
+
+  return parsedDate;
+};
+
 const ensurePaidBilling = (isPaid: boolean, message: string) => {
   if (!isPaid) {
     throw new LabModuleError(message, 409);
@@ -170,6 +198,11 @@ const toDisplayItem = (
     isPaid,
     paidAt: latestPayment?.payment_date?.toISOString() ?? null,
     category: resolveApiLabCategory({
+      category: item.test.category,
+      schemaKey: item.test.schema_key,
+      testName: item.test.name,
+    }),
+    recordGroup: resolveLabRecordGroup({
       category: item.test.category,
       schemaKey: item.test.schema_key,
       testName: item.test.name,
@@ -468,6 +501,73 @@ export const getLabRequestsService = async (status?: string) => {
       .filter((record) => record.items.length > 0)
       .flatMap((record) => record.items.map((item) => toDisplayItem(record, item)))
       .filter((item) => !normalizedStatus || item.status === normalizedStatus)
+      .sort((left, right) => {
+        const timeDiff =
+          new Date(right.requestedDate).getTime() - new Date(left.requestedDate).getTime();
+
+        if (timeDiff !== 0) {
+          return timeDiff;
+        }
+
+        return right.labId - left.labId;
+      });
+  });
+};
+
+export const getLabRequestByIdService = async (labId: number) => {
+  return prisma.$transaction(async (tx) => getDisplayItemById(tx, labId));
+};
+
+export const getPatientLabRecordsService = async (
+  patientId: number,
+  filters: PatientLabRecordsFilters = {}
+) => {
+  return prisma.$transaction(async (tx) => {
+    const patient = await tx.patients.findUnique({
+      where: { patient_id: patientId },
+      select: { patient_id: true },
+    });
+
+    if (!patient) {
+      throw new LabModuleError("Patient not found.", 404);
+    }
+
+    const dateFrom = parseRecordFilterDate(filters.dateFrom, "Date from");
+    const dateTo = parseRecordFilterDate(filters.dateTo, "Date to", true);
+
+    if (dateFrom && dateTo && dateFrom.getTime() > dateTo.getTime()) {
+      throw new LabModuleError("Date from cannot be later than date to.", 400);
+    }
+
+    const records = await tx.laboratoryRequest.findMany({
+      where: {
+        request: {
+          is: {
+            patient_id: patientId,
+            ...(dateFrom || dateTo
+              ? {
+                  req_date: {
+                    ...(dateFrom ? { gte: dateFrom } : {}),
+                    ...(dateTo ? { lte: dateTo } : {}),
+                  },
+                }
+              : {}),
+          },
+        },
+      },
+      include: labRequestInclude,
+    });
+
+    return records
+      .filter((record) => record.items.length > 0)
+      .flatMap((record) =>
+        record.items
+          .filter((item) => item.result_payload)
+          .map((item) => toDisplayItem(record, item))
+      )
+      .filter(
+        (item) => !filters.recordGroup || item.recordGroup === filters.recordGroup
+      )
       .sort((left, right) => {
         const timeDiff =
           new Date(right.requestedDate).getTime() - new Date(left.requestedDate).getTime();

@@ -60,6 +60,13 @@ export type LabTemplateKey =
 
 export type RequestStatus = "queued" | "pending" | "done";
 
+export type LabRecordGroup =
+  | "clinical-chemistry"
+  | "clinical-microscopy"
+  | "hematology"
+  | "other"
+  | "serology";
+
 export type LabRequest = {
   labId: number;
   requestId: number;
@@ -87,6 +94,7 @@ export type LabRequest = {
   isPaid: boolean;
   paidAt?: string | null;
   schemaKey?: LabSchemaKey | null;
+  recordGroup: LabRecordGroup;
   requestedBy: string;
   address: string;
   sex: string;
@@ -137,4 +145,10 @@ export type SaveLabResultPayload = {
   category: LabCategory;
   form: LabResultPayload;
   pathologistUserId?: number | null;
+};
+
+export type PatientLabRecordFilters = {
+  dateFrom?: string;
+  dateTo?: string;
+  recordGroup?: LabRecordGroup | "all";
 };
