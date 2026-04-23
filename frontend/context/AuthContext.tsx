@@ -42,6 +42,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthReady] = useState(true);
 
   const login = (token: string, user: AuthUser) => {
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+
+    setUser(user);
+    setIsAuthenticated(true);
+
+    const admin_user = user.roles.includes('ADMIN');
+    const doctor_user = user.roles.includes('DOCTOR');
+    const laboratory_user = user.roles.includes('LAB') || user.roles.includes('LABORATORY');
+    const staff_user = user.roles.includes('STAFF');
+    const cashier_user = user.roles.includes('CASHIER');
+
+    if (admin_user) {
+      router.replace("dashboard");
+    }
+
+    if (doctor_user) {
+      router.replace("docDashboard");
+    }
+
+    if (laboratory_user) {
+      router.replace("/labdashboard");
+    }
+
+    if (staff_user) {
+      router.replace("/registration");
+    }
+
+    if (cashier_user) {
+      router.replace("/billing");
+    }
+  };
   localStorage.setItem("token", token);
   localStorage.setItem("user", JSON.stringify(user));
 

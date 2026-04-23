@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createPatient, fetchAllPatient } from "@/services/patient.services";
+import { getPrevVitalSigns, createRequest, getAllUsers } from "@/services/request.services";
 import { createPatient, fetchAllPatient, updatePatient } from "@/services/patient.services";
 import { getPrevVitalSigns, createRequest } from "@/services/request.services";
 import SweetAlert from "@/utils/SweetAlert";
 import { VitalSignProps} from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
+import { UsersProps, VitalSignProps } from "@/types/RequestTypes";
 import api from "@/services/axios";
 
 export const useGetAllpatient = (search: string) => {
@@ -15,7 +18,7 @@ export const useGetAllpatient = (search: string) => {
 
 export const usePatient = (closeModal: () => void) => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: createPatient,
 
@@ -124,4 +127,12 @@ export const useUpdatePatient = (closeModal: () => void) => {
       );
     }
   });
+};
+
+export const useGetAllUsers = () => {
+  return useQuery<UsersProps[]>({
+    queryKey: ["patient"],
+    queryFn: () => getAllUsers(),
+  });
+};
 };

@@ -5,14 +5,14 @@ import {
   Package,
   Users,
   BarChart,
-  Newspaper
+  FileStack
 } from "lucide-react";
 
 export interface MenuItem {
   label: string;
   path: string;
   icon?: ReactNode;
-  iconOnly? : ReactNode;
+  iconOnly?: ReactNode;
   roles: string[];
 }
 
@@ -20,7 +20,7 @@ export const MENU_ITEMS: MenuItem[] = [
   // ADMIN pages
   {
     label: "Dashboard",
-    path: "/pages/admin/dashboard",
+    path: "/dashboard",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
     roles: ["ADMIN"]
@@ -30,7 +30,7 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/pages/admin/users",
     icon: <ShoppingCart size={18} />,
     iconOnly: <ShoppingCart size={30} />,
-    roles: [ "ADMIN"]
+    roles: ["ADMIN"]
   },
   {
     label: "Services",
@@ -54,25 +54,25 @@ export const MENU_ITEMS: MenuItem[] = [
     roles: ["ADMIN"]
   },
 
-  // STAFF
+  // DOCTOR
 
   {
-    label: "Dashboard",
-    path: "/pages/doctor/dashboard",
+    label: "Queue & Dashboard",
+    path: "/docDashboard",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
     roles: ["DOCTOR"]
   },
   {
-    label: "Consultations",
-    path: "/pages/doctor/consultation",
+    label: "Registry & Request",
+    path: "/patientHistoryList",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
     roles: ["DOCTOR"]
   },
   {
-    label: "Request",
-    path: "/pages/doctor/consultation",
+    label: "History & Records",
+    path: "/historyRecords",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
     roles: ["DOCTOR"]
@@ -82,28 +82,36 @@ export const MENU_ITEMS: MenuItem[] = [
 
   {
     label: "Dashboard",
-    path: "/pages/doctor/dashboard",
+    path: "/labdashboard",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
-    roles: ["LAB"]
+    roles: ["LAB", "LABORATORY"]
+  },
+
+  {
+    label: "Laboratory Records",
+    path: "/labrecords",
+    icon: <FileStack size={18} />,
+    iconOnly: <FileStack size={30} />,
+    roles: ["LAB", "LABORATORY, DOCTOR"]
   },
 
   // STAFF
   {
     label: "Dashboard",
-    path: "/pages/doctor/dashboard",
+    path: "/registration",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
     roles: ["STAFF"]
   },
 
   // CASHIER
-   {
+  {
     label: "Billing",
-    path: "/pages/cashier/billing",
+    path: "/billing",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
-    roles: ["CASHIER"]
+    roles: ["CASHIER", "ADMIN"]
   },
 
 
