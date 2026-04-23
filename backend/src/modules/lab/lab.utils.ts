@@ -678,31 +678,31 @@ export const toNullableDate = (value?: string | null) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-// export const trimFormValue = (
-//   form: Record<string, string>,
-//   ...keys: string[]
-// ) => {
-//   for (const key of keys) {
-//     const value = form[key];
+export const trimFormValue = (
+  form: Record<string, string>,
+  ...keys: string[]
+) => {
+  for (const key of keys) {
+    const value = form[key];
 
-//     if (typeof value === "string") {
-//       const trimmed = value.trim();
-//       if (trimmed) {
-//         return trimmed;
-//       }
-//     }
-//   }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+  }
 
-//   return null;
-// };
+  return null;
+};
 
-// export const toNullableDate = (value?: string | null) => {
-//   const trimmed = value?.trim();
+export const toNullableDate = (value?: string | null) => {
+  const trimmed = value?.trim();
 
-//   if (!trimmed) {
-//     return null;
-//   }
+  if (!trimmed) {
+    return null;
+  }
 
-//   const parsed = new Date(trimmed);
-//   return Number.isNaN(parsed.getTime()) ? null : parsed;
-// };
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};

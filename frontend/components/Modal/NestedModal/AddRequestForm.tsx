@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { requestSchema } from "@/schemas/request.schema";
 import { UsersProps, VitalSignProps } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
+import { useRequest } from "@/hooks/Patient/usePatientRegistration";
 import { useLabTestCatalog } from "@/hooks/Lab/useLab";
 import { useRequest, useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
 import Input from "@/components/ui/Input";
@@ -53,9 +54,8 @@ function VitalsRow<T extends FieldValues>({
   label,
   teal,
   register,
-  errors,
   readonly,
-}: VitalKeyProps<T>) {
+}: VitakKeyProps<T>) {
   const fields = [
     { name: "bp", label: "BP (mmHg)", ph: "120/80" },
     { name: "temp", label: "Temp (°C)", ph: "36.6" },
@@ -112,7 +112,6 @@ const RequestForm: React.FC<{
     register,
     handleSubmit,
     control,
-    watch,
     formState: { errors },
   } = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
@@ -144,6 +143,24 @@ const RequestForm: React.FC<{
     await request(data);
   };
 
+  const typeIcon =
+    reqType === "CONSULTATION" ? (
+      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+        />
+      </svg>
+    ) : (
+      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+        />
+      </svg>
+    );
   const testOptions = [
     { value: "CBC", label: "CBC (Complete Blood Count)" },
     { value: "Urinalysis", label: "Urinalysis" },
@@ -192,7 +209,7 @@ const RequestForm: React.FC<{
 
   return (
     <div className="font-['DM_Sans']">
-      <div className="flex items-center justify-between border-b border-[#dce3ef] bg-[#f7f8fc] px-6 py-4 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-[#dce3ef] bg-[#f7f8fc] px-6 py-4">
         <div className="flex items-center gap-3">
           <div
             className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white ${reqType === "LABORATORY" ? "bg-[#0e7c7b]" : reqType === 'CONSULTATION' ? "bg-[#0f2244]" : "bg-[#a3852c]"
@@ -365,7 +382,7 @@ const RequestForm: React.FC<{
 
         )}
 
-        {reqType === "LABORATORY" && (
+        {reqType === "LABORATORY" ? (
           <div className="space-y-4">
             <div className="col-span-2">
               <Input
