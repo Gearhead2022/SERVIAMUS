@@ -1,21 +1,18 @@
-import {
-  Prisma,
-  LaboratoryCategory,
-  LaboratoryRequestItemStatus,
-  RequestStatus,
-} from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
 import { CreateLabRequestInput, SaveLabResultInput } from "./lab.types";
+import { createLaboratoryRequestWithItems } from "./lab.helpers";
+import { upsertStructuredLabResult } from "./lab.result-writers";
 import {
-  categorizeLabTest,
   normalizeLabForm,
   requestStatusFromItemStatuses,
-  seedItemStatusFromRequestStatus,
+  serializeLabResultPayload,
   splitLabTests,
   toApiLabCategory,
   toApiLabStatus,
   toDbLabCategory,
   toDbLabStatus,
+  toSchemaKey,
 } from "./lab.utils";
 
 type RawPatientRow = {
@@ -38,37 +35,7 @@ type RawPatientRecordRow = RawPatientRow & {
   vital_signs_count: number;
 };
 
-type LabRequestRecord = {
-  id: number;
-  req_id: number;
-  req_by: string;
-  request: {
-    req_id: number;
-    patient_id: number;
-    req_date: Date;
-    status: RequestStatus;
-    patient: {
-      patient_id: number;
-      patient_code: string | null;
-      name: string;
-      age: number | null;
-      sex: string;
-      address: string;
-    };
-  };
-  items: Array<{
-    item_id: number;
-    test_name: string;
-    category: LaboratoryCategory;
-    status: LaboratoryRequestItemStatus;
-    result_payload: Prisma.JsonValue | null;
-    sort_order: number;
-    completed_at: Date | null;
-    created_at: Date;
-  }>;
-};
-
-const includeLabRequestRecord = {
+const labRequestInclude = Prisma.validator<Prisma.LaboratoryRequestInclude>()({
   request: {
     select: {
       req_id: true,
@@ -90,34 +57,34 @@ const includeLabRequestRecord = {
   items: {
     select: {
       item_id: true,
-      test_name: true,
-      category: true,
       status: true,
       result_payload: true,
-      sort_order: true,
-      completed_at: true,
-      created_at: true,
+      test: {
+        select: {
+          test_id: true,
+          name: true,
+          category: true,
+          schema_key: true,
+        },
+      },
+      processor: {
+        select: {
+          user_id: true,
+          name: true,
+        },
+      },
     },
-    orderBy: [{ sort_order: "asc" }, { item_id: "asc" }],
+    orderBy: [{ item_id: "asc" }],
   },
-} satisfies Prisma.LaboratoryRequestInclude;
+});
+
+type LabRequestRecord = Prisma.LaboratoryRequestGetPayload<{
+  include: typeof labRequestInclude;
+}>;
 
 const normalizeRequestedBy = (value?: string | null) => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
-};
-
-const serializeResultPayload = (value: Prisma.JsonValue | null) => {
-  if (!value || Array.isArray(value) || typeof value !== "object") {
-    return null;
-  }
-
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).map(([key, itemValue]) => [
-      key,
-      typeof itemValue === "string" ? itemValue : String(itemValue ?? ""),
-    ])
-  );
 };
 
 const toDisplayItem = (
@@ -126,10 +93,10 @@ const toDisplayItem = (
 ) => {
   const completedTests = record.items
     .filter((entry) => entry.status === "DONE")
-    .map((entry) => entry.test_name);
+    .map((entry) => entry.test.name);
   const pendingTests = record.items
-    .filter((entry) => entry.status !== "DONE")
-    .map((entry) => entry.test_name);
+    .filter((entry) => entry.status !== "DONE" && entry.status !== "CANCELLED")
+    .map((entry) => entry.test.name);
   const requestStatus = requestStatusFromItemStatuses(
     record.items.map((entry) => entry.status)
   );
@@ -141,8 +108,8 @@ const toDisplayItem = (
     id: `LR-${record.id.toString().padStart(4, "0")}`,
     patientId:
       record.request.patient.patient_code ??
-      `PT-${record.request.patient_id.toString().padStart(4, "0")}`,
-    rawPatientId: record.request.patient_id,
+      `PT-${record.request.patient.patient_id.toString().padStart(4, "0")}`,
+    rawPatientId: record.request.patient.patient_id,
     patientName: record.request.patient.name,
     age: record.request.patient.age ? String(record.request.patient.age) : "",
     sex: record.request.patient.sex,
@@ -152,15 +119,16 @@ const toDisplayItem = (
     requestedDate: record.request.req_date.toISOString(),
     requestStatus: toApiLabStatus(requestStatus),
     status: toApiLabStatus(item.status),
-    category: toApiLabCategory(item.category),
-    tests: record.items.map((entry) => entry.test_name),
-    testType: item.test_name,
+    category: toApiLabCategory(item.test.category),
+    schemaKey: item.test.schema_key,
+    tests: record.items.map((entry) => entry.test.name),
+    testType: item.test.name,
     completedTests,
     pendingTests,
     totalTests: record.items.length,
     completedCount: completedTests.length,
     priority: "Routine" as const,
-    resultPayload: serializeResultPayload(item.result_payload),
+    resultPayload: serializeLabResultPayload(item.result_payload),
   };
 };
 
@@ -173,94 +141,13 @@ const getUserName = async (tx: Prisma.TransactionClient, userId: number) => {
   return normalizeRequestedBy(user?.name) ?? "Doctor";
 };
 
-const ensureLaboratoryRequestItems = async (tx: Prisma.TransactionClient) => {
-  const laboratoryRequests = await tx.laboratoryRequest.findMany({
-    select: {
-      id: true,
-      test: true,
-      request: {
-        select: {
-          status: true,
-        },
-      },
-      items: {
-        select: {
-          test_name: true,
-        },
-        orderBy: [{ sort_order: "asc" }, { item_id: "asc" }],
-      },
-    },
-  });
-
-  for (const laboratoryRequest of laboratoryRequests) {
-    const parsedTests = splitLabTests(laboratoryRequest.test);
-
-    if (!parsedTests.length) {
-      continue;
-    }
-
-    const unmatchedIndexes = new Set<number>();
-    const existingNames = laboratoryRequest.items.map((item) =>
-      item.test_name.trim().toLowerCase()
-    );
-
-    const missingItems: Array<{
-      laboratory_request_id: number;
-      test_name: string;
-      category: LaboratoryCategory;
-      status: LaboratoryRequestItemStatus;
-      sort_order: number;
-    }> = [];
-
-    parsedTests.forEach((testName, index) => {
-      const normalizedName = testName.trim().toLowerCase();
-      let matchedIndex = -1;
-
-      for (let existingIndex = 0; existingIndex < existingNames.length; existingIndex += 1) {
-        if (unmatchedIndexes.has(existingIndex)) {
-          continue;
-        }
-
-        if (existingNames[existingIndex] === normalizedName) {
-          matchedIndex = existingIndex;
-          break;
-        }
-      }
-
-      if (matchedIndex >= 0) {
-        unmatchedIndexes.add(matchedIndex);
-        return;
-      }
-
-      missingItems.push({
-        laboratory_request_id: laboratoryRequest.id,
-        test_name: testName,
-        category: categorizeLabTest(testName),
-        status: seedItemStatusFromRequestStatus(laboratoryRequest.request.status),
-        sort_order: index,
-      });
-    });
-
-    if (missingItems.length) {
-      await tx.laboratoryRequestItem.createMany({
-        data: missingItems,
-      });
-    }
-  }
-};
-
 const getLabRequestRecords = async (tx: Prisma.TransactionClient) => {
-  await ensureLaboratoryRequestItems(tx);
-
   return tx.laboratoryRequest.findMany({
-    include: includeLabRequestRecord,
+    include: labRequestInclude,
   });
 };
 
-const getDisplayItemById = async (
-  tx: Prisma.TransactionClient,
-  labId: number
-) => {
+const getDisplayItemById = async (tx: Prisma.TransactionClient, labId: number) => {
   const record = await tx.laboratoryRequest.findFirst({
     where: {
       items: {
@@ -269,20 +156,50 @@ const getDisplayItemById = async (
         },
       },
     },
-    include: includeLabRequestRecord,
+    include: labRequestInclude,
   });
 
   if (!record) {
     throw new Error("Lab request not found.");
   }
 
-  const targetItem = record.items.find((item) => item.item_id === labId);
+  const item = record.items.find((entry) => entry.item_id === labId);
 
-  if (!targetItem) {
+  if (!item) {
     throw new Error("Lab request item not found.");
   }
 
-  return toDisplayItem(record as LabRequestRecord, targetItem);
+  return toDisplayItem(record, item);
+};
+
+const syncParentRequestStatus = async (
+  tx: Prisma.TransactionClient,
+  laboratoryRequestId: number
+) => {
+  const parentRequest = await tx.laboratoryRequest.findUnique({
+    where: { id: laboratoryRequestId },
+    select: {
+      req_id: true,
+      items: {
+        select: {
+          status: true,
+        },
+      },
+    },
+  });
+
+  if (!parentRequest) {
+    throw new Error("Lab request not found.");
+  }
+
+  await tx.request.update({
+    where: { req_id: parentRequest.req_id },
+    data: {
+      status: requestStatusFromItemStatuses(
+        parentRequest.items.map((item) => item.status)
+      ),
+    },
+  });
 };
 
 export const getAllUsersService = async () => {
@@ -405,21 +322,10 @@ export const createLabRequestService = async ({
       },
     });
 
-    const laboratoryRequest = await tx.laboratoryRequest.create({
-      data: {
-        req_id: request.req_id,
-        req_by: finalRequestedBy,
-        test: normalizedTests.join(", "),
-      },
-    });
-
-    await tx.laboratoryRequestItem.createMany({
-      data: normalizedTests.map((testName, index) => ({
-        laboratory_request_id: laboratoryRequest.id,
-        test_name: testName,
-        category: categorizeLabTest(testName),
-        sort_order: index,
-      })),
+    const laboratoryRequest = await createLaboratoryRequestWithItems(tx, {
+      reqId: request.req_id,
+      requestedBy: finalRequestedBy,
+      tests: normalizedTests,
     });
 
     const records = await getLabRequestRecords(tx);
@@ -429,7 +335,7 @@ export const createLabRequestService = async ({
       throw new Error("Unable to load the created laboratory request.");
     }
 
-    return toDisplayItem(createdRecord as LabRequestRecord, createdRecord.items[0]);
+    return toDisplayItem(createdRecord, createdRecord.items[0]);
   });
 };
 
@@ -439,9 +345,8 @@ export const getLabRequestsService = async (status?: string) => {
     const normalizedStatus = status?.trim().toLowerCase();
 
     return records
-      .flatMap((record) =>
-        record.items.map((item) => toDisplayItem(record as LabRequestRecord, item))
-      )
+      .filter((record) => record.items.length > 0)
+      .flatMap((record) => record.items.map((item) => toDisplayItem(record, item)))
       .filter((item) => !normalizedStatus || item.status === normalizedStatus)
       .sort((left, right) => {
         const timeDiff =
@@ -458,7 +363,8 @@ export const getLabRequestsService = async (status?: string) => {
 
 export const updateLabRequestStatusService = async (
   labId: number,
-  status: "queued" | "pending" | "done"
+  status: "queued" | "pending" | "done",
+  userId?: number
 ) => {
   return prisma.$transaction(async (tx) => {
     const existingItem = await tx.laboratoryRequestItem.findUnique({
@@ -466,6 +372,7 @@ export const updateLabRequestStatusService = async (
       select: {
         item_id: true,
         laboratory_request_id: true,
+        processed_by: true,
       },
     });
 
@@ -475,38 +382,17 @@ export const updateLabRequestStatusService = async (
 
     const dbStatus = toDbLabStatus(status);
 
-    await tx.laboratoryRequestItem.update({
+    await tx.laboratoryRequestItem.updateMany({
       where: { item_id: labId },
       data: {
         status: dbStatus,
         completed_at: dbStatus === "DONE" ? new Date() : null,
+        processed_by:
+          dbStatus === "QUEUED" ? null : userId ?? existingItem.processed_by ?? null,
       },
     });
 
-    const items = await tx.laboratoryRequestItem.findMany({
-      where: {
-        laboratory_request_id: existingItem.laboratory_request_id,
-      },
-      select: {
-        status: true,
-      },
-    });
-
-    const parentRequest = await tx.laboratoryRequest.findUnique({
-      where: { id: existingItem.laboratory_request_id },
-      select: { req_id: true },
-    });
-
-    if (!parentRequest) {
-      throw new Error("Lab request not found.");
-    }
-
-    await tx.request.update({
-      where: { req_id: parentRequest.req_id },
-      data: {
-        status: requestStatusFromItemStatuses(items.map((item) => item.status)),
-      },
-    });
+    await syncParentRequestStatus(tx, existingItem.laboratory_request_id);
 
     return getDisplayItemById(tx, labId);
   });
@@ -516,14 +402,33 @@ export const saveLabResultService = async ({
   labId,
   category,
   form,
+  userId,
+  pathologistUserId,
 }: SaveLabResultInput) => {
   return prisma.$transaction(async (tx) => {
     const existingItem = await tx.laboratoryRequestItem.findUnique({
       where: { item_id: labId },
       select: {
         item_id: true,
+        test_id: true,
         status: true,
+        processed_by: true,
         laboratory_request_id: true,
+        test: {
+          select: {
+            name: true,
+            schema_key: true,
+          },
+        },
+        laboratoryRequest: {
+          select: {
+            request: {
+              select: {
+                patient_id: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -531,39 +436,36 @@ export const saveLabResultService = async ({
       throw new Error("Lab request item not found.");
     }
 
-    await tx.laboratoryRequestItem.update({
-      where: { item_id: labId },
+    await tx.laboratoryTest.update({
+      where: { test_id: existingItem.test_id },
       data: {
         category: toDbLabCategory(category),
-        result_payload: normalizeLabForm(form),
-        status: existingItem.status === "QUEUED" ? "PENDING" : existingItem.status,
+        schema_key: toSchemaKey(existingItem.test.name),
       },
     });
 
-    const items = await tx.laboratoryRequestItem.findMany({
-      where: {
-        laboratory_request_id: existingItem.laboratory_request_id,
-      },
-      select: {
-        status: true,
-      },
-    });
-
-    const parentRequest = await tx.laboratoryRequest.findUnique({
-      where: { id: existingItem.laboratory_request_id },
-      select: { req_id: true },
-    });
-
-    if (!parentRequest) {
-      throw new Error("Lab request not found.");
-    }
-
-    await tx.request.update({
-      where: { req_id: parentRequest.req_id },
+    await tx.laboratoryRequestItem.updateMany({
+      where: { item_id: labId },
       data: {
-        status: requestStatusFromItemStatuses(items.map((item) => item.status)),
+        result_payload: normalizeLabForm(form),
+        status: existingItem.status === "DONE" ? "DONE" : "PROCESSING",
+        completed_at: existingItem.status === "DONE" ? new Date() : null,
+        processed_by: userId ?? existingItem.processed_by ?? null,
       },
     });
+
+    await upsertStructuredLabResult({
+      tx,
+      patientId: existingItem.laboratoryRequest.request.patient_id,
+      labId,
+      testName: existingItem.test.name,
+      schemaKey: existingItem.test.schema_key,
+      form,
+      medTechUserId: userId ?? null,
+      pathologistUserId,
+    });
+
+    await syncParentRequestStatus(tx, existingItem.laboratory_request_id);
 
     return getDisplayItemById(tx, labId);
   });

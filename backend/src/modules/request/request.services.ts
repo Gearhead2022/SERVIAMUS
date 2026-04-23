@@ -24,8 +24,8 @@ export const getPrevVitalSigns = async (patient_id: number) => {
             patient_code: true
           }
         }
-        
-        
+
+
       },
     });
 
@@ -41,7 +41,7 @@ export const createRequest = async (payload: CreateRequestProps) => {
       data: {
         patient_id: payload.patient_id,
         req_date: new Date(payload.req_date),
-        req_type: payload.req_type as 'CONSULTATION' | 'LABORATORY',
+        req_type: payload.req_type as 'CONSULTATION' | 'LABORATORY' | 'CERTIFICATE',
         status: "WAITING",
       },
     });
@@ -63,6 +63,7 @@ export const createRequest = async (payload: CreateRequestProps) => {
         data: {
           req_id: request.req_id,
           vs_id: vitals.vs_id,
+          physician: payload.physician,
         },
       });
 
@@ -87,6 +88,7 @@ export const createRequest = async (payload: CreateRequestProps) => {
       await tx.laboratoryRequestItem.createMany({
         data: normalizedTests.map((test, index) => ({
           laboratory_request_id: lab.id,
+          test_id: payload.test_id,
           test_name: test,
           category: categorizeLabTest(test),
           sort_order: index,
@@ -96,7 +98,86 @@ export const createRequest = async (payload: CreateRequestProps) => {
       return { request, lab };
     }
 
-    // fallback (should never happen)
+    if (payload.req_type === "CERTIFICATE") {
+
+      const med = await tx.medicalCertificateRequest.create({
+        data: {
+          req_id: request.req_id,
+          physician: payload.physician,
+          purpose: payload.purpose,
+        },
+        include: {
+          certificate: true
+        }
+      });
+
+      return { request, med };
+    }
+
     throw new Error("Invalid request type");
+  });
+};
+
+export const getAllRegisteredUsers = async () => {
+  return prisma.$transaction(async (tx) => {
+    const data = tx.users.findMany({
+      where: {
+        is_active: true,
+        roles: {
+          some: {
+            role: {
+              role_name: 'DOCTOR'
+            }
+          }
+        }
+      },
+      select: {
+        user_id: true,
+        username: true,
+        name: true,
+        license_no: true,
+        title: true,
+        ptr_no: true,
+      }
+    });
+
+    return data;
+  })
+}
+
+export const getRequestData = async (request_id: number) => {
+  return prisma.$transaction(async (tx) => {
+    const request = await tx.request.findFirst({
+      where: {
+        req_id: request_id,
+      },
+      include: {
+        cert: {
+          include: {
+            certificate: true,
+          },
+        },
+        consult: true, // no nested include
+        patient: true,
+      },
+    });
+
+    if (!request?.consult?.cons_id) {
+      return request;
+    }
+
+    const consultation = await tx.consultation.findFirst({
+      where: {
+        cons_id: request.consult.cons_id,
+      },
+    });
+
+    return {
+      ...request,
+      consult: {
+        ...request.consult,
+        consultation,
+      },
+    };
   });
 };

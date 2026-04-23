@@ -5,16 +5,20 @@ import Select from "react-select";
 import { useForm, UseFormRegister, FieldValues, Path, FieldErrors, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { requestSchema } from "@/schemas/request.schema";
-import { VitalSignProps } from "@/types/RequestTypes";
+import { UsersProps, VitalSignProps } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
-import { useRequest } from "@/hooks/Patient/usePatientRegistration";
+import { useRequest, useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Label from "@/components/ui/label";
-import Textarea from "@/components/ui/Textarea";
+import { File, TestTubeDiagonal, SquareActivity } from "lucide-react";
+import { todayPH } from "@/utils/Date";
+
 
 type RequestFormValues = z.infer<typeof requestSchema>;
-type LabForm = Extract<RequestFormValues, { req_type: "LABORATORY" }>;
+type Consultation = Extract<RequestFormValues, { req_type: "CONSULTATION" }>;
+type Laboratory = Extract<RequestFormValues, { req_type: "LABORATORY" }>;
+type Certificate = Extract<RequestFormValues, { req_type: "CERTIFICATE" }>;
 
 const inputCls =
   "w-full bg-[#f0f3fa] border border-[1.5px] border-[#dce3ef] rounded-lg px-3 py-2.5 text-sm text-[#1a2a45] font-['DM_Sans'] outline-none transition focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white placeholder:text-[#b0bcd4]";
@@ -27,6 +31,12 @@ interface VitakKeyProps<T extends FieldValues> {
   teal?: boolean;
   readonly: boolean;
 }
+
+const typeLabels = {
+  CONSULTATION: "Consultation",
+  LABORATORY: "Laboratory",
+  CERTIFICATE: "Certificate",
+} as const;
 
 function VitalsRow<T extends FieldValues>({
   prefix,
@@ -86,6 +96,7 @@ const RequestForm: React.FC<{
   onClose: () => void;
 }> = ({ patient, vitals, onClose }) => {
   const { mutateAsync: request, isPending } = useRequest(onClose);
+  const { data: UserList } = useGetAllUsers();
   const {
     register,
     handleSubmit,
@@ -96,7 +107,6 @@ const RequestForm: React.FC<{
     resolver: zodResolver(requestSchema),
     defaultValues: {
       req_type: "CONSULTATION",
-
       name: patient.name,
       patient_id: patient.patient_id,
       prev_cr: vitals?.cr,
@@ -107,13 +117,16 @@ const RequestForm: React.FC<{
       prev_wt: vitals?.ht,
       created_at: '',
       patient_code: patient?.patient_code,
-      req_date: new Date().toISOString().split("T")[0],
+      address: patient?.address,
+      age: patient?.age?.toString(),
+      req_date: todayPH(),
     },
   });
 
-
-  const reqType = watch("req_type");
-  const labErrors = errors as FieldErrors<LabForm>;
+  const reqType = watch("req_type") as RequestFormValues["req_type"];
+  const consultErrors = errors as FieldErrors<Consultation>;
+  const labErrors = errors as FieldErrors<Laboratory>;
+  const certificateErrors = errors as FieldErrors<Certificate>;
   const lastConsultation = vitals?.created_at ? new Date(vitals?.created_at).toISOString().split("T")[0] : '';
 
   const onSubmit = async (data: RequestFormValues) => {
@@ -130,17 +143,41 @@ const RequestForm: React.FC<{
     { value: "Ultrasound", label: "Ultrasound" },
   ];
 
-  /* Icon per type */
-  const typeIcon =
-    reqType === "CONSULTATION" ? (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ) : (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-      </svg>
-    );
+  const purposeOptions = [
+    { value: "Fit To Work", label: "Fit to work" },
+    { value: "Medical Assistance", label: "Medical Assistance" }
+  ]
+
+  type Option = {
+    label: string;
+    value: number;
+  };
+
+  const userOptions = (UserList: UsersProps[]): Option[] => {
+    return UserList.map((user) => ({
+      label: user.name + " " + user.title,
+      value: user.user_id,
+    }));
+  };
+
+  const options = userOptions(UserList ?? []);
+
+  type ReqType = "CONSULTATION" | "CERTIFICATE" | "LABORATORY";
+
+  const icons: Partial<Record<ReqType, React.ReactNode>> = {
+    CONSULTATION: (
+      <File height={20} width={20} />
+    ),
+    CERTIFICATE: (
+      <SquareActivity height={20} width={20} />
+    ),
+  };
+
+  const defaultIcon = (
+    <TestTubeDiagonal height={20} width={20} />
+  );
+
+  const typeIcon = icons[reqType] ?? defaultIcon;
 
   return (
     <div className="font-['DM_Sans']">
@@ -149,14 +186,14 @@ const RequestForm: React.FC<{
       <div className="bg-[#f7f8fc] border-b border-[#dce3ef] px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white ${reqType === "LABORATORY" ? "bg-[#0e7c7b]" : "bg-[#0f2244]"
+            className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white ${reqType === "LABORATORY" ? "bg-[#0e7c7b]" : reqType === 'CONSULTATION' ? "bg-[#0f2244]" : "bg-[#a3852c]"
               }`}
           >
             {typeIcon}
           </div>
           <div>
             <h2 className="font-['DM_Serif_Display'] text-[#0f2244] text-base leading-tight">
-              {reqType === "CONSULTATION" ? "Consultation Request" : "Laboratory Request"}
+              {reqType === "CONSULTATION" ? "Consultation Request" : reqType === "LABORATORY" ? "Laboratory Request" : "Certificate Request"}
             </h2>
             <p className="text-[11px] text-[#6b7da0] mt-0.5">
               Patient:{" "}
@@ -169,15 +206,15 @@ const RequestForm: React.FC<{
           </div>
         </div>
 
-        {/* Type toggle pills */}
         <div className="flex items-center gap-1 bg-[#eef1f9] p-1 rounded-xl">
-          {(["CONSULTATION", "LABORATORY"] as const).map((type) => (
+          {(["CONSULTATION", "LABORATORY", "CERTIFICATE"] as const).map((type) => (
             <label
               key={type}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${watch("req_type") === type
                 ? type === "CONSULTATION"
                   ? "bg-[#0f2244] text-white shadow-sm"
-                  : "bg-[#0e7c7b] text-white shadow-sm"
+                  : type === "LABORATORY" ? "bg-[#0e7c7b] text-white shadow-sm"
+                    : "bg-[#a3852c] text-white shadow-sm"
                 : "text-[#6b7da0] hover:text-[#1a2a45]"
                 }`}
             >
@@ -187,7 +224,7 @@ const RequestForm: React.FC<{
                 value={type}
                 className="sr-only"
               />
-              {type === "CONSULTATION" ? "Consultation" : "Laboratory"}
+              {typeLabels[type]}
             </label>
           ))}
         </div>
@@ -203,7 +240,7 @@ const RequestForm: React.FC<{
               type="text"
               placeholder="Auto-filled"
               {...register("patient_code")}
-              error={errors.patient_code?.message}
+              error={consultErrors.patient_code?.message}
               readOnly
             />
           </div>
@@ -213,7 +250,7 @@ const RequestForm: React.FC<{
               type="text"
               placeholder="Auto-filled"
               {...register("name")}
-              error={errors.name?.message}
+              error={consultErrors.name?.message}
               readOnly
             />
           </div>
@@ -223,14 +260,36 @@ const RequestForm: React.FC<{
               type="date"
               {...register("req_date")}
               className="bg-[#f7f8fc]"
-              error={errors.req_date?.message}
+              error={consultErrors.req_date?.message}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-4 gap-4">
+          <div className="col-span-3">
+            <Input
+              label="Address"
+              type="text"
+              placeholder="Street, City, Province"
+              {...register("address")}
+              readOnly
+              error={errors.address?.message}
+            />
+          </div>
+          <div className="col-span-1">
+            <Input
+              label="Age"
+              type="text"
+              placeholder="Years"
+              {...register("age")}
+              readOnly
+              error={errors.age?.message}
             />
           </div>
         </div>
 
         {/* ── CONSULTATION fields ── */}
         {reqType === "CONSULTATION" && (
-          <div className="space-y-4">
+          <div className="space-y-4 z-0">
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7da0]">
                 Vital Signs
@@ -243,7 +302,7 @@ const RequestForm: React.FC<{
               label="Previous Record"
               teal={false}
               register={register}
-              errors={errors}
+              errors={consultErrors}
               readonly={true}
             />
             <VitalsRow
@@ -251,10 +310,53 @@ const RequestForm: React.FC<{
               label="Current Record"
               teal
               register={register}
-              errors={errors}
+              errors={consultErrors}
               readonly={false}
             />
+            <div className="w-[70%] z-10">
+              <Label>Assigned Physician</Label>
+
+              <Controller
+                control={control}
+                name="physician"
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    options={options}
+                    placeholder="— Select Physician —"
+                    className={`text-sm ${inputCls}`}
+                    classNamePrefix="react-select"
+                    isClearable
+
+                    onChange={(selected) =>
+                      field.onChange(selected ? selected.value : null)
+                    }
+
+                    value={options.find(
+                      (opt) => opt.value === field.value
+                    ) || null}
+
+                    menuPortalTarget={document.body}
+                    styles={{
+                      menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                      menuList: (base) => ({
+                        ...base,
+                        maxHeight: 200,
+                        overflowY: "auto",
+                        color: 'black',
+                      }),
+                    }}
+                  />
+                )}
+              />
+              {consultErrors.physician && (
+                <p className="text-xs text-red-500 mt-1">
+                  {consultErrors.physician.message}
+                </p>
+              )}
+            </div>
           </div>
+
         )}
 
         {/* ── LABORATORY fields ── */}
@@ -302,18 +404,95 @@ const RequestForm: React.FC<{
                 )}
               />
 
-              {/* <FieldError message={errors.test?.message} /> */}
-            </div>
-
-            {/* Notes field for lab */}
-            <div>
-              <Textarea
-                label="Clinical Notes"
-                rows={3}
-                placeholder="Add any instructions or clinical context for the lab request…"
-              />
+              {certificateErrors.purpose && (
+                <p className="text-xs text-red-500 mt-1">
+                  {certificateErrors.purpose.message}
+                </p>
+              )}
             </div>
           </div>
+        )}
+
+        {/* ── CERTIFICATE fields ── */}
+        {reqType === "CERTIFICATE" && (
+          <div className="space-y-4">
+            <Controller
+              control={control}
+              name="purpose"
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  options={purposeOptions}
+                  placeholder="— Select Purpose —"
+                  className={`text-sm ${inputCls}`}
+                  classNamePrefix="react-select"
+                  isClearable
+
+                  onChange={(selected) =>
+                    field.onChange(selected ? selected.value : null)
+                  }
+
+                  value={purposeOptions.find(
+                    (opt) => opt.value === field.value
+                  ) || null}
+
+                  menuPortalTarget={document.body}
+                  styles={{
+                    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                    menuList: (base) => ({
+                      ...base,
+                      maxHeight: 200,
+                      overflowY: "auto",
+                      color: 'black',
+                    }),
+                  }}
+                />
+              )}
+            />
+            <div className="w-[70%]">
+              <Label>Assigned Physician</Label>
+
+              <Controller
+                control={control}
+                name="physician"
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    options={options}
+                    placeholder="— Select Physician —"
+                    className={`text-sm ${inputCls}`}
+                    classNamePrefix="react-select"
+                    isClearable
+
+                    onChange={(selected) =>
+                      field.onChange(selected ? selected.value : null)
+                    }
+
+                    value={options.find(
+                      (opt) => opt.value === field.value
+                    ) || null}
+
+                    menuPortalTarget={document.body}
+                    styles={{
+                      menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                      menuList: (base) => ({
+                        ...base,
+                        maxHeight: 200,
+                        overflowY: "auto",
+                        color: 'black',
+                      }),
+                    }}
+                  />
+                )}
+              />
+              {certificateErrors.physician && (
+                <p className="text-xs text-red-500 mt-1">
+                  {certificateErrors.physician.message}
+                </p>
+              )}
+            </div>
+          </div>
+
         )}
 
         {/* Divider + Actions */}
@@ -336,7 +515,7 @@ const RequestForm: React.FC<{
         </div>
 
       </form>
-    </div>
+    </div >
   );
 };
 

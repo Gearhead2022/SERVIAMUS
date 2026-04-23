@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getPrevVitalSigns, createRequest } from "./request.services";
+import { getPrevVitalSigns, createRequest, getAllRegisteredUsers, getRequestData } from "./request.services";
 
 export const getPrevVitalSignsController = async (req: Request, res: Response) => {
   try {
@@ -38,6 +38,47 @@ export const createRequestController = async (req: Request, res: Response) => {
     return res.status(400).json({
       success: false,
       message: error.message
+    });
+  }
+};
+
+export const getAllRegisteredUsersController = async (req: Request, res: Response) => {
+  try {
+    const data = await getAllRegisteredUsers();
+
+    return res.status(201).json({
+      success: true,
+      data: data
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+export const getRequestDataController = async (req: Request, res: Response) => {
+  try {
+    const requestId = Number(req.params.id);
+
+    if (!requestId || isNaN(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid consultation_id",
+      });
+    }
+
+    const prescriptions = await getRequestData(requestId);
+
+    return res.status(200).json({
+      success: true,
+      data: prescriptions,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Something went wrong",
     });
   }
 };
