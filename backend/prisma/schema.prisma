@@ -192,11 +192,12 @@ model Request {
   status     RequestStatus
   req_date   DateTime      @db.Date
 
-  patient             Patients                  @relation(fields: [patient_id], references: [patient_id])
-  laboratory          LaboratoryRequest?
-  consult             ConsultationRequest?
-  medical_certificate MedicalCertificateResult?
-  billing             Billing?
+  patient Patients @relation(fields: [patient_id], references: [patient_id])
+
+  laboratory LaboratoryRequest?
+  consult    ConsultationRequest?
+  billing    Billing?
+  cert       MedicalCertificateRequest?
 
   @@index([patient_id])
   @@map("request")
@@ -386,20 +387,11 @@ model Patients {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  phr                       ConsultationRecords[]
-  request                   Request[]
-  vitals                    VitallSign[]
-  prescriptions             Prescription[]
-  consultations             Consultation[]
-  hematologyResults         HematologyResult[]
-  serologyResults           SerologyResult[]
-  parasitologyResults       ParasitologyResult[]
-  urinalysisResults         UrinalysisResult[]
-  clinicalChemistryResults  ClinicalChemistryResult[]
-  hbA1CResults              HbA1cResult[]
-  chemistryResults          ChemistryResult[]
-  ogttResults               OgttResult[]
-  medicalCertificateResults MedicalCertificateResult[]
+  phr           ConsultationRecords[]
+  request       Request[]
+  vitals        VitallSign[]
+  prescriptions Prescription[]
+  consultations Consultation[]
 
   hematology_results          HematologyResult[]
   serology_results            SerologyResult[]
@@ -774,115 +766,4 @@ model OgttResult {
   @@index([med_tech_user_id])
   @@index([pth_user_id])
   @@map("ogtt_results")
-}
-
-model MedicalCertificateResult {
-  med_cert_id      Int       @id @default(autoincrement())
-  patient_id       Int
-  request_id       Int?      @unique
-  purpose          String?   @db.Text
-  med_tech_user_id Int?
-  result_date      DateTime  @default(now()) @db.Date
-  created_at       DateTime  @default(now())
-  updated_at       DateTime? @updatedAt
-
-  patient  Patients @relation(fields: [patient_id], references: [patient_id])
-  request  Request? @relation(fields: [request_id], references: [req_id])
-  med_tech Users?   @relation("MedicalCertificateResultMedTech", fields: [med_tech_user_id], references: [user_id])
-
-  @@index([patient_id])
-  @@index([med_tech_user_id])
-  @@map("medical_certificate_results")
-}
-
-// Service Class
-model ServiceClass {
-  class_id    Int     @id @default(autoincrement())
-  class_code  String  @unique @db.VarChar(20)
-  description String  @db.VarChar(200)
-  is_active   Boolean @default(true)
-
-  services Services[]
-
-  @@map("service_class")
-}
-
-// Services
-model Services {
-  service_id   Int      @id @default(autoincrement())
-  service_code String   @unique @db.VarChar(20)
-  price        Decimal  @db.Decimal(12, 2)
-  date         DateTime @db.Date
-  is_active    Boolean  @default(true)
-  class_id     Int
-
-  serviceClass ServiceClass     @relation(fields: [class_id], references: [class_id])
-  billingItems BillingService[]
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@map("services")
-}
-
-// Billing
-model Billing {
-  billing_id   Int        @id @default(autoincrement())
-  billing_code String     @unique @db.VarChar(20)
-  req_id       Int        @unique
-  total_price  Decimal    @db.Decimal(12, 2)
-  date         DateTime   @db.Date
-  discount     Decimal    @db.Decimal(12, 2)
-  status       BillStatus
-
-  services BillingService[]
-  request  Request          @relation(fields: [req_id], references: [req_id])
-  payments Payment[]
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@map("biling")
-}
-
-enum BillStatus {
-  PENDING
-  DONE
-}
-
-// Billing Services (Pivot Table)
-model BillingService {
-  service_list_id Int @id @default(autoincrement())
-
-  billing_id Int
-  service_id Int
-
-  billing Billing  @relation(fields: [billing_id], references: [billing_id])
-  service Services @relation(fields: [service_id], references: [service_id])
-
-  price Decimal? @db.Decimal(12, 2)
-
-  @@map("billing_services")
-}
-
-model Payment {
-  payment_id Int @id @default(autoincrement())
-
-  billing_id Int
-  billing    Billing @relation(fields: [billing_id], references: [billing_id])
-
-  amount       Decimal       @db.Decimal(12, 2)
-  method       PaymentMethod
-  payment_date DateTime      @default(now())
-
-  reference_no String? @db.VarChar(50) // for GCash / bank / etc.
-
-  created_at DateTime @default(now())
-}
-
-enum PaymentMethod {
-  CASH
-  GCASH
-  CARD
-  BANK_TRANSFER
 }
