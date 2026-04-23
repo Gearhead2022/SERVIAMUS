@@ -677,3 +677,32 @@ export const toNullableDate = (value?: string | null) => {
   const parsed = new Date(trimmed);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
+
+export const trimFormValue = (
+  form: Record<string, string>,
+  ...keys: string[]
+) => {
+  for (const key of keys) {
+    const value = form[key];
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+  }
+
+  return null;
+};
+
+export const toNullableDate = (value?: string | null) => {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};

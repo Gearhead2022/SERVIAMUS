@@ -20,32 +20,36 @@ model Users {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  roles                                     UserRole[]
+  roles         UserRole[]
+  prescriptions Prescription[]
+
   processed_lab_items                       LaboratoryRequestItem[]
-  hematology_results_as_medtech             HematologyResult[]         @relation("HematologyResultMedTech")
-  hematology_results_as_pathologist         HematologyResult[]         @relation("HematologyResultPathologist")
-  serology_results_as_medtech               SerologyResult[]           @relation("SerologyResultMedTech")
-  serology_results_as_pathologist           SerologyResult[]           @relation("SerologyResultPathologist")
-  parasitology_results_as_medtech           ParasitologyResult[]       @relation("ParasitologyResultMedTech")
-  parasitology_results_as_pathologist       ParasitologyResult[]       @relation("ParasitologyResultPathologist")
-  urinalysis_results_as_medtech             UrinalysisResult[]         @relation("UrinalysisResultMedTech")
-  urinalysis_results_as_pathologist         UrinalysisResult[]         @relation("UrinalysisResultPathologist")
-  clinical_chemistry_results_as_medtech     ClinicalChemistryResult[]  @relation("ClinicalChemistryResultMedTech")
-  clinical_chemistry_results_as_pathologist ClinicalChemistryResult[]  @relation("ClinicalChemistryResultPathologist")
-  hba1c_results_as_medtech                  HbA1cResult[]              @relation("HbA1cResultMedTech")
-  hba1c_results_as_pathologist              HbA1cResult[]              @relation("HbA1cResultPathologist")
-  chemistry_results_as_medtech              ChemistryResult[]          @relation("ChemistryResultMedTech")
-  chemistry_results_as_pathologist          ChemistryResult[]          @relation("ChemistryResultPathologist")
-  ogtt_results_as_medtech                   OgttResult[]               @relation("OgttResultMedTech")
-  ogtt_results_as_pathologist               OgttResult[]               @relation("OgttResultPathologist")
-  medical_certificate_results_as_medtech    MedicalCertificateResult[] @relation("MedicalCertificateResultMedTech")
+  hematology_results_as_medtech             HematologyResult[]          @relation("HematologyResultMedTech")
+  hematology_results_as_pathologist         HematologyResult[]          @relation("HematologyResultPathologist")
+  serology_results_as_medtech               SerologyResult[]            @relation("SerologyResultMedTech")
+  serology_results_as_pathologist           SerologyResult[]            @relation("SerologyResultPathologist")
+  parasitology_results_as_medtech           ParasitologyResult[]        @relation("ParasitologyResultMedTech")
+  parasitology_results_as_pathologist       ParasitologyResult[]        @relation("ParasitologyResultPathologist")
+  urinalysis_results_as_medtech             UrinalysisResult[]          @relation("UrinalysisResultMedTech")
+  urinalysis_results_as_pathologist         UrinalysisResult[]          @relation("UrinalysisResultPathologist")
+  clinical_chemistry_results_as_medtech     ClinicalChemistryResult[]   @relation("ClinicalChemistryResultMedTech")
+  clinical_chemistry_results_as_pathologist ClinicalChemistryResult[]   @relation("ClinicalChemistryResultPathologist")
+  hba1c_results_as_medtech                  HbA1cResult[]               @relation("HbA1cResultMedTech")
+  hba1c_results_as_pathologist              HbA1cResult[]               @relation("HbA1cResultPathologist")
+  chemistry_results_as_medtech              ChemistryResult[]           @relation("ChemistryResultMedTech")
+  chemistry_results_as_pathologist          ChemistryResult[]           @relation("ChemistryResultPathologist")
+  ogtt_results_as_medtech                   OgttResult[]                @relation("OgttResultMedTech")
+  ogtt_results_as_pathologist               OgttResult[]                @relation("OgttResultPathologist")
+  medical_certificate_request_as_doctor     MedicalCertificateRequest[] @relation("MedicalCertificateRequestDoctor")
+  consultation_request_as_doctor            ConsultationRequest[]       @relation("ConsultationRequestDoctor")
 
   @@map("users")
 }
 
 model RoleTypes {
-  role_id   Int     @id @default(autoincrement())
-  role_name String  @db.VarChar(50)
+  role_id   Int    @id @default(autoincrement())
+  role_name String @db.VarChar(50)
+
   role_desc String? @db.VarChar(100)
 
   created_at DateTime  @default(now())
@@ -81,20 +85,49 @@ model VitallSign {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  phr      PatientHistoricalRecord[]
-  cons_req ConsultationRequest[]
-  patient  Patients                  @relation(fields: [patient_id], references: [patient_id])
+  phr           ConsultationRecords[]
+  cons_req      ConsultationRequest[]
+  patient       Patients              @relation(fields: [patient_id], references: [patient_id])
+  consultations Consultation[]
 
   @@map("vital_signs")
 }
 
-model PatientHistoricalRecord {
-  phr_id            Int      @id @default(autoincrement())
-  patient_id        Int
-  vs_id             Int
-  hist_illness      String   @db.Text
+model Consultation {
+  consultation_id Int @id @default(autoincrement())
+
+  patient_id Int
+  cons_id    Int
+  vs_id      Int?
+  phr_id     Int?
+
   consultation_date DateTime @db.Date
-  chief_complaint   String   @db.Text
+
+  chief_complaint String?
+  hist_illness    String?
+
+  examination String?
+  assessment  String?
+  plans       String?
+
+  follow_up_date DateTime?
+
+  created_at DateTime @default(now())
+
+  patient        Patients             @relation(fields: [patient_id], references: [patient_id])
+  vitals         VitallSign?          @relation(fields: [vs_id], references: [vs_id])
+  consultRecords ConsultationRecords? @relation(fields: [phr_id], references: [phr_id])
+  consultRequest ConsultationRequest  @relation(fields: [cons_id], references: [cons_id])
+
+  prescriptions Prescription[]
+
+  @@index([patient_id])
+  @@map("consultation")
+}
+
+model ConsultationRecords {
+  phr_id     Int @id @default(autoincrement())
+  patient_id Int @unique
 
   pmh_allergy     Boolean @default(false)
   pmh_admission   Boolean @default(false)
@@ -137,12 +170,13 @@ model PatientHistoricalRecord {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  patient Patients         @relation(fields: [patient_id], references: [patient_id])
-  vitals  VitallSign       @relation(fields: [vs_id], references: [vs_id])
-  mr      MedicalRecords[]
+  patient Patients       @relation(fields: [patient_id], references: [patient_id])
+  consult Consultation[]
+
+  vitallSign      VitallSign? @relation(fields: [vitallSignVs_id], references: [vs_id])
+  vitallSignVs_id Int?
 
   @@index([patient_id])
-  @@index([vs_id])
   @@map("consultation_records")
 }
 
@@ -182,14 +216,90 @@ enum RequestStatus {
 }
 
 model ConsultationRequest {
-  id     Int @id @default(autoincrement())
-  req_id Int @unique
-  vs_id  Int
+  cons_id   Int @id @default(autoincrement())
+  req_id    Int @unique
+  vs_id     Int
+  physician Int
 
-  request Request    @relation(fields: [req_id], references: [req_id])
-  vitals  VitallSign @relation(fields: [vs_id], references: [vs_id])
+  request       Request        @relation(fields: [req_id], references: [req_id])
+  vitals        VitallSign     @relation(fields: [vs_id], references: [vs_id])
+  consultations Consultation[]
+  doctor        Users?         @relation("ConsultationRequestDoctor", fields: [physician], references: [user_id])
 
   @@map("consultation_request")
+}
+
+model MedicalCertificateRequest {
+  mcr_id    Int    @id @default(autoincrement())
+  req_id    Int    @unique
+  physician Int
+  purpose   String @db.VarChar(50)
+
+  request     Request                   @relation(fields: [req_id], references: [req_id])
+  certificate MedicalCertificateResult?
+  doctor      Users?                    @relation("MedicalCertificateRequestDoctor", fields: [physician], references: [user_id])
+
+  @@map("med_cert_request")
+}
+
+model MedicalCertificateResult {
+  med_cert_id    Int       @id @default(autoincrement())
+  mcr_id         Int       @unique
+  patient_id     Int
+  purpose        String    @db.VarChar(50)
+  impression     String?   @db.Text
+  recommendation String?   @db.Text
+  result_date    DateTime  @db.Date
+  created_at     DateTime  @default(now())
+  updated_at     DateTime? @updatedAt
+
+  patient          Patients                  @relation(fields: [patient_id], references: [patient_id])
+  med_cert_request MedicalCertificateRequest @relation(fields: [mcr_id], references: [mcr_id])
+
+  @@index([patient_id])
+  @@map("med_cert_results")
+}
+
+model Prescription {
+  presc_id Int @id @default(autoincrement())
+
+  consultation_id Int
+  patient_id      Int
+  doctor_id       Int
+
+  gen_notes String?
+
+  consultation Consultation @relation(fields: [consultation_id], references: [consultation_id])
+  patient      Patients     @relation(fields: [patient_id], references: [patient_id])
+  doctor       Users        @relation(fields: [doctor_id], references: [user_id])
+
+  medicines PrescriptionItem[]
+
+  created_at DateTime @default(now())
+
+  @@map("prescriptions")
+}
+
+model PrescriptionItem {
+  item_id Int @id @default(autoincrement())
+
+  presc_id Int
+
+  medicine_name String
+  strength      String?
+
+  form      String
+  dose      String
+  frequency String
+  route     String
+  duration  String
+  quantity  String?
+
+  instruction String?
+
+  prescription Prescription @relation(fields: [presc_id], references: [presc_id], onDelete: Cascade)
+
+  @@map("prescription_items")
 }
 
 model LaboratoryRequest {
@@ -276,10 +386,20 @@ model Patients {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  phr     PatientHistoricalRecord[]
-  request Request[]
-  mr      MedicalRecords[]
-  vitals  VitallSign[]
+  phr                       ConsultationRecords[]
+  request                   Request[]
+  vitals                    VitallSign[]
+  prescriptions             Prescription[]
+  consultations             Consultation[]
+  hematologyResults         HematologyResult[]
+  serologyResults           SerologyResult[]
+  parasitologyResults       ParasitologyResult[]
+  urinalysisResults         UrinalysisResult[]
+  clinicalChemistryResults  ClinicalChemistryResult[]
+  hbA1CResults              HbA1cResult[]
+  chemistryResults          ChemistryResult[]
+  ogttResults               OgttResult[]
+  medicalCertificateResults MedicalCertificateResult[]
 
   hematology_results          HematologyResult[]
   serology_results            SerologyResult[]
@@ -294,22 +414,96 @@ model Patients {
   @@map("patients")
 }
 
-model MedicalRecords {
-  mt_id         Int      @id @default(autoincrement())
-  patient_id    Int
-  phr_id        Int
-  lab_id        Int
-  findings      String   @db.Text
-  presc         String   @db.Text
-  followup_date DateTime
-  med_cert      Boolean  @default(false)
+// Service Class
+model ServiceClass {
+  class_id    Int     @id @default(autoincrement())
+  class_code  String  @unique @db.VarChar(20)
+  description String  @db.VarChar(200)
+  is_active   Boolean @default(true)
 
-  patient Patients                @relation(fields: [patient_id], references: [patient_id])
-  phr     PatientHistoricalRecord @relation(fields: [phr_id], references: [phr_id])
+  services Services[]
 
-  @@index([patient_id])
-  @@index([phr_id])
-  @@map("medical_records")
+  @@map("service_class")
+}
+
+// Services
+model Services {
+  service_id   Int      @id @default(autoincrement())
+  service_code String   @unique @db.VarChar(20)
+  price        Decimal  @db.Decimal(12, 2)
+  date         DateTime @db.Date
+  is_active    Boolean  @default(true)
+  class_id     Int
+
+  serviceClass ServiceClass     @relation(fields: [class_id], references: [class_id])
+  billingItems BillingService[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("services")
+}
+
+// Billing
+model Billing {
+  billing_id   Int        @id @default(autoincrement())
+  billing_code String     @unique @db.VarChar(20)
+  req_id       Int        @unique
+  total_price  Decimal    @db.Decimal(12, 2)
+  date         DateTime   @db.Date
+  discount     Decimal    @db.Decimal(12, 2)
+  status       BillStatus
+
+  services BillingService[]
+  request  Request          @relation(fields: [req_id], references: [req_id])
+  payments Payment[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("biling")
+}
+
+enum BillStatus {
+  PENDING
+  DONE
+}
+
+// Billing Services (Pivot Table)
+model BillingService {
+  service_list_id Int @id @default(autoincrement())
+
+  billing_id Int
+  service_id Int
+
+  billing Billing  @relation(fields: [billing_id], references: [billing_id])
+  service Services @relation(fields: [service_id], references: [service_id])
+
+  price Decimal? @db.Decimal(12, 2)
+
+  @@map("billing_services")
+}
+
+model Payment {
+  payment_id Int @id @default(autoincrement())
+
+  billing_id Int
+  billing    Billing @relation(fields: [billing_id], references: [billing_id])
+
+  amount       Decimal       @db.Decimal(12, 2)
+  method       PaymentMethod
+  payment_date DateTime      @default(now())
+
+  reference_no String? @db.VarChar(50) // for GCash / bank / etc.
+
+  created_at DateTime @default(now())
+}
+
+enum PaymentMethod {
+  CASH
+  GCASH
+  CARD
+  BANK_TRANSFER
 }
 
 model HematologyResult {
