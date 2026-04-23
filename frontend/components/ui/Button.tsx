@@ -7,14 +7,16 @@ type ButtonVariant =
   | "neutral"
   | "addPatient"
   | "acceptRequest"
-  | "declineRequest";
+  | "declineRequest"
+  | "consult"
+  | "prescription"
+  | "doneStatus";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   isLoading?: boolean;
   icon?: ReactNode;
-  iconPosition?: "left" | "right",
-  
+  iconPosition?: "left" | "right";
 }
 
 const baseCls =
@@ -32,13 +34,21 @@ const variants: Record<ButtonVariant, string> = {
 
   neutral:
     "text-[#6b7da0] border border-[#dce3ef] hover:border-[#0f2244] hover:text-[#0f2244]",
-  addPatient: 
+  addPatient:
     "flex items-center gap-2 bg-[#c8102e] hover:bg-[#a50d25] text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-lg shadow-[#c8102e]/30",
-  acceptRequest: 
+  acceptRequest:
     "flex items-center gap-[.2rem] bg-[#234075] hover:bg-[#09152b] text-white text-sm font-semibold px-[.7rem] py-[2px] rounded-xl transition shadow-lg shadow-[#234075]/30",
-  declineRequest: 
-    "flex items-center gap-[.2rem] bg-[#c8102e] hover:bg-[#a50d25] text-white text-sm font-semibold px-[.7rem] py-[2px] rounded-xl transition shadow-lg shadow-[#c8102e]/30"
+  declineRequest:
+    "flex items-center gap-[.2rem] bg-[#c8102e] hover:bg-[#a50d25] text-white text-sm font-semibold px-[.7rem] py-[2px] rounded-xl transition shadow-lg shadow-[#c8102e]/30",
+
+  consult:
+    "flex items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-semibold transition-all bg-[#0e7c7b] hover:bg-[#13aba8] shadow-lg shadow-[#0e7c7a]/30",
+  prescription:
+    "flex items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-semibold transition-all bg-[#0e287c] hover:bg-[#163cb8] shadow-lg shadow-[#0e7c7a]/30",
+  doneStatus:
+    "flex items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-semibold transition-all bg-[#7c190e] hover:bg-[#ad2313] shadow-lg shadow-[#0e7c7a]/30"
 };
+
 
 const Button: React.FC<ButtonProps> = ({
   children,
@@ -54,11 +64,10 @@ const Button: React.FC<ButtonProps> = ({
     <button
       {...props}
       disabled={disabled || isLoading}
-      className={`${baseCls} ${variants[variant]} ${
-        disabled || isLoading ? "opacity-60 cursor-not-allowed" : ""
-      } ${className}`}
+      className={`${baseCls} ${variants[variant]} ${disabled || isLoading ? "opacity-60 cursor-not-allowed" : ""
+        } ${className}`}
     >
-       {isLoading ? (
+      {isLoading ? (
         "Loading..."
       ) : (
         <>

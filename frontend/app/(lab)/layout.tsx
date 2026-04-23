@@ -41,5 +41,6 @@ export default function ProtectedLayout({
       </main>
     </div>
   </div>
+  
 );
 }

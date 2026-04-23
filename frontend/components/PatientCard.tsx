@@ -1,4 +1,4 @@
-import { PatientProps } from "@/types/RequestTypes";
+import { PatientProps } from "@/types/PatientTypes";
 import Image from "next/image";
 
 interface PatientCardProps {
