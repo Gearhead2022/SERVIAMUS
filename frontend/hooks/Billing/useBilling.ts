@@ -53,7 +53,7 @@ export const useProcessPayment = (onSuccess?: () => void) => {
     mutationFn: (data: PaymentProps) => processPayment(data),
 
     onSuccess: () => {
-      SweetAlert.successAlert("Success", "Payment processed successfully");
+      // Don't show alert here - let the component handle it
       queryClient.invalidateQueries({ queryKey: ["billing"] });
       if (onSuccess) onSuccess();
     },
@@ -63,7 +63,7 @@ export const useProcessPayment = (onSuccess?: () => void) => {
         "Payment Failed",
         error instanceof Error ? error.message : "Something went wrong"
       );
-    },
+    }
   });
 };
 

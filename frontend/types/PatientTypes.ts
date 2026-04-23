@@ -5,6 +5,7 @@
 export interface PatientProps {
     patient_id?: number;
     patient_code: string;
+    philhealth_id?: string;
     name: string;
     age?: number;
     sex?: string;

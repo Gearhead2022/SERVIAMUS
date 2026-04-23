@@ -1,3 +1,4 @@
+// HAS 400 ERROR WHEN TESTING WITHOUT ACCESS
 import api from "./axios";
 import { PaymentProps } from "@/types/BillingTypes";
 

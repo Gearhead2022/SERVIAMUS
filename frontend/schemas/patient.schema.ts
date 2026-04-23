@@ -17,6 +17,11 @@ export const patientSchema = z.object({
         message: "Age must be a number",
         }),
     religion: z.string().optional(),
+    philhealth_id: z
+    .string()
+    .regex(/^\d{2}-\d{6}-\d{1}$/, "PhilHealth ID must be in format: XX-XXXXXXXX-X")
+    .optional()
+    .or(z.literal("")),
 })
 
 

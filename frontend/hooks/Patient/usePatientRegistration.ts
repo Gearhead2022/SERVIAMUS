@@ -4,7 +4,7 @@ import { getPrevVitalSigns, createRequest } from "@/services/request.services";
 import SweetAlert from "@/utils/SweetAlert";
 import { VitalSignProps} from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
-
+import api from "@/services/axios";
 
 export const useGetAllpatient = (search: string) => {
   return useQuery<PatientProps[]>({
@@ -61,33 +61,46 @@ export const useRequest = (closeModal: () => void) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createRequest,
+    mutationFn: async (data: Parameters<typeof createRequest>[0]) => {
+      const response = await createRequest(data);
+      
+      // Auto-add to queue
+      await api.post("/api/queue/add", {
+        patient_id: data.patient_id,
+        queue_type: data.req_type === "LABORATORY" ? "LABORATORY" : "CONSULTATION",
+      });
+      
+      return response;
+    },
 
     onSuccess: (data: RequestResponse) => {
-      // Check if it's a laboratory request
       if (data?.request?.req_type === "LABORATORY") {
-        // Redirect to billing page with request ID
-        window.location.href = `/billing?req_id=${data.request.req_id}`;
-      } else {
-        // For consultation, show success and close
         SweetAlert.successAlert(
           "Success",
-          "Request created successfully"
+          "Laboratory request submitted! Patient added to queue."
         );
-        queryClient.invalidateQueries({ queryKey: ["request"] });
-        closeModal();
+      } else {
+        SweetAlert.successAlert(
+          "Success",
+          "Consultation request created successfully! Patient added to queue."
+        );
       }
+      
+      queryClient.invalidateQueries({ queryKey: ["request"] });
+      queryClient.invalidateQueries({ queryKey: ["patient"] });
+      queryClient.invalidateQueries({ queryKey: ["billing"] });
+      queryClient.invalidateQueries({ queryKey: ["queue"] });
+      closeModal();
     },
 
     onError: (error: unknown) => {
       SweetAlert.errorAlert(
-        "Registration Failed",
+        "Request Failed",
         error instanceof Error ? error.message : "Something went wrong"
       );
     }
   });
 };
-
 export const useUpdatePatient = (closeModal: () => void) => {
   const queryClient = useQueryClient();
   

@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import clsx from "clsx";
 import { ChevronLeft } from "lucide-react";
 import { useEffect, useState } from "react";
+import QueueManagementBox from "./Dashboard/QueueManagementBox";
 
 export default function SidebarMenu() {
   const { user } = useAuth();
@@ -40,6 +41,9 @@ export default function SidebarMenu() {
       )
     : [];
 
+  // Only show queue box for STAFF
+  const isStaff = user?.roles.includes("STAFF");
+
   return (
     <aside
       className={clsx(
@@ -53,7 +57,6 @@ export default function SidebarMenu() {
       {/* Header */}
       <div className="relative px-4 py-5 border-b border-white/[0.06] flex items-center justify-between gap-2 min-h-[72px]">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          {/* <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(251,146,60,0.35)] shrink-0" /> */}
           <img src="images/serviamus.jpeg" className="rounded-2xl" alt="" width={50} height={50} />
           <div className={clsx(
             "overflow-hidden transition-all duration-300",
@@ -99,6 +102,13 @@ export default function SidebarMenu() {
           );
         })}
       </nav>
+
+      {/* Queue Management - Only for STAFF */}
+      {isStaff && isOpen && (
+        <div className="border-t border-white/[0.06] p-3">
+          <QueueManagementBox />
+        </div>
+      )}
     </aside>
   );
 }

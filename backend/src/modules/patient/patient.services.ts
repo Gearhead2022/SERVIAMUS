@@ -42,6 +42,7 @@ export const addPatient = async (payload: PatientPayload) => {
         sex: payload.sex as "male" | "female",
         age: payload.age,
         religion: payload.religion,
+        philhealth_id: payload.philhealth_id,
       },
     });
 
@@ -85,6 +86,7 @@ export const updatePatient = async (patientId: number, payload: PatientPayload) 
       sex: payload.sex as "male" | "female",
       age: payload.age,
       religion: payload.religion,
+      philhealth_id: payload.philhealth_id,
     },
   });
 };

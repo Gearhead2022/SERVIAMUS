@@ -6,7 +6,7 @@ import PatientActionModal from "@/components/Modal/ChildModal/PatientActionModal
 import ModalHeader from "@/components/Modal/ModalHeader";
 import AddPatientForm from "@/components/Modal/ChildModal/AddPatientForm";
 import { useGetAllpatient, useGetPrevVitalSigns } from "@/hooks/Patient/usePatientRegistration";
-import { PatientProps } from "@/types/RequestTypes";
+import { PatientProps } from "@/types/PatientTypes";
 import RoleGuard from "@/guards/RoleGuard";
 import AddRequestForm from "@/components/Modal/NestedModal/AddRequestForm";
 import { useDebounce } from "use-debounce";
@@ -186,6 +186,12 @@ const RegistrationPage = () => {
             <p className="text-xs font-semibold text-gray-500 uppercase">Patient ID</p>
             <p className="text-sm font-semibold text-gray-900">#{selectedPatient.patient_code}</p>
           </div>
+          {selectedPatient.philhealth_id && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase">PhilHealth ID</p>
+                <p className="text-sm font-semibold text-gray-900">{selectedPatient.philhealth_id}</p>
+              </div>
+            )}
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase">Age</p>
             <p className="text-sm font-semibold text-gray-900">{selectedPatient.age} years</p>

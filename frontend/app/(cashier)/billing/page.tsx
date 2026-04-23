@@ -1,17 +1,34 @@
 "use client"
-
 import RoleGuard from "@/guards/RoleGuard";
-import { useState, useMemo } from "react";
+
+import { useState, useMemo, useEffect } from "react";
 import { useProcessPayment } from "@/hooks/Billing/useBilling";
 import { PaymentProps, BillingProps } from "@/types/BillingTypes";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
+import ReceiptModal from "@/components/Modal/ReceiptModal";
+import SweetAlert from "@/utils/SweetAlert";
 import { useForm } from "react-hook-form";
 import { 
   FileText, CheckCircle2, Clock, 
   Search, ChevronRight, TrendingUp, AlertCircle 
 } from "lucide-react";
+import api from "@/services/axios";
+
+interface BillingResponse {
+  billing_id: number;
+  billing_code: string;
+  total_price: number | string;
+  date: string | Date;
+  status: "PENDING" | "DONE";
+  request: {
+    patient: {
+      name: string;
+    };
+    req_type: "LABORATORY" | "CONSULTATION";
+  };
+}
 
 interface BillItem {
   billing_id: number;
@@ -28,42 +45,41 @@ const BillingDashboard = () => {
   const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "DONE">("ALL");
   const [selectedBilling, setSelectedBilling] = useState<BillingProps | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [bills, setBills] = useState<BillItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
 
-  // Mock data - in production, fetch from API
-  const [bills] = useState<BillItem[]>([
-    {
-      billing_id: 1,
-      billing_code: "BILL20251001",
-      patient_name: "John Doe",
-      amount: 1500,
-      status: "PENDING",
-      date: "2025-10-13",
-      req_type: "LABORATORY",
-    },
-    {
-      billing_id: 2,
-      billing_code: "BILL20251002",
-      patient_name: "Jane Smith",
-      amount: 2000,
-      status: "DONE",
-      date: "2025-10-12",
-      req_type: "LABORATORY",
-    },
-    {
-      billing_id: 3,
-      billing_code: "BILL20251003",
-      patient_name: "Robert Johnson",
-      amount: 1200,
-      status: "PENDING",
-      date: "2025-10-13",
-      req_type: "LABORATORY",
-    },
-  ]);
+  // Fetch bills from API
+useEffect(() => {
+  const fetchBills = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get("/api/billing");
+      
+      const billsData = res.data.data.map((billing: BillingResponse) => ({
+        billing_id: billing.billing_id,
+        billing_code: billing.billing_code,
+        patient_name: billing.request?.patient?.name || "Unknown",
+        amount: Number(billing.total_price),
+        status: billing.status,
+        date: new Date(billing.date).toISOString().split("T")[0],
+        req_type: billing.request?.req_type || "LABORATORY",
+      }));
+      
+      setBills(billsData);
+    } catch (error) {
+      console.error("Failed to fetch bills:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const { mutateAsync: processPayment, isPending: paymentPending } = useProcessPayment(() => {
-    setSelectedBilling(null);
-    setIsProcessing(false);
-  });
+  fetchBills();
+}, []);
+
+ const { mutateAsync: processPayment, isPending: paymentPending } = useProcessPayment(() => {
+});
 
   const {
     register,
@@ -99,21 +115,34 @@ const BillingDashboard = () => {
       .reduce((sum, b) => sum + b.amount, 0),
   };
 
-  const onSubmit = async (data: PaymentProps) => {
-    if (!selectedBilling) return;
-    setIsProcessing(true);
+const onSubmit = async (data: PaymentProps) => {
+  if (!selectedBilling) return;
+  setIsProcessing(true);
 
-    try {
-      await processPayment({
-        ...data,
-        billing_id: selectedBilling.billing_id,
-        amount: selectedBilling.total_price - selectedBilling.discount,
-      });
+  try {
+    await processPayment({
+      ...data,
+      billing_id: selectedBilling.billing_id,
+      amount: selectedBilling.total_price - selectedBilling.discount,
+    });
+    
+    // Show receipt for CASH immediately
+    if (data.method === "CASH") {
+      setTimeout(() => setShowReceipt(true), 500);
+    } else {
+      // Show alert for online transactions
+      SweetAlert.successAlert(
+        "Success",
+        "Payment processed successfully"
+      );
       reset();
-    } finally {
-      setIsProcessing(false);
+      setSelectedBilling(null);
+      setTimeout(() => window.location.reload(), 1500);
     }
-  };
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   return (
     <RoleGuard allowedRoles={["CASHIER"]}>
@@ -186,6 +215,13 @@ const BillingDashboard = () => {
                       <option value="PENDING">Pending</option>
                       <option value="DONE">Completed</option>
                     </select>
+                    <Button 
+                      variant="primary" 
+                      onClick={() => window.location.reload()}
+                      className="!text-xs !px-3"
+                    >
+                      Refresh
+                    </Button>
                   </div>
                 </div>
 
@@ -203,7 +239,13 @@ const BillingDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredBills.length === 0 ? (
+                      {loading ? (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-8 text-center">
+                            <p className="text-[#6b7da0]">Loading bills...</p>
+                          </td>
+                        </tr>
+                      ) : filteredBills.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="px-6 py-8 text-center">
                             <AlertCircle size={32} className="mx-auto mb-2 text-[#b0bcd4]" />
@@ -348,8 +390,56 @@ const BillingDashboard = () => {
               )}
             </div>
           </div>
+          {showReceipt && selectedBilling && (
+              <ReceiptModal
+                billingCode={selectedBilling.billing_code}
+                patientName={selectedBilling.patient.name}
+                amount={selectedBilling.total_price - selectedBilling.discount}
+                paymentMethod="CASH"
+                onClose={() => {
+                  setShowReceipt(false);
+                  window.location.reload();
+                }}
+                onPrint={() => window.print()}
+              />
+            )}
         </div>
       </div>
+      {/* Payment Confirmation Dialog */}
+      {showPaymentConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-8 text-center space-y-6">
+            <div className="w-16 h-16 rounded-full bg-[#e0f4f4] flex items-center justify-center mx-auto">
+              <CheckCircle2 size={32} className="text-[#0e7c7b]" />
+            </div>
+            <div>
+              <h2 className="font-['DM_Serif_Display'] text-xl text-[#0f2244] mb-2">Payment Successful</h2>
+              <p className="text-[#6b7da0] text-sm">Amount: ₱{selectedBilling?.total_price.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="danger"
+                onClick={() => setShowPaymentConfirm(false)}
+                className="flex-1"
+              >
+                Close
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setShowPaymentConfirm(false);
+                  if (selectedBilling) {
+                    setShowReceipt(true);
+                  }
+                }}
+                className="flex-1"
+              >
+                Show Receipt
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </RoleGuard>
   );
 };
