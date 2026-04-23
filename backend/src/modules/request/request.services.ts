@@ -35,20 +35,27 @@ export const createRequest = async (payload: CreateRequestProps) => {
         patient_id: payload.patient_id,
         req_date: new Date(payload.req_date),
         req_type: payload.req_type as 'CONSULTATION' | 'LABORATORY' | 'CERTIFICATE',
+
+export const createRequest = async (payload: any) => {
+  const { patient_id, req_type, req_date, req_by, test } = payload;
+
+  return prisma.$transaction(async (tx) => {
+    // Create the request
+    const request = await tx.request.create({
+      data: {
+        patient_id,
+        req_type,
         status: "WAITING",
+        req_date: new Date(req_date),
       },
     });
 
-    if (payload.req_type === "CONSULTATION") {
-      const vitals = await tx.vitallSign.create({
+    // Handle LABORATORY requests
+    if (req_type === "LABORATORY") {
+      await tx.laboratoryRequest.create({
         data: {
-          patient_id: payload.patient_id,
-          bp: payload.bp ?? null,
-          temp: payload.temp ?? null,
-          cr: payload.cr ?? null,
-          rr: payload.rr ?? null,
-          wt: payload.wt ?? null,
-          ht: payload.ht ?? null,
+          req_id: request.req_id,
+          req_by,
         },
       });
 
@@ -57,18 +64,23 @@ export const createRequest = async (payload: CreateRequestProps) => {
           req_id: request.req_id,
           vs_id: vitals.vs_id,
           physician: payload.physician,
+      // Get all services for pricing
+      const services = await tx.services.findMany({
+        where: {
+          is_active: true,
         },
       });
 
-      return { request, vitals, consult };
-    }
-
-    if (payload.req_type === "LABORATORY") {
-      const normalizedTests = splitLabTests(payload.test.join(", "));
-
-      if (!normalizedTests.length) {
-        throw new Error("At least one laboratory test is required.");
+      if (services.length === 0) {
+        throw new Error("No services found. Please configure services first.");
       }
+
+      // Calculate total price
+      const totalPrice = services.reduce((sum: number, svc: any) => sum + Number(svc.price), 0);
+
+      // Generate billing code
+      const billingCount = await tx.billing.count();
+      const billingCode = `BILL${new Date().getFullYear()}${String(billingCount + 1).padStart(5, "0")}`;
 
       const lab = await createLaboratoryRequestWithItems(tx, {
         reqId: request.req_id,
@@ -82,10 +94,17 @@ export const createRequest = async (payload: CreateRequestProps) => {
     if (payload.req_type === "CERTIFICATE") {
 
       const med = await tx.medicalCertificateRequest.create({
+      // Create billing
+      const billing = await tx.billing.create({
         data: {
+          billing_code: billingCode,
           req_id: request.req_id,
           physician: payload.physician,
           purpose: payload.purpose,
+          total_price: totalPrice,
+          discount: 0,
+          date: new Date(),
+          status: "PENDING",
         },
         include: {
           certificate: true
@@ -161,4 +180,70 @@ export const getRequestData = async (request_id: number) => {
       },
     };
   });
+};
+      // Link services to billing
+      await Promise.all(
+        services.map((svc) =>
+          tx.billingService.create({
+            data: {
+              billing_id: billing.billing_id,
+              service_id: svc.service_id,
+              price: svc.price,
+            },
+          })
+        )
+      );
+    } else if (req_type === "CONSULTATION") {
+      // Create consultation request record
+      let vitalSigns = await tx.vitallSign.findFirst({
+        where: { patient_id },
+        orderBy: { created_at: "desc" },
+      });
+
+      if (!vitalSigns) {
+        vitalSigns = await tx.vitallSign.create({
+          data: {
+            patient_id,
+          },
+        });
+      }
+
+      await tx.consultationRequest.create({
+        data: {
+          req_id: request.req_id,
+          vs_id: vitalSigns.vs_id,
+        },
+      });
+    }
+
+    return {
+      request: {
+        req_id: request.req_id,
+        req_type,
+      },
+    };
+  });
+};
+
+export const getPrevVitalSigns = async (patient_id: number) => {
+  const latestRecord = await prisma.patientHistoricalRecord.findFirst({
+    where: { patient_id },
+    include: { vitals: true },
+    orderBy: { created_at: "desc" },
+  });
+
+  if (!latestRecord || !latestRecord.vitals) {
+    return null;
+  }
+
+  return {
+    vs_id: latestRecord.vitals.vs_id,
+    bp: latestRecord.vitals.bp,
+    temp: latestRecord.vitals.temp,
+    cr: latestRecord.vitals.cr,
+    rr: latestRecord.vitals.rr,
+    wt: latestRecord.vitals.wt,
+    ht: latestRecord.vitals.ht,
+    created_at: latestRecord.created_at,
+  };
 };

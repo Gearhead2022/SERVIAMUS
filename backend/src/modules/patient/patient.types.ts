@@ -10,4 +10,5 @@ export interface PatientPayload {
     sex: string;
     age: number;
     religion: string;
+    philhealth_id?: string;
 }

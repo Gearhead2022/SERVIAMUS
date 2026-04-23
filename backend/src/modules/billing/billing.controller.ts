@@ -6,6 +6,19 @@ export const getBillingsController = async (req: Request, res: Response) => {
   try {
     const status = typeof req.query.status === "string" ? req.query.status : undefined;
     const billings = await getBillingsService(status);
+import { authorize } from "../../middlewares/authorize.middleware";
+import {
+  createBilling,
+  getBillingByRequestId,
+  getBillingById,
+  createPayment,
+  updateBillingStatus,
+  getAllBillings,
+} from "./billing.services";
+
+export const getAllBillingsController = async (req: Request, res: Response) => {
+  try {
+    const billings = await getAllBillings();
 
     return res.status(200).json({
       success: true,
@@ -35,6 +48,52 @@ export const payBillingController = async (req: Request, res: Response) => {
     }
 
     const billing = await payBillingService(billingId, method);
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const createBillingController = async (req: Request, res: Response) => {
+  try {
+    const { req_id, service_ids } = req.body;
+
+    if (!req_id || !service_ids || !Array.isArray(service_ids)) {
+      return res.status(400).json({
+        success: false,
+        message: "req_id and service_ids (array) are required",
+      });
+    }
+
+    const billing = await createBilling(req_id, service_ids);
+
+    return res.status(201).json({
+      success: true,
+      data: billing,
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getBillingByRequestIdController = async (req: Request, res: Response) => {
+  try {
+    const req_id = Array.isArray(req.params.req_id) ? req.params.req_id[0] : req.params.req_id;
+    const requestId = parseInt(req_id, 10);
+
+    if (isNaN(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid request ID",
+      });
+    }
+
+    const billing = await getBillingByRequestId(requestId);
 
     return res.status(200).json({
       success: true,
@@ -44,6 +103,103 @@ export const payBillingController = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Failed to update billing status.",
+    });
+  }
+};
+  } catch (error: any) {
+    return res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getBillingByIdController = async (req: Request, res: Response) => {
+  try {
+    const billing_id = Array.isArray(req.params.billing_id) ? req.params.billing_id[0] : req.params.billing_id;
+    const billingId = parseInt(billing_id, 10);
+
+    if (isNaN(billingId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid billing ID",
+      });
+    }
+
+    const billing = await getBillingById(billingId);
+
+    return res.status(200).json({
+      success: true,
+      data: billing,
+    });
+  } catch (error: any) {
+    return res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const createPaymentController = async (req: Request, res: Response) => {
+  try {
+    const { billing_id, amount, method, reference_no } = req.body;
+
+    if (!billing_id || !amount || !method) {
+      return res.status(400).json({
+        success: false,
+        message: "billing_id, amount, and method are required",
+      });
+    }
+
+    const result = await createPayment(
+      billing_id,
+      parseFloat(amount),
+      method,
+      reference_no
+    );
+
+    return res.status(201).json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const updateBillingStatusController = async (req: Request, res: Response) => {
+  try {
+    const billing_id = Array.isArray(req.params.billing_id) ? req.params.billing_id[0] : req.params.billing_id;
+    const { status } = req.body;
+    const billingId = parseInt(billing_id, 10);
+
+    if (isNaN(billingId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid billing ID",
+      });
+    }
+
+    if (!["PENDING", "DONE"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status",
+      });
+    }
+
+    const billing = await updateBillingStatus(billingId, status);
+
+    return res.status(200).json({
+      success: true,
+      data: billing,
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
     });
   }
 };
