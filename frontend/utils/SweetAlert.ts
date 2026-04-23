@@ -11,7 +11,7 @@ const SweetAlert = {
     });
   },
 
-  successAlertFunction: (title: string = "Success", text: string = "",  runFuction: () => void,  onCLose: () => void ) => {
+  successAlertFunction: (title: string = "Success", text: string = "", runFuction: () => void, onCLose: () => void) => {
     return Swal.fire({
       title,
       text,
@@ -19,11 +19,11 @@ const SweetAlert = {
       confirmButtonText: "OK",
       confirmButtonColor: "#3085d6",
     }).then((result) => {
-        if (result.isConfirmed && typeof runFuction === "function" || result.isDismissed) {
-            runFuction();
-            onCLose();
-        }
-      });
+      if (result.isConfirmed && typeof runFuction === "function" || result.isDismissed) {
+        runFuction();
+        onCLose();
+      }
+    });
   },
 
   warningAlert: (title: string = "Warning", text: string = "") => {
@@ -67,9 +67,26 @@ const SweetAlert = {
     }).then((result) => {
       if (result.isConfirmed && typeof onConfirm === "function") {
         onConfirm();
-        
       }
     });
+  },
+
+  confirmationAlert2: async (
+    title: string = "Are you sure?",
+    text: string = ""
+  ): Promise<boolean> => {
+    const result = await Swal.fire({
+      title,
+      text,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes",
+      cancelButtonText: "No",
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+    });
+
+    return result.isConfirmed;
   },
 };
 

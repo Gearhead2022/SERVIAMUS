@@ -3,6 +3,8 @@
 import { PatientProps } from "@/types/PatientTypes";
 import Image from "next/image";
 import Button from "@/components/ui/Button";
+import { History } from "lucide-react";
+import { _void } from "zod/v4/core";
 
 interface ActionItem {
   icon: React.ReactNode;
@@ -19,6 +21,7 @@ interface PatientActionModalProps {
   onRequestAction: (patient: PatientProps) => void;
   onEditPatient: (patient: PatientProps) => void;
   onViewProfile: (patient: PatientProps) => void;
+  onViewHistory: (patient: PatientProps) => void;
 }
 
 const PatientActionModal = ({
@@ -28,6 +31,7 @@ const PatientActionModal = ({
   onRequestAction,
   onEditPatient,
   onViewProfile,
+  onViewHistory,
 }: PatientActionModalProps) => {
 
   const actions: ActionItem[] = [
@@ -63,6 +67,15 @@ const PatientActionModal = ({
       ),
       color: "text-[#c8102e] bg-[#fdf0f2] hover:bg-[#c8102e] hover:text-white",
       onClick: () => { onEditPatient(patient); },
+    },
+    {
+      label: "View History",
+      description: "View patient history",
+      icon: (
+        <History className="h-4 w-4" />
+      ),
+      color: "text-[#225e08] bg-[#ddf0d5] hover:bg-[#193d0a] hover:text-white",
+      onClick: () => { onViewHistory(patient) },
     },
   ];
 

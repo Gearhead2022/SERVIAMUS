@@ -1,21 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
 import {
-    Plus, Trash2, Pill, Printer,
-    X, ChevronDown, AlertCircle, FileText
+    Plus, Trash2, Pill, Printer, AlertCircle
 } from "lucide-react";
+import { useEffect } from "react";
 import { PatientProps } from "@/types/PatientTypes";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
-import Label from "@/components/ui/label";
 import { useForm, UseFormRegister, useFieldArray, FieldErrors, Controller, Control, FieldArrayWithId } from "react-hook-form";
 import { PrescriptionValues, prescriptionSchema } from "@/schemas/consultation.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { usePrescription } from "@/hooks/Consultation/useConsultation";
-import { PrescriptionProps, RequestProps } from "@/types/ConsultationTypes";
-import { useConsultationRecords } from "@/hooks/Consultation/useConsultation";
+import { useConsultationById, usePrescription } from "@/hooks/Consultation/useConsultation";
+import { PrescriptionProps } from "@/types/ConsultationTypes";
 
 interface MedicineEntry {
     presc_id: string;
@@ -69,7 +66,6 @@ function MedicineCard({
     errors,
     isOnly,
     onRemove,
-    med,
     control,
 }: {
     register: UseFormRegister<PrescriptionValues>;
@@ -260,6 +256,7 @@ export default function PrescriptionModal({ patient, consult_id, onClose, doctor
 }: PrescriptionModalProps) {
 
     const { mutateAsync: prescription, isPending } = usePrescription(onClose);
+    const { data: consultationRecord } = useConsultationById(consult_id);
 
     const rxDate = new Date().toLocaleDateString("en-PH", {
         month: "long", day: "numeric", year: "numeric",
@@ -277,10 +274,21 @@ export default function PrescriptionModal({ patient, consult_id, onClose, doctor
             patient_id: patient?.patient_id ?? 0,
             gen_notes: "",
             medicines: [EMPTY_MED()],
-            cons_id: consult_id,
+            cons_id: 0,
             doctor_id: doctor.id
         },
     });
+
+    useEffect(() => {
+        if (!consultationRecord) return;
+
+        reset((prev) => ({
+            ...prev,
+            cons_id: consultationRecord.consultation_id,
+        }));
+    }, [consultationRecord, reset]);
+
+    console.log('error', errors)
 
     const { fields, append, remove } = useFieldArray({
         control,
@@ -289,7 +297,7 @@ export default function PrescriptionModal({ patient, consult_id, onClose, doctor
 
     const onSubmit = async (data: PrescriptionValues) => {
         const payload: PrescriptionProps = {
-            cons_id: consult_id,
+            cons_id: consultationRecord?.consultation_id ?? 0,
             patient_id: patient?.patient_id ?? data.patient_id,
             doctor_id: doctor.id,
             gen_notes: data.gen_notes,
@@ -321,7 +329,6 @@ export default function PrescriptionModal({ patient, consult_id, onClose, doctor
                         boxShadow: "0 24px 80px rgba(15,34,68,0.28)",
                     }}
                 >
-
                     <div className="flex-shrink-0 flex items-center justify-between px-7 py-3 flex-wrap gap-2"
                         style={{ background: "#f7f8fc", borderBottom: "1px solid #dce3ef" }}>
                         <div className="flex items-center gap-4">

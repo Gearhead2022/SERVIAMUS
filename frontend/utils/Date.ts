@@ -1,0 +1,25 @@
+// utils/date.ts
+
+const TIMEZONE = "Asia/Manila";
+
+export const now = () => new Date();
+
+export const todayPH = () =>
+    new Date().toLocaleDateString("en-CA", {
+        timeZone: TIMEZONE,
+    });
+
+export const formatPH = (date: Date | string) =>
+    new Date(date).toLocaleString("en-PH", {
+        timeZone: TIMEZONE,
+    });
+
+export const isoPH = () => {
+    const date = new Date();
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: TIMEZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(date);
+};

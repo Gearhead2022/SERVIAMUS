@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "set PORT=5005 && tsx watch src/server.ts"
   },
+  "prisma": {
+    "seed": "tsx seeders/seed.ts"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

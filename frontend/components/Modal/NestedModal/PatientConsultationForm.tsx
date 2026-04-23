@@ -3,16 +3,19 @@
 import { ReactNode, useState } from "react";
 import { z } from "zod";
 import { patientConsultationSchema } from "@/schemas/consultation.schema";
-import { useForm, UseFormReturn, Path, UseFormRegister, FieldValues } from "react-hook-form";
+import { useForm, UseFormReturn, Path, UseFormRegister } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useConsultaion } from "@/hooks/Consultation/useConsultation";
 import { PatientProps } from "@/types/PatientTypes";
 import Button from "@/components/ui/Button";
 import { VitalSignProps } from "@/types/RequestTypes"
-import { ConsultaionResultProps } from "@/types/ConsultationTypes";
+import { ConsultationResultProps } from "@/types/ConsultationTypes";
 
 type RegisterConsultationFormValues = z.infer<typeof patientConsultationSchema>;
-type StepProps = { form: UseFormReturn<RegisterConsultationFormValues>; }
+
+type StepProps = {
+  form: UseFormReturn<RegisterConsultationFormValues>;
+};
 
 const STEPS = [
   { label: "Personal", sub: "Information" },
@@ -21,10 +24,10 @@ const STEPS = [
   { label: "Assesment", sub: "Results" },
 ];
 
-type CheckItemProps<T extends FieldValues> = {
+type CheckItemProps = {
   label: string;
-  name: Path<T>;
-  register: UseFormRegister<T>;
+  name: Path<RegisterConsultationFormValues>;
+  register: UseFormRegister<RegisterConsultationFormValues>;
 };
 
 const inputCls =
@@ -42,7 +45,7 @@ function FormGroup({ label, children, span2 = false }: { label: string, children
   );
 }
 
-function CheckItem<T extends FieldValues>({ label, name, register }: CheckItemProps<T>) {
+function CheckItem({ label, name, register }: CheckItemProps) {
   return (
     <div className="flex items-center gap-2 mb-2">
       <input type="checkbox"
@@ -326,10 +329,10 @@ function Step4({ form }: StepProps) {
           rows={5}
           placeholder="Describe onset, duration, character, associated symptoms, relieving/aggravating factors…"
           className={`${inputCls} mt-1 resize-y`}
-          {...register("assesment")}
+          {...register("assessment")}
         />
-        {errors.assesment && (
-          <p>{errors.assesment.message as string}</p>
+        {errors.assessment && (
+          <p>{errors.assessment.message as string}</p>
         )}
       </div>
 
@@ -355,84 +358,108 @@ function Step4({ form }: StepProps) {
     </>
   );
 }
+
+function normalizeConsultationDefaults(
+  patient?: PatientProps,
+  consult?: ConsultationResultProps,
+  vitals?: VitalSignProps
+): RegisterConsultationFormValues {
+  return {
+    // Patient Info
+    name: patient?.name ?? "",
+    contact_number: patient?.contact_number ?? "",
+    address: patient?.address ?? "",
+    birth_date: patient?.birth_date
+      ? new Date(patient.birth_date).toISOString().split("T")[0]
+      : "",
+    sex: patient?.sex?.toLowerCase() === "female" ? "female" : "male",
+    age: patient?.age?.toString() ?? "",
+    religion: consult?.religion ?? "",
+
+    // Consultation Info
+    consultation_date: new Date().toISOString().split("T")[0],
+    chief_complaint: consult?.chief_complaint ?? "",
+    hist_illness: consult?.hist_illness ?? "",
+
+    // Vitals
+    bp: vitals?.bp ?? "",
+    temp: vitals?.temp ?? "",
+    cr: vitals?.cr ?? "",
+    rr: vitals?.rr ?? "",
+    wt: vitals?.wt ?? "",
+    ht: vitals?.ht ?? "",
+
+    // Personal Medical History
+    pmh_allergy: consult?.pmh_allergy ?? false,
+    pmh_admission: consult?.pmh_admission ?? false,
+    pmh_others: consult?.pmh_others ?? false,
+    pmh_others_text: consult?.pmh_others_text ?? "",
+
+    // Family History
+    fh_htn: consult?.fh_htn ?? false,
+    fh_dm: consult?.fh_dm ?? false,
+    fh_ba: consult?.fh_ba ?? false,
+    fh_cancer: consult?.fh_cancer ?? false,
+    fh_others: consult?.fh_others ?? false,
+    fh_others_text: consult?.fh_others_text ?? "",
+
+    // OB History
+    ob_score: consult?.ob_score ?? "",
+    ob_nvsd: consult?.ob_nvsd ?? false,
+    ob_cs: consult?.ob_cs ?? false,
+
+    menarche: consult?.menarche ?? "",
+    interval: consult?.interval ?? "",
+    duration: consult?.duration ?? "",
+    amount: consult?.amount ?? "",
+    ob_symptoms: consult?.ob_symptoms ?? "",
+
+    // Social History
+    cigarette_use: consult?.cigarette_use ?? false,
+    alcohol_use: consult?.alcohol_use ?? false,
+    drug_use: consult?.drug_use ?? false,
+    exercise: consult?.exercise ?? false,
+    hygiene_prac: consult?.hygiene_prac ?? false,
+    coffee_cons: consult?.coffee_cons ?? false,
+    soda_cons: consult?.soda_cons ?? false,
+
+    sh_allergy: consult?.sh_allergy ?? false,
+    sh_admission: consult?.sh_admission ?? false,
+
+    // Lifestyle
+    travel_history: consult?.travel_history ?? "",
+    diet: consult?.diet ?? "",
+    stress: consult?.stress ?? "",
+    occupation: consult?.occupation ?? "",
+
+    // Medical
+    examination: consult?.examination ?? "",
+    assessment: consult?.assessment ?? "",
+    plans: consult?.plans ?? "",
+
+    // Follow-up
+    follow_up_date: consult?.follow_up_date
+      ? new Date(consult.follow_up_date).toISOString().split("T")[0]
+      : "",
+  };
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-const PatientConsultationForm: React.FC<{ patient: PatientProps | undefined, vitals: VitalSignProps | undefined, consult: ConsultaionResultProps | undefined, onClose: () => void }> = ({ patient, vitals, consult, onClose }) => {
+const PatientConsultationForm: React.FC<{ patient: PatientProps | undefined, vitals: VitalSignProps | undefined, consult: ConsultationResultProps | undefined, cons_id: number, onClose: () => void }> = ({ patient, vitals, consult, cons_id, onClose }) => {
   const [step, setStep] = useState(1);
-  const { mutateAsync: consultationResult, isPending } = useConsultaion(onClose);
+  const { mutateAsync: createConsultationResult, isPending } = useConsultaion(onClose);
 
+  // console.log('request data', cons_id)
   const form = useForm<RegisterConsultationFormValues>({
     resolver: zodResolver(patientConsultationSchema),
     mode: "onSubmit",
-    defaultValues: {
-      name: patient?.name,
-      contact_number: patient?.contact_number ?? "",
-      address: patient?.address,
-      birth_date: patient?.birth_date
-        ? new Date(patient.birth_date).toISOString().split("T")[0]
-        : "",
-      sex: patient?.sex?.toLowerCase() === "female" ? "female" : "male",
-      age: patient?.age?.toLocaleString(),
-      religion: patient?.religion,
-
-      chief_complaint: consult?.chief_complaint,
-      hist_illness: consult?.hist_illness,
-      consultation_date: new Date().toISOString().split('T')[0],
-
-      cr: vitals?.cr,
-      bp: vitals?.bp,
-      temp: vitals?.temp,
-      rr: vitals?.rr,
-      ht: vitals?.ht,
-      wt: vitals?.ht,
-
-      pmh_allergy: consult?.pmh_allergy,
-      pmh_admission: consult?.pmh_admission,
-      pmh_others: consult?.pmh_others,
-      pmh_others_text: consult?.pmh_others_text,
-      fh_htn: consult?.fh_dm,
-      fh_dm: consult?.fh_ba,
-      fh_ba: consult?.fh_cancer,
-      fh_cancer: consult?.fh_cancer,
-      fh_others: consult?.fh_cancer,
-      fh_others_text: consult?.fh_others_text,
-      ob_score: consult?.ob_score,
-      ob_nvsd: consult?.ob_nvsd,
-      ob_cs: consult?.ob_cs,
-
-      menarche: consult?.menarche,
-      interval: consult?.interval,
-      duration: consult?.duration,
-      amount: consult?.amount,
-      ob_symptoms: consult?.ob_symptoms,
-
-      cigarette_use: consult?.cigarette_use,
-      alcohol_use: consult?.alcohol_use,
-      drug_use: consult?.drug_use,
-      exercise: consult?.exercise,
-      hygiene_prac: consult?.hygiene_prac,
-      coffee_cons: consult?.coffee_cons,
-      soda_cons: consult?.soda_cons,
-
-      sh_allergy: consult?.cigarette_use,
-      sh_admission: consult?.sh_admission,
-
-      travel_history: consult?.travel_history,
-      diet: consult?.amount,
-      stress: consult?.amount,
-      occupation: consult?.amount,
-
-      examination: consult?.examination,
-      assesment: consult?.assesment,
-      plans: consult?.plans,
-      follow_up_date: consult?.follow_up_date ? new Date(consult?.follow_up_date).toISOString().split("T")[0] : "",
-
-    },
+    defaultValues: normalizeConsultationDefaults(patient, consult, vitals) as RegisterConsultationFormValues,
   });
 
   const { handleSubmit } = form;
 
-  const panels = [
+  const panels: React.ReactElement[] = [
     <Step1 key="step1" form={form} />,
     <Step2 key="step2" form={form} />,
     <Step3 key="step3" form={form} />,
@@ -442,8 +469,9 @@ const PatientConsultationForm: React.FC<{ patient: PatientProps | undefined, vit
   function mapToPrisma(data: RegisterConsultationFormValues) {
     return {
       // ─── STEP 1 ─────────────────────────
-      consultation_id: 0,
-      patient_id: patient?.patient_id,
+      cons_id: cons_id, // ⚠️ ensure this exists or remove if create mode
+      patient_id: patient?.patient_id ?? 0, // safer fallback
+
       full_name: data.name,
       consultation_date: new Date(data.consultation_date),
       address: data.address,
@@ -452,71 +480,76 @@ const PatientConsultationForm: React.FC<{ patient: PatientProps | undefined, vit
       sex: data.sex,
       age: Number(data.age),
 
-      religion: data.religion,
+      religion: data.religion ?? "",
       chief_complaint: data.chief_complaint,
 
       // ─── STEP 2 ─────────────────────────
-      hist_illness: data.hist_illness,
-      bp: data.bp,
-      temp: data.temp,
-      cr: data.cr,
-      rr: data.rr,
-      wt: data.wt,
-      ht: data.ht,
+      hist_illness: data.hist_illness ?? "",
+      bp: data.bp ?? "",
+      temp: data.temp ?? "",
+      cr: data.cr ?? "",
+      rr: data.rr ?? "",
+      wt: data.wt ?? "",
+      ht: data.ht ?? "",
 
       // ─── STEP 3: PMH ────────────────────
-      pmh_allergy: data.pmh_allergy,
-      pmh_admission: data.pmh_admission,
-      pmh_others: data.pmh_others,
-      pmh_others_text: data.pmh_others_text,
+      pmh_allergy: data.pmh_allergy ?? false,
+      pmh_admission: data.pmh_admission ?? false,
+      pmh_others: data.pmh_others ?? false,
+      pmh_others_text: data.pmh_others_text ?? "",
 
       // ─── FAMILY HISTORY ─────────────────
-      fh_htn: data.fh_htn,
-      fh_dm: data.fh_dm,
-      fh_ba: data.fh_ba,
-      fh_cancer: data.fh_cancer,
-      fh_others: data.fh_others,
-      fh_others_text: data.fh_others_text,
+      fh_htn: data.fh_htn ?? false,
+      fh_dm: data.fh_dm ?? false,
+      fh_ba: data.fh_ba ?? false,
+      fh_cancer: data.fh_cancer ?? false,
+      fh_others: data.fh_others ?? false,
+      fh_others_text: data.fh_others_text ?? "",
 
       // ─── OB-GYNE ───────────────────────
-      ob_score: data.ob_score,
-      ob_nvsd: data.ob_nvsd,
-      ob_cs: data.ob_cs,
+      ob_score: data.ob_score ?? "",
+      ob_nvsd: data.ob_nvsd ?? false,
+      ob_cs: data.ob_cs ?? false,
 
-      menarche: data.menarche,
-      interval: data.interval,
-      duration: data.duration,
-      amount: data.amount,
-      ob_symptoms: data.ob_symptoms,
+      menarche: data.menarche ?? "",
+      interval: data.interval ?? "",
+      duration: data.duration ?? "",
+      amount: data.amount ?? "",
+      ob_symptoms: data.ob_symptoms ?? "",
 
       // ─── PERSONAL HISTORY ──────────────
-      cigarette_use: data.cigarette_use,
-      alcohol_use: data.alcohol_use,
-      drug_use: data.drug_use,
-      exercise: data.exercise,
-      hygiene_prac: data.hygiene_prac,
-      coffee_cons: data.coffee_cons,
-      soda_cons: data.soda_cons,
+      cigarette_use: data.cigarette_use ?? false,
+      alcohol_use: data.alcohol_use ?? false,
+      drug_use: data.drug_use ?? false,
+      exercise: data.exercise ?? false,
+      hygiene_prac: data.hygiene_prac ?? false,
+      coffee_cons: data.coffee_cons ?? false,
+      soda_cons: data.soda_cons ?? false,
 
       // ─── SOCIAL HISTORY ────────────────
-      sh_allergy: data.sh_allergy,
-      sh_admission: data.sh_admission,
+      sh_allergy: data.sh_allergy ?? false,
+      sh_admission: data.sh_admission ?? false,
 
-      travel_history: data.travel_history,
-      diet: data.diet,
-      stress: data.stress,
-      occupation: data.occupation,
+      travel_history: data.travel_history ?? "",
+      diet: data.diet ?? "",
+      stress: data.stress ?? "",
+      occupation: data.occupation ?? "",
 
-      examination: data.examination,
-      assesment: data.assesment,
-      plans: data.plans,
-      follow_up_date: data.follow_up_date ? new Date(data.follow_up_date) : undefined,
+      // ─── MEDICAL ───────────────────────
+      examination: data.examination ?? "",
+      assessment: data.assessment ?? "",
+      plans: data.plans ?? "",
+
+      // ─── FOLLOW UP ─────────────────────
+      follow_up_date: data.follow_up_date
+        ? new Date(data.follow_up_date)
+        : undefined,
     };
   }
 
   const onSubmit = async (data: RegisterConsultationFormValues) => {
     // console.log("SUBMIT DATA:", data);
-    await consultationResult(mapToPrisma(data));
+    await createConsultationResult(mapToPrisma(data));
   };
 
   const onError = (errors: unknown) => {

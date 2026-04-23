@@ -1,26 +1,19 @@
-import z from "zod";
+import { z } from "zod";
 
 export const patientConsultationSchema = z.object({
-  // ─── STEP 1: PERSONAL INFO ─────────────────────────────
-  name: z.string().min(1, "Full name is required"),
-  consultation_date: z.string().min(1, "Consultation date is required"),
-  address: z.string().min(1, "Address is required"),
-  contact_number: z.string().min(1, "Contact number is required"),
-  birth_date: z.string().min(1, "Birth date is required"),
+  name: z.string().min(1),
+  consultation_date: z.string().min(1),
+  address: z.string().min(1),
+  contact_number: z.string().min(1),
+  birth_date: z.string().min(1),
 
-  sex: z.enum(["male", "female"], {
-    message: "Sex is required",
-  }),
-  age: z
-    .string()
-    .min(1, "Age is required")
-    .refine((val) => !isNaN(Number(val)), {
-      message: "Age must be a number",
-    }),
+  sex: z.enum(["male", "female"]),
+  age: z.string().min(1),
+
   religion: z.string().optional(),
-  chief_complaint: z.string().min(1, "Chief complaint is required"),
 
-  // ─── STEP 2: VITALS & HISTORY ─────────────────────────
+  chief_complaint: z.string().min(1),
+
   hist_illness: z.string().optional(),
   bp: z.string().optional(),
   temp: z.string().optional(),
@@ -29,9 +22,7 @@ export const patientConsultationSchema = z.object({
   wt: z.string().optional(),
   ht: z.string().optional(),
 
-  // ─── STEP 3: MEDICAL HISTORY ──────────────────────────
-
-  // Past Medical History
+  // Personal Medical History
   pmh_allergy: z.boolean().optional(),
   pmh_admission: z.boolean().optional(),
   pmh_others: z.boolean().optional(),
@@ -45,8 +36,8 @@ export const patientConsultationSchema = z.object({
   fh_others: z.boolean().optional(),
   fh_others_text: z.string().optional(),
 
-  // OB-Gyne
-  ob_score: z.string().optional(), // G P
+  // OB History
+  ob_score: z.string().optional(),
   ob_nvsd: z.boolean().optional(),
   ob_cs: z.boolean().optional(),
 
@@ -56,7 +47,7 @@ export const patientConsultationSchema = z.object({
   amount: z.string().optional(),
   ob_symptoms: z.string().optional(),
 
-  //Personal History
+  // Social History
   cigarette_use: z.boolean().optional(),
   alcohol_use: z.boolean().optional(),
   drug_use: z.boolean().optional(),
@@ -65,7 +56,6 @@ export const patientConsultationSchema = z.object({
   coffee_cons: z.boolean().optional(),
   soda_cons: z.boolean().optional(),
 
-  // Social History
   sh_allergy: z.boolean().optional(),
   sh_admission: z.boolean().optional(),
 
@@ -75,11 +65,10 @@ export const patientConsultationSchema = z.object({
   occupation: z.string().optional(),
 
   examination: z.string().optional(),
-  assesment: z.string().optional(),
+  assessment: z.string().optional(),
   plans: z.string().optional(),
 
   follow_up_date: z.string().optional(),
-
 });
 
 export const medicineSchema = z.object({

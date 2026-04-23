@@ -1,6 +1,7 @@
 
 export interface PatientConsultationRecordsPayload {
     phr_id: number;
+    cons_id: number;
     vs_id: number;
     patient_id: number;
     consultation_date: string;
@@ -44,7 +45,7 @@ export interface PatientConsultationRecordsPayload {
     occupation?: string;
 
     examination?: string;
-    assesment?: string;
+    assessment?: string;
     plans?: string
     follow_up_date?: string;
 
@@ -83,4 +84,14 @@ export interface PrescriptionMedicine {
 
     quantity?: string;
     instruction?: string;
+}
+
+export interface MedicalCertificatePayload {
+    mcr_id: number;
+    patient_id: number;
+    purpose: string;
+    impression: string;
+    recommendation: string;
+    med_tech_user_id: number;
+    result_date: string;
 }
