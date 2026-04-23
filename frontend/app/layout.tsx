@@ -12,7 +12,7 @@ const roboto = Roboto({ weight: "400", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "SCLMS SYSTEM",
   description: "Main layout",
-  icons: "../images/serviamus.jpeg"
+  icons: "/images/serviamus.jpeg",
 };
 
 export default function RootLayout({

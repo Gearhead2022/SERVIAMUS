@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  // output   = "../generated/prisma"
 }
 
 datasource db {
@@ -62,13 +61,13 @@ model RoleTypes {
 }
 
 model UserRole {
-  user_id Int // Foreign key from users 
-  role_id Int // Foreign key from roles
+  user_id Int
+  role_id Int
 
-  user Users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  user Users     @relation(fields: [user_id], references: [user_id])
   role RoleTypes @relation(fields: [role_id], references: [role_id], onDelete: Cascade)
 
-  @@id([user_id, role_id]) // primary | composite keys
+  @@id([user_id, role_id])
   @@index([user_id])
   @@index([role_id])
   @@map("user_roles")
@@ -130,13 +129,11 @@ model ConsultationRecords {
   phr_id     Int @id @default(autoincrement())
   patient_id Int @unique
 
-  // PMH
   pmh_allergy     Boolean @default(false)
   pmh_admission   Boolean @default(false)
   pmh_others      Boolean @default(false)
   pmh_others_text String?
 
-  // FH
   fh_htn         Boolean @default(false)
   fh_dm          Boolean @default(false)
   fh_ba          Boolean @default(false)
@@ -144,7 +141,6 @@ model ConsultationRecords {
   fh_others      Boolean @default(false)
   fh_others_text String?
 
-  // OB
   ob_score String?
   ob_nvsd  Boolean @default(false)
   ob_cs    Boolean @default(false)
@@ -155,7 +151,6 @@ model ConsultationRecords {
   amount      String? @db.VarChar(100)
   ob_symptoms String? @db.VarChar(100)
 
-  // Personal History
   cigarette_use Boolean @default(false)
   alcohol_use   Boolean @default(false)
   drug_use      Boolean @default(false)
@@ -163,9 +158,9 @@ model ConsultationRecords {
   hygiene_prac  Boolean @default(false)
   coffee_cons   Boolean @default(false)
   soda_cons     Boolean @default(false)
-  // Social
-  sh_allergy    Boolean @default(false)
-  sh_admission  Boolean @default(false)
+
+  sh_allergy   Boolean @default(false)
+  sh_admission Boolean @default(false)
 
   travel_history String? @db.VarChar(100)
   diet           String? @db.VarChar(100)
@@ -197,12 +192,11 @@ model Request {
   status     RequestStatus
   req_date   DateTime      @db.Date
 
-  patient Patients @relation(fields: [patient_id], references: [patient_id])
-
-  laboratory LaboratoryRequest?
-  consult    ConsultationRequest?
-  billing    Billing?
-  cert       MedicalCertificateRequest?
+  patient             Patients                  @relation(fields: [patient_id], references: [patient_id])
+  laboratory          LaboratoryRequest?
+  consult             ConsultationRequest?
+  medical_certificate MedicalCertificateResult?
+  billing             Billing?
 
   @@index([patient_id])
   @@map("request")
@@ -311,7 +305,6 @@ model PrescriptionItem {
 model LaboratoryRequest {
   id     Int    @id @default(autoincrement())
   req_id Int    @unique
-  test   String @db.Text
   req_by String @db.VarChar(50)
 
   request Request                 @relation(fields: [req_id], references: [req_id])
@@ -361,6 +354,156 @@ model LaboratoryRequestItem {
   @@index([status])
   @@index([processed_by])
   @@map("laboratory_request_items")
+}
+
+enum LaboratoryCategory {
+  Clinical_Chemistry
+  Clinical_Microscopy
+  Serology
+  Hematology
+  OTHER
+}
+
+enum LaboratoryRequestItemStatus {
+  QUEUED
+  PROCESSING
+  DONE
+  CANCELLED
+}
+
+model Patients {
+  patient_id     Int      @id @default(autoincrement())
+  patient_code   String?  @unique
+  name           String   @db.VarChar(50)
+  address        String   @db.Text
+  contact_number String   @db.VarChar(50)
+  birth_date     DateTime @db.Date
+  religion       String?  @db.VarChar(50)
+
+  sex Sex
+  age Int?
+
+  created_at DateTime  @default(now())
+  updated_at DateTime? @updatedAt
+
+  phr                       ConsultationRecords[]
+  request                   Request[]
+  vitals                    VitallSign[]
+  prescriptions             Prescription[]
+  consultations             Consultation[]
+  hematologyResults         HematologyResult[]
+  serologyResults           SerologyResult[]
+  parasitologyResults       ParasitologyResult[]
+  urinalysisResults         UrinalysisResult[]
+  clinicalChemistryResults  ClinicalChemistryResult[]
+  hbA1CResults              HbA1cResult[]
+  chemistryResults          ChemistryResult[]
+  ogttResults               OgttResult[]
+  medicalCertificateResults MedicalCertificateResult[]
+
+  hematology_results          HematologyResult[]
+  serology_results            SerologyResult[]
+  parasitology_results        ParasitologyResult[]
+  urinalysis_results          UrinalysisResult[]
+  clinical_chemistry_results  ClinicalChemistryResult[]
+  hba1c_results               HbA1cResult[]
+  chemistry_results           ChemistryResult[]
+  ogtt_results                OgttResult[]
+  medical_certificate_results MedicalCertificateResult[]
+
+  @@map("patients")
+}
+
+// Service Class
+model ServiceClass {
+  class_id    Int     @id @default(autoincrement())
+  class_code  String  @unique @db.VarChar(20)
+  description String  @db.VarChar(200)
+  is_active   Boolean @default(true)
+
+  services Services[]
+
+  @@map("service_class")
+}
+
+// Services
+model Services {
+  service_id   Int      @id @default(autoincrement())
+  service_code String   @unique @db.VarChar(20)
+  price        Decimal  @db.Decimal(12, 2)
+  date         DateTime @db.Date
+  is_active    Boolean  @default(true)
+  class_id     Int
+
+  serviceClass ServiceClass     @relation(fields: [class_id], references: [class_id])
+  billingItems BillingService[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("services")
+}
+
+// Billing
+model Billing {
+  billing_id   Int        @id @default(autoincrement())
+  billing_code String     @unique @db.VarChar(20)
+  req_id       Int        @unique
+  total_price  Decimal    @db.Decimal(12, 2)
+  date         DateTime   @db.Date
+  discount     Decimal    @db.Decimal(12, 2)
+  status       BillStatus
+
+  services BillingService[]
+  request  Request          @relation(fields: [req_id], references: [req_id])
+  payments Payment[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("biling")
+}
+
+enum BillStatus {
+  PENDING
+  DONE
+}
+
+// Billing Services (Pivot Table)
+model BillingService {
+  service_list_id Int @id @default(autoincrement())
+
+  billing_id Int
+  service_id Int
+
+  billing Billing  @relation(fields: [billing_id], references: [billing_id])
+  service Services @relation(fields: [service_id], references: [service_id])
+
+  price Decimal? @db.Decimal(12, 2)
+
+  @@map("billing_services")
+}
+
+model Payment {
+  payment_id Int @id @default(autoincrement())
+
+  billing_id Int
+  billing    Billing @relation(fields: [billing_id], references: [billing_id])
+
+  amount       Decimal       @db.Decimal(12, 2)
+  method       PaymentMethod
+  payment_date DateTime      @default(now())
+
+  reference_no String? @db.VarChar(50) // for GCash / bank / etc.
+
+  created_at DateTime @default(now())
+}
+
+enum PaymentMethod {
+  CASH
+  GCASH
+  CARD
+  BANK_TRANSFER
 }
 
 model HematologyResult {
@@ -633,52 +776,23 @@ model OgttResult {
   @@map("ogtt_results")
 }
 
-enum LaboratoryCategory {
-  HEMATOLOGY
-  PARASITOLOGY
-  URINALYSIS
-  CLINICAL_CHEMISTRY
-  OTHER
-}
+model MedicalCertificateResult {
+  med_cert_id      Int       @id @default(autoincrement())
+  patient_id       Int
+  request_id       Int?      @unique
+  purpose          String?   @db.Text
+  med_tech_user_id Int?
+  result_date      DateTime  @default(now()) @db.Date
+  created_at       DateTime  @default(now())
+  updated_at       DateTime? @updatedAt
 
-enum LaboratoryRequestItemStatus {
-  QUEUED
-  PROCESSING
-  DONE
-  CANCELLED
-}
+  patient  Patients @relation(fields: [patient_id], references: [patient_id])
+  request  Request? @relation(fields: [request_id], references: [req_id])
+  med_tech Users?   @relation("MedicalCertificateResultMedTech", fields: [med_tech_user_id], references: [user_id])
 
-model Patients {
-  patient_id     Int      @id @default(autoincrement())
-  patient_code   String?  @unique
-  name           String   @db.VarChar(50)
-  address        String   @db.Text
-  contact_number String   @db.VarChar(50)
-  birth_date     DateTime @db.Date
-  religion       String?  @db.VarChar(50)
-
-  sex Sex
-  age Int?
-
-  created_at DateTime  @default(now())
-  updated_at DateTime? @updatedAt
-
-  phr                       ConsultationRecords[]
-  request                   Request[]
-  vitals                    VitallSign[]
-  prescriptions             Prescription[]
-  consultations             Consultation[]
-  hematologyResults         HematologyResult[]
-  serologyResults           SerologyResult[]
-  parasitologyResults       ParasitologyResult[]
-  urinalysisResults         UrinalysisResult[]
-  clinicalChemistryResults  ClinicalChemistryResult[]
-  hbA1CResults              HbA1cResult[]
-  chemistryResults          ChemistryResult[]
-  ogttResults               OgttResult[]
-  medicalCertificateResults MedicalCertificateResult[]
-
-  @@map("patients")
+  @@index([patient_id])
+  @@index([med_tech_user_id])
+  @@map("medical_certificate_results")
 }
 
 // Service Class

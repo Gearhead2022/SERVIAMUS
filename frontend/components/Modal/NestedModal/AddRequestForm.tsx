@@ -1,12 +1,23 @@
 "use client";
 
-import z from "zod";
+import { useMemo } from "react";
+import { z } from "zod";
 import Select from "react-select";
-import { useForm, UseFormRegister, FieldValues, Path, FieldErrors, Controller } from "react-hook-form";
+import {
+  Controller,
+  FieldErrors,
+  FieldValues,
+  Path,
+  UseFormRegister,
+  useForm,
+  useWatch,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { requestSchema } from "@/schemas/request.schema";
 import { UsersProps, VitalSignProps } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
+import { useRequest } from "@/hooks/Patient/usePatientRegistration";
+import { useLabTestCatalog } from "@/hooks/Lab/useLab";
 import { useRequest, useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -23,7 +34,7 @@ type Certificate = Extract<RequestFormValues, { req_type: "CERTIFICATE" }>;
 const inputCls =
   "w-full bg-[#f0f3fa] border border-[1.5px] border-[#dce3ef] rounded-lg px-3 py-2.5 text-sm text-[#1a2a45] font-['DM_Sans'] outline-none transition focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white placeholder:text-[#b0bcd4]";
 
-interface VitakKeyProps<T extends FieldValues> {
+interface VitalKeyProps<T extends FieldValues> {
   prefix: string;
   register: UseFormRegister<T>;
   errors: FieldErrors<T>;
@@ -43,7 +54,6 @@ function VitalsRow<T extends FieldValues>({
   label,
   teal,
   register,
-  errors,
   readonly,
 }: VitakKeyProps<T>) {
   const fields = [
@@ -89,19 +99,19 @@ function VitalsRow<T extends FieldValues>({
   );
 }
 
-/* ── Main Component ── */
 const RequestForm: React.FC<{
   patient: PatientProps;
   vitals: VitalSignProps | undefined;
   onClose: () => void;
 }> = ({ patient, vitals, onClose }) => {
   const { mutateAsync: request, isPending } = useRequest(onClose);
+  const { data: labTests = [], isLoading: loadingLabTests } = useLabTestCatalog();
+
   const { data: UserList } = useGetAllUsers();
   const {
     register,
     handleSubmit,
     control,
-    watch,
     formState: { errors },
   } = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
@@ -133,6 +143,24 @@ const RequestForm: React.FC<{
     await request(data);
   };
 
+  const typeIcon =
+    reqType === "CONSULTATION" ? (
+      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+        />
+      </svg>
+    ) : (
+      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+        />
+      </svg>
+    );
   const testOptions = [
     { value: "CBC", label: "CBC (Complete Blood Count)" },
     { value: "Urinalysis", label: "Urinalysis" },
@@ -181,9 +209,7 @@ const RequestForm: React.FC<{
 
   return (
     <div className="font-['DM_Sans']">
-
-      {/* Header band */}
-      <div className="bg-[#f7f8fc] border-b border-[#dce3ef] px-6 py-4 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-[#dce3ef] bg-[#f7f8fc] px-6 py-4">
         <div className="flex items-center gap-3">
           <div
             className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white ${reqType === "LABORATORY" ? "bg-[#0e7c7b]" : reqType === 'CONSULTATION' ? "bg-[#0f2244]" : "bg-[#a3852c]"
@@ -195,9 +221,8 @@ const RequestForm: React.FC<{
             <h2 className="font-['DM_Serif_Display'] text-[#0f2244] text-base leading-tight">
               {reqType === "CONSULTATION" ? "Consultation Request" : reqType === "LABORATORY" ? "Laboratory Request" : "Certificate Request"}
             </h2>
-            <p className="text-[11px] text-[#6b7da0] mt-0.5">
-              Patient:{" "}
-              <span className="font-semibold text-[#1a2a45]">{patient.name}</span>
+            <p className="mt-0.5 text-[11px] text-[#6b7da0]">
+              Patient: <span className="font-semibold text-[#1a2a45]">{patient.name}</span>
             </p>
 
           </div>
@@ -230,9 +255,7 @@ const RequestForm: React.FC<{
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="px-6 pt-5 pb-6 space-y-5 bg-white">
-
-        {/* Patient row */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 bg-white px-6 pb-6 pt-5">
         <div className="grid grid-cols-4 gap-4">
           <div>
             <Input
@@ -359,8 +382,7 @@ const RequestForm: React.FC<{
 
         )}
 
-        {/* ── LABORATORY fields ── */}
-        {reqType === "LABORATORY" && (
+        {reqType === "LABORATORY" ? (
           <div className="space-y-4">
             <div className="col-span-2">
               <Input
@@ -381,7 +403,6 @@ const RequestForm: React.FC<{
 
             <div>
               <Label>Select Test</Label>
-
               <Controller
                 control={control}
                 name="test"
@@ -389,15 +410,17 @@ const RequestForm: React.FC<{
                   <Select
                     {...field}
                     options={testOptions}
-                    placeholder="— Choose a test —"
+                    placeholder={
+                      loadingLabTests ? "Loading laboratory tests..." : "Choose laboratory tests"
+                    }
                     isMulti
                     className={`text-sm ${inputCls}`}
                     classNamePrefix="react-select"
                     onChange={(selected) =>
-                      field.onChange(selected.map((opt) => opt.value))
+                      field.onChange((selected ?? []).map((option) => option.value))
                     }
-                    value={testOptions.filter(opt =>
-                      field.value?.includes(opt.value)
+                    value={testOptions.filter((option) =>
+                      field.value?.includes(option.value)
                     )}
                     isClearable
                   />
@@ -495,13 +518,8 @@ const RequestForm: React.FC<{
 
         )}
 
-        {/* Divider + Actions */}
-        <div className="pt-1 border-t border-[#dce3ef] flex items-center justify-end gap-2.5">
-          <Button
-            type="button"
-            variant="danger"
-            onClick={onClose}
-          >
+        <div className="flex items-center justify-end gap-2.5 border-t border-[#dce3ef] pt-1">
+          <Button type="button" variant="danger" onClick={onClose}>
             Cancel
           </Button>
 
@@ -513,7 +531,6 @@ const RequestForm: React.FC<{
             Submit ✓
           </Button>
         </div>
-
       </form>
     </div >
   );

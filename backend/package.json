@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "set PORT=5005 && tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "prisma": {
     "seed": "tsx seeders/seed.ts"
