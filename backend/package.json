@@ -10,9 +10,6 @@
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
-  "prisma": {
-    "seed": "tsx seeders/seed.ts"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
