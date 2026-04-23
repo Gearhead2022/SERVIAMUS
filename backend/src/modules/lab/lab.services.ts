@@ -8,6 +8,7 @@ import {
   normalizeLabForm,
   requestStatusFromItemStatuses,
   resolveApiLabCategory,
+  resolveCombinedLabResultFamily,
   resolveLabRecordGroup,
   serializeLabResultPayload,
   splitLabTests,
@@ -259,6 +260,38 @@ const getDisplayItemById = async (tx: Prisma.TransactionClient, labId: number) =
   return toDisplayItem(record, item);
 };
 
+const getRelatedCombinedLabResultItems = async (
+  tx: Prisma.TransactionClient,
+  laboratoryRequestId: number,
+  family: NonNullable<ReturnType<typeof resolveCombinedLabResultFamily>>
+) => {
+  const items = await tx.laboratoryRequestItem.findMany({
+    where: {
+      laboratory_request_id: laboratoryRequestId,
+    },
+    select: {
+      item_id: true,
+      processed_by: true,
+      result_payload: true,
+      status: true,
+      test: {
+        select: {
+          name: true,
+          schema_key: true,
+        },
+      },
+    },
+  });
+
+  return items.filter((item) =>
+    resolveCombinedLabResultFamily({
+      schemaKey: item.test.schema_key,
+      testName: item.test.name,
+    })
+      === family
+  );
+};
+
 const syncParentRequestStatus = async (
   tx: Prisma.TransactionClient,
   laboratoryRequestId: number
@@ -308,11 +341,22 @@ const getCatalogPreferenceScore = (item: LabCatalogItem) => {
     return 100;
   }
 
+  if (item.schema_key === "onehOGTT" && normalizedName.includes("50g")) {
+    return 100;
+  }
+
   if (item.schema_key === "twohOGTT" && normalizedName.includes("2h")) {
     return 100;
   }
 
-  if (item.schema_key === "OGTT" && normalizedName === "ogtt") {
+  if (item.schema_key === "twohOGTT" && normalizedName.includes("75g")) {
+    return 100;
+  }
+
+  if (
+    item.schema_key === "OGTT" &&
+    (normalizedName === "ogtt" || normalizedName.includes("100g"))
+  ) {
     return 100;
   }
 
@@ -595,6 +639,12 @@ export const updateLabRequestStatusService = async (
         processed_by: true,
         status: true,
         result_payload: true,
+        test: {
+          select: {
+            name: true,
+            schema_key: true,
+          },
+        },
         laboratoryRequest: {
           select: {
             request: {
@@ -617,6 +667,18 @@ export const updateLabRequestStatusService = async (
 
     const dbStatus = toDbLabStatus(status);
     const isBillingPaid = existingItem.laboratoryRequest.request.billing?.status === "DONE";
+    const combinedResultFamily = resolveCombinedLabResultFamily({
+      schemaKey: existingItem.test.schema_key,
+      testName: existingItem.test.name,
+    });
+    const relatedGroupItems = combinedResultFamily
+      ? await getRelatedCombinedLabResultItems(
+          tx,
+          existingItem.laboratory_request_id,
+          combinedResultFamily
+        )
+      : [existingItem];
+    const targetItemIds = relatedGroupItems.map((item) => item.item_id);
 
     if (dbStatus !== "QUEUED") {
       ensurePaidBilling(
@@ -625,14 +687,14 @@ export const updateLabRequestStatusService = async (
       );
     }
 
-    if (dbStatus === "DONE" && existingItem.status === "QUEUED") {
+    if (dbStatus === "DONE" && relatedGroupItems.some((item) => item.status === "QUEUED")) {
       throw new LabModuleError(
         "Accept the laboratory request before marking it as completed.",
         409
       );
     }
 
-    if (dbStatus === "DONE" && !existingItem.result_payload) {
+    if (dbStatus === "DONE" && relatedGroupItems.some((item) => !item.result_payload)) {
       throw new LabModuleError(
         "Save laboratory results before marking this request as completed.",
         409
@@ -640,7 +702,11 @@ export const updateLabRequestStatusService = async (
     }
 
     await tx.laboratoryRequestItem.updateMany({
-      where: { item_id: labId },
+      where: {
+        item_id: {
+          in: targetItemIds,
+        },
+      },
       data: {
         status: dbStatus,
         completed_at: dbStatus === "DONE" ? new Date() : null,
@@ -719,26 +785,54 @@ export const saveLabResultService = async ({
       });
     }
 
+    const combinedResultFamily = resolveCombinedLabResultFamily({
+      schemaKey: existingItem.test.schema_key,
+      testName: existingItem.test.name,
+    });
+    const relatedGroupItems = combinedResultFamily
+      ? await getRelatedCombinedLabResultItems(
+          tx,
+          existingItem.laboratory_request_id,
+          combinedResultFamily
+        )
+      : [
+          {
+            item_id: existingItem.item_id,
+            processed_by: existingItem.processed_by,
+            result_payload: null,
+            status: existingItem.status,
+            test: existingItem.test,
+          },
+        ];
+    const targetItemIds = relatedGroupItems.map((item) => item.item_id);
+    const nextStatus = existingItem.status === "DONE" ? "DONE" : "PROCESSING";
+
     await tx.laboratoryRequestItem.updateMany({
-      where: { item_id: labId },
+      where: {
+        item_id: {
+          in: targetItemIds,
+        },
+      },
       data: {
         result_payload: normalizeLabForm(form),
-        status: existingItem.status === "DONE" ? "DONE" : "PROCESSING",
-        completed_at: existingItem.status === "DONE" ? new Date() : null,
+        status: nextStatus,
+        completed_at: nextStatus === "DONE" ? new Date() : null,
         processed_by: userId ?? existingItem.processed_by ?? null,
       },
     });
 
-    await upsertStructuredLabResult({
-      tx,
-      patientId: existingItem.laboratoryRequest.request.patient_id,
-      labId,
-      testName: existingItem.test.name,
-      schemaKey: existingItem.test.schema_key,
-      form,
-      medTechUserId: userId ?? null,
-      pathologistUserId,
-    });
+    for (const relatedItem of relatedGroupItems) {
+      await upsertStructuredLabResult({
+        tx,
+        patientId: existingItem.laboratoryRequest.request.patient_id,
+        labId: relatedItem.item_id,
+        testName: relatedItem.test.name,
+        schemaKey: relatedItem.test.schema_key,
+        form,
+        medTechUserId: userId ?? null,
+        pathologistUserId,
+      });
+    }
 
     await syncParentRequestStatus(tx, existingItem.laboratory_request_id);
 

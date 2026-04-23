@@ -55,6 +55,10 @@ export type LabSchemaKey =
   | "ogtt"
   | "general";
 
+export type CombinedLabResultFamily =
+  | "chemistry-panel"
+  | "clinical-chemistry-panel";
+
 type KnownLabSchemaDefinition = {
   apiCategory: ApiLabCategory;
   category: LaboratoryCategory;
@@ -176,17 +180,33 @@ const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> 
   OGTT: {
     apiCategory: "clinical-chemistry",
     category: "Clinical_Chemistry",
-    aliases: ["ogtt", "oral glucose tolerance test"],
+    aliases: ["ogtt", "oral glucose tolerance test", "100g ogtt", "ogtt 100g", "100g-ogtt"],
   },
   onehOGTT: {
     apiCategory: "clinical-chemistry",
     category: "Clinical_Chemistry",
-    aliases: ["1h ogtt", "1 hour ogtt", "1h oral glucose tolerance test"],
+    aliases: [
+      "1h ogtt",
+      "1h-ogtt",
+      "1 hour ogtt",
+      "1h oral glucose tolerance test",
+      "50g ogtt",
+      "50g-ogtt",
+      "50 grams ogtt",
+    ],
   },
   twohOGTT: {
     apiCategory: "clinical-chemistry",
     category: "Clinical_Chemistry",
-    aliases: ["2h ogtt", "2 hour ogtt", "2h oral glucose tolerance test"],
+    aliases: [
+      "2h ogtt",
+      "2h-ogtt",
+      "2 hour ogtt",
+      "2h oral glucose tolerance test",
+      "75g ogtt",
+      "75g-ogtt",
+      "75 grams ogtt",
+    ],
   },
   FOBT: {
     apiCategory: "other",
@@ -235,7 +255,14 @@ const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> 
   chemistry: {
     apiCategory: "clinical-chemistry",
     category: "Clinical_Chemistry",
-    aliases: ["chemistry", "electrolytes", "electrolyte panel"],
+    aliases: [
+      "chemistry",
+      "electrolytes",
+      "electrolyte panel",
+      "chloride",
+      "ionized calcium",
+      "calcium ionized",
+    ],
   },
   ogtt: {
     apiCategory: "clinical-chemistry",
@@ -336,10 +363,24 @@ const inferLabSchemaKey = (testName: string): LabSchemaKey => {
     value.includes("glucose tolerance") ||
     value.includes("glucose load")
   ) {
+    if (value.includes("50g") || value.includes("50 grams") || value.includes("1h")) {
+      return "onehOGTT";
+    }
+
+    if (value.includes("75g") || value.includes("75 grams") || value.includes("2h")) {
+      return "twohOGTT";
+    }
+
     return "OGTT";
   }
 
-  if (value.includes("sodium") || value.includes("potassium")) {
+  if (
+    value.includes("sodium") ||
+    value.includes("potassium") ||
+    value.includes("chloride") ||
+    value.includes("ionized calcium") ||
+    value.includes("calcium ionized")
+  ) {
     return "chemistry";
   }
 
@@ -423,6 +464,23 @@ const clinicalChemistrySchemaKeys = new Set<LabSchemaKey>([
   "twohOGTT",
   "uricacid",
 ]);
+const combinedClinicalChemistrySchemaKeys = new Set<LabSchemaKey>([
+  "BUN",
+  "FBS",
+  "HDL",
+  "LDL",
+  "RBS",
+  "SGPT",
+  "clinical_chemistry",
+  "totalcholesterol",
+  "triglycerides",
+  "uricacid",
+]);
+const combinedChemistrySchemaKeys = new Set<LabSchemaKey>([
+  "chemistry",
+  "potassium",
+  "sodium",
+]);
 const clinicalMicroscopySchemaKeys = new Set<LabSchemaKey>([
   "FOBT",
   "parasitology",
@@ -481,6 +539,26 @@ export const resolveLabRecordGroup = ({
   }
 
   return "other";
+};
+
+export const resolveCombinedLabResultFamily = ({
+  schemaKey,
+  testName,
+}: {
+  schemaKey?: string | null;
+  testName: string;
+}): CombinedLabResultFamily | null => {
+  const resolvedSchemaKey = resolveLabSchemaKey(testName, schemaKey);
+
+  if (combinedClinicalChemistrySchemaKeys.has(resolvedSchemaKey)) {
+    return "clinical-chemistry-panel";
+  }
+
+  if (combinedChemistrySchemaKeys.has(resolvedSchemaKey)) {
+    return "chemistry-panel";
+  }
+
+  return null;
 };
 
 export const toApiLabCategory = (category: LaboratoryCategory): ApiLabCategory => {

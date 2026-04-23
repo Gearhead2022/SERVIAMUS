@@ -37,6 +37,24 @@ type OgttTemplateConfig = {
   phases: OgttPhaseConfig[];
 };
 
+export type ClinicalChemistryRow = {
+  conversionFieldName?: string;
+  fieldName: string;
+  label: string;
+  showMealFields?: boolean;
+};
+
+export type ChemistryPanelFieldName =
+  | "chloride"
+  | "ionized_calcium"
+  | "potassium"
+  | "sodium";
+
+export type ChemistryPanelRow = {
+  fieldName: ChemistryPanelFieldName;
+  label: string;
+};
+
 export type LabTemplateDefinition = {
   apiCategory: LabCategory;
   key: LabTemplateKey;
@@ -44,6 +62,10 @@ export type LabTemplateDefinition = {
   ogtt?: OgttTemplateConfig;
   serology?: SerologyTemplateConfig;
   singleChemistry?: SingleChemistryTemplateConfig;
+};
+
+type LabTemplateRequestContext = Pick<LabRequest, "category" | "schemaKey" | "testType"> & {
+  tests?: string[];
 };
 
 const createSingleChemistryTemplate = (
@@ -61,10 +83,121 @@ const createSingleChemistryTemplate = (
   },
 });
 
+const clinicalChemistryRows: ClinicalChemistryRow[] = [
+  {
+    label: "FBS (Fasting Blood Sugar)",
+    fieldName: "FBS",
+    conversionFieldName: "FBS_conv",
+    showMealFields: true,
+  },
+  {
+    label: "RBS (Random Blood Sugar)",
+    fieldName: "RBS",
+    conversionFieldName: "RBS_conv",
+    showMealFields: true,
+  },
+  {
+    label: "BUN (Blood Urea Nitrogen)",
+    fieldName: "BUN",
+    conversionFieldName: "BUN_conv",
+  },
+  {
+    label: "Creatinine",
+    fieldName: "creatinine",
+    conversionFieldName: "creatinine_conv",
+  },
+  {
+    label: "Uric Acid",
+    fieldName: "uric_acid",
+    conversionFieldName: "uric_acid_conv",
+  },
+  {
+    label: "Total Cholesterol",
+    fieldName: "cholesterol",
+    conversionFieldName: "cholesterol_conv",
+  },
+  {
+    label: "HDL Cholesterol",
+    fieldName: "hdl_cholesterol",
+    conversionFieldName: "hdl_cholesterol_conv",
+  },
+  {
+    label: "LDL Cholesterol",
+    fieldName: "ldl_cholesterol",
+    conversionFieldName: "ldl_cholesterol_conv",
+  },
+  {
+    label: "Triglycerides",
+    fieldName: "triglycerides",
+    conversionFieldName: "triglycerides_conv",
+  },
+  {
+    label: "SGPT",
+    fieldName: "sgpt",
+  },
+];
+
+const clinicalChemistryMatchers: Array<{
+  fieldName: ClinicalChemistryRow["fieldName"];
+  matchers: string[];
+}> = [
+  { fieldName: "FBS", matchers: ["fbs", "fasting blood sugar"] },
+  { fieldName: "RBS", matchers: ["rbs", "random blood sugar"] },
+  { fieldName: "BUN", matchers: ["bun", "blood urea nitrogen", "urea"] },
+  { fieldName: "creatinine", matchers: ["creatinine"] },
+  { fieldName: "uric_acid", matchers: ["uric acid", "uricacid"] },
+  { fieldName: "cholesterol", matchers: ["total cholesterol", "cholesterol"] },
+  { fieldName: "hdl_cholesterol", matchers: ["hdl cholesterol", "hdl"] },
+  { fieldName: "ldl_cholesterol", matchers: ["ldl cholesterol", "ldl"] },
+  { fieldName: "triglycerides", matchers: ["triglycerides", "triglyceride"] },
+  {
+    fieldName: "sgpt",
+    matchers: ["sgpt", "serum glutamic pyruvic transaminase"],
+  },
+];
+
+const chemistryPanelRows: ChemistryPanelRow[] = [
+  { fieldName: "sodium", label: "Sodium" },
+  { fieldName: "potassium", label: "Potassium" },
+  { fieldName: "chloride", label: "Chloride" },
+  { fieldName: "ionized_calcium", label: "Ionized Calcium" },
+];
+
+const chemistryPanelMatchers: Array<{
+  fieldName: ChemistryPanelRow["fieldName"];
+  matchers: string[];
+}> = [
+  { fieldName: "sodium", matchers: ["sodium"] },
+  { fieldName: "potassium", matchers: ["potassium"] },
+  { fieldName: "chloride", matchers: ["chloride"] },
+  {
+    fieldName: "ionized_calcium",
+    matchers: ["ionized calcium", "ionized ca", "calcium ionized"],
+  },
+];
+
 const ogttFastingPhase: OgttPhaseConfig = {
   conversionFieldName: "FBS_conv",
   fieldName: "FBS",
   label: "Fasting Blood Sugar",
+};
+
+const ogttOneHourPhase: OgttPhaseConfig = {
+  conversionFieldName: "onehagl_conv",
+  fieldName: "onehagl",
+  label: "1 Hour After Glucose Load",
+};
+
+const ogttTwoHourPhase: OgttPhaseConfig = {
+  conversionFieldName: "twohagl_conv",
+  fieldName: "twohagl",
+  label: "2 Hours After Glucose Load",
+};
+
+const ogttThreeHourPhase: OgttPhaseConfig = {
+  conversionFieldName: "threehagl_conv",
+  fieldName: "threehagl",
+  label: "3 Hours After Glucose Load",
 };
 
 const templateBySchemaKey: Partial<Record<LabSchemaKey, LabTemplateDefinition>> = {
@@ -144,59 +277,33 @@ const templateBySchemaKey: Partial<Record<LabSchemaKey, LabTemplateDefinition>> 
   OGTT: {
     apiCategory: "clinical-chemistry",
     key: "ogtt",
-    label: "OGTT",
+    label: "100G-OGTT",
     ogtt: {
-      defaultTestType: "OGTT",
+      defaultTestType: "100G-OGTT",
       phases: [
         ogttFastingPhase,
-        {
-          conversionFieldName: "onehagl_conv",
-          fieldName: "onehagl",
-          label: "1 Hour After Glucose Load",
-        },
-        {
-          conversionFieldName: "twohagl_conv",
-          fieldName: "twohagl",
-          label: "2 Hours After Glucose Load",
-        },
-        {
-          conversionFieldName: "threehagl_conv",
-          fieldName: "threehagl",
-          label: "3 Hours After Glucose Load",
-        },
+        ogttOneHourPhase,
+        ogttTwoHourPhase,
+        ogttThreeHourPhase,
       ],
     },
   },
   onehOGTT: {
     apiCategory: "clinical-chemistry",
     key: "ogtt",
-    label: "1H-OGTT",
+    label: "50G-OGTT (1H)",
     ogtt: {
-      defaultTestType: "1H-OGTT",
-      phases: [
-        ogttFastingPhase,
-        {
-          conversionFieldName: "onehagl_conv",
-          fieldName: "onehagl",
-          label: "1 Hour After Glucose Load",
-        },
-      ],
+      defaultTestType: "50G-OGTT",
+      phases: [ogttOneHourPhase],
     },
   },
   twohOGTT: {
     apiCategory: "clinical-chemistry",
     key: "ogtt",
-    label: "2H-OGTT",
+    label: "75G-OGTT (2H)",
     ogtt: {
-      defaultTestType: "2H-OGTT",
-      phases: [
-        ogttFastingPhase,
-        {
-          conversionFieldName: "twohagl_conv",
-          fieldName: "twohagl",
-          label: "2 Hours After Glucose Load",
-        },
-      ],
+      defaultTestType: "75G-OGTT",
+      phases: [ogttFastingPhase, ogttOneHourPhase, ogttTwoHourPhase],
     },
   },
   FOBT: {
@@ -280,26 +387,14 @@ const templateBySchemaKey: Partial<Record<LabSchemaKey, LabTemplateDefinition>> 
   ogtt: {
     apiCategory: "clinical-chemistry",
     key: "ogtt",
-    label: "OGTT",
+    label: "100G-OGTT",
     ogtt: {
-      defaultTestType: "OGTT",
+      defaultTestType: "100G-OGTT",
       phases: [
         ogttFastingPhase,
-        {
-          conversionFieldName: "onehagl_conv",
-          fieldName: "onehagl",
-          label: "1 Hour After Glucose Load",
-        },
-        {
-          conversionFieldName: "twohagl_conv",
-          fieldName: "twohagl",
-          label: "2 Hours After Glucose Load",
-        },
-        {
-          conversionFieldName: "threehagl_conv",
-          fieldName: "threehagl",
-          label: "3 Hours After Glucose Load",
-        },
+        ogttOneHourPhase,
+        ogttTwoHourPhase,
+        ogttThreeHourPhase,
       ],
     },
   },
@@ -326,15 +421,162 @@ const normalizeTestType = (value: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-export const resolveLabTemplate = (
-  request: Pick<LabRequest, "category" | "schemaKey" | "testType">
-): LabTemplateDefinition => {
+const uniqueRows = <T extends { fieldName: string }>(rows: T[]) => {
+  const seen = new Set<string>();
+
+  return rows.filter((row) => {
+    if (seen.has(row.fieldName)) {
+      return false;
+    }
+
+    seen.add(row.fieldName);
+    return true;
+  });
+};
+
+const resolveClinicalChemistryRowByTestName = (testName: string) => {
+  const normalizedTestName = normalizeTestType(testName);
+  const matchedFieldName = clinicalChemistryMatchers.find(({ matchers }) =>
+    matchers.some((matcher) => normalizedTestName.includes(matcher))
+  )?.fieldName;
+
+  if (!matchedFieldName) {
+    return null;
+  }
+
+  return clinicalChemistryRows.find((row) => row.fieldName === matchedFieldName) ?? null;
+};
+
+const resolveChemistryPanelRowByTestName = (testName: string) => {
+  const normalizedTestName = normalizeTestType(testName);
+  const matchedFieldName = chemistryPanelMatchers.find(({ matchers }) =>
+    matchers.some((matcher) => normalizedTestName.includes(matcher))
+  )?.fieldName;
+
+  if (!matchedFieldName) {
+    return null;
+  }
+
+  return chemistryPanelRows.find((row) => row.fieldName === matchedFieldName) ?? null;
+};
+
+export const getClinicalChemistryRows = (fieldNames?: string[]) => {
+  if (!fieldNames?.length) {
+    return clinicalChemistryRows;
+  }
+
+  return clinicalChemistryRows.filter((row) => fieldNames.includes(row.fieldName));
+};
+
+export const getChemistryPanelRows = (fieldNames?: string[]) => {
+  if (!fieldNames?.length) {
+    return chemistryPanelRows;
+  }
+
+  return chemistryPanelRows.filter((row) => fieldNames.includes(row.fieldName));
+};
+
+export const resolveClinicalChemistryFieldNames = (
+  request: Pick<LabRequest, "schemaKey" | "testType"> & { tests?: string[] }
+) => {
+  const normalizedTestType = normalizeTestType(request.testType);
   const schemaKey = toKnownSchemaKey(request.schemaKey);
+  const sourceTests = request.tests?.length ? request.tests : [request.testType];
+  const matchedRows = uniqueRows(
+    sourceTests
+      .map((testName) => resolveClinicalChemistryRowByTestName(testName))
+      .filter((row): row is ClinicalChemistryRow => Boolean(row))
+  );
+
+  if (matchedRows.length) {
+    return matchedRows.map((row) => row.fieldName);
+  }
+
+  if (
+    schemaKey === "clinical_chemistry" &&
+    (normalizedTestType.includes("blood chemistry") ||
+      normalizedTestType.includes("clinical chemistry"))
+  ) {
+    return clinicalChemistryRows.map((row) => row.fieldName);
+  }
+
+  return [];
+};
+
+export const resolveChemistryPanelFieldNames = (
+  request: Pick<LabRequest, "schemaKey" | "testType"> & { tests?: string[] }
+) => {
+  const normalizedTestType = normalizeTestType(request.testType);
+  const schemaKey = toKnownSchemaKey(request.schemaKey);
+  const sourceTests = request.tests?.length ? request.tests : [request.testType];
+  const matchedRows = uniqueRows(
+    sourceTests
+      .map((testName) => resolveChemistryPanelRowByTestName(testName))
+      .filter((row): row is ChemistryPanelRow => Boolean(row))
+  );
+
+  if (matchedRows.length) {
+    return matchedRows.map((row) => row.fieldName);
+  }
+
+  if (
+    schemaKey === "chemistry" &&
+    (normalizedTestType.includes("chemistry") ||
+      normalizedTestType.includes("electrolyte"))
+  ) {
+    return chemistryPanelRows.map((row) => row.fieldName);
+  }
+
+  return [];
+};
+
+export const shouldShowClinicalChemistryMealFields = (
+  request: Pick<LabRequest, "schemaKey" | "testType"> & { tests?: string[] }
+) =>
+  getClinicalChemistryRows(resolveClinicalChemistryFieldNames(request)).some(
+    (row) => row.showMealFields
+  );
+
+const shouldUseCombinedClinicalChemistryTemplate = (request: LabTemplateRequestContext) => {
+  const allFieldNames = resolveClinicalChemistryFieldNames(request);
+  const currentItemFieldNames = resolveClinicalChemistryFieldNames({
+    schemaKey: request.schemaKey,
+    testType: request.testType,
+    tests: [request.testType],
+  });
+
+  return currentItemFieldNames.length > 0 && allFieldNames.length > 1;
+};
+
+const shouldUseChemistryPanelTemplate = (request: LabTemplateRequestContext) => {
+  const allFieldNames = resolveChemistryPanelFieldNames(request);
+  const currentItemFieldNames = resolveChemistryPanelFieldNames({
+    schemaKey: request.schemaKey,
+    testType: request.testType,
+    tests: [request.testType],
+  });
+
+  return currentItemFieldNames.length > 0 && allFieldNames.length > 0;
+};
+
+export const resolveLabTemplate = (request: LabTemplateRequestContext): LabTemplateDefinition => {
+  const schemaKey = toKnownSchemaKey(request.schemaKey);
+
+  if (shouldUseChemistryPanelTemplate(request)) {
+    return {
+      apiCategory: "clinical-chemistry",
+      key: "chemistry-panel",
+      label: "Chemistry",
+    };
+  }
 
   if (schemaKey === "clinical_chemistry") {
     const normalizedTestType = normalizeTestType(request.testType);
 
-    if (normalizedTestType.includes("creatinine")) {
+    if (
+      normalizedTestType.includes("creatinine") &&
+      !shouldUseCombinedClinicalChemistryTemplate(request)
+    ) {
       return createSingleChemistryTemplate("Creatinine", "creatinine", {
         conversionFactor: 88.4,
         conversionFieldName: "creatinine_conv",
@@ -342,6 +584,14 @@ export const resolveLabTemplate = (
       });
     }
 
+    return {
+      apiCategory: "clinical-chemistry",
+      key: "clinical-chemistry-panel",
+      label: "Clinical Chemistry",
+    };
+  }
+
+  if (shouldUseCombinedClinicalChemistryTemplate(request)) {
     return {
       apiCategory: "clinical-chemistry",
       key: "clinical-chemistry-panel",
@@ -405,6 +655,20 @@ export const resolveLabTemplate = (
 
   if (normalizedTestType.includes("hba1c") || normalizedTestType.includes("glycosylated")) {
     return templateBySchemaKey.hba1c ?? templateBySchemaKey.general!;
+  }
+
+  if (
+    (normalizedTestType.includes("50g") || normalizedTestType.includes("50 grams")) &&
+    normalizedTestType.includes("ogtt")
+  ) {
+    return templateBySchemaKey.onehOGTT ?? templateBySchemaKey.general!;
+  }
+
+  if (
+    (normalizedTestType.includes("75g") || normalizedTestType.includes("75 grams")) &&
+    normalizedTestType.includes("ogtt")
+  ) {
+    return templateBySchemaKey.twohOGTT ?? templateBySchemaKey.general!;
   }
 
   if (normalizedTestType.includes("1h") && normalizedTestType.includes("ogtt")) {
@@ -494,8 +758,9 @@ export const resolveLabTemplate = (
   return templateBySchemaKey.general!;
 };
 
-export const getLabTemplateLabel = (request: Pick<LabRequest, "category" | "schemaKey" | "testType">) =>
-  resolveLabTemplate(request).label;
+export const getLabTemplateLabel = (
+  request: Pick<LabRequest, "category" | "schemaKey" | "testType"> & { tests?: string[] }
+) => resolveLabTemplate(request).label;
 
 export const getLabRecordGroupLabel = (recordGroup: LabRecordGroup) => {
   if (recordGroup === "hematology") {

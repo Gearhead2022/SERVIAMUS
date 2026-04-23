@@ -12,14 +12,17 @@ import {
 } from "@/schemas/lab.schema";
 import { LabResultPayload } from "@/types/LabTypes";
 import { mergeLabFormDefaults } from "@/utils/lab";
+import { getChemistryPanelRows } from "@/utils/lab-templates";
 
 type Props = {
+  fieldNames?: string[];
   initialValues?: LabResultPayload | null;
   onSubmit: (form: ChemistryFormValues) => void;
   onCancel: () => void;
 };
 
 export default function ChemistryResultModal({
+  fieldNames,
   initialValues,
   onSubmit,
   onCancel,
@@ -39,21 +42,16 @@ export default function ChemistryResultModal({
       className="p-5 space-y-5"
     >
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        {[
-          { label: "Sodium", name: "sodium" },
-          { label: "Potassium", name: "potassium" },
-          { label: "Chloride", name: "chloride" },
-          { label: "Ionized Calcium", name: "ionized_calcium" },
-        ].map(({ label, name }) => (
-          <div key={name} className="flex flex-col gap-1">
+        {getChemistryPanelRows(fieldNames).map(({ label, fieldName }) => (
+          <div key={fieldName} className="flex flex-col gap-1">
             <Input
               label={label}
               placeholder="--"
               inputMode="decimal"
-              {...register(name as keyof ChemistryFormValues, {
+              {...register(fieldName as keyof ChemistryFormValues, {
                 valueAsNumber: true,
               })}
-              error={errors[name as keyof ChemistryFormValues]?.message}
+              error={errors[fieldName as keyof ChemistryFormValues]?.message}
             />
           </div>
         ))}

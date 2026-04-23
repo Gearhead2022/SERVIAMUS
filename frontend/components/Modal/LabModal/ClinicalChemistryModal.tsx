@@ -14,6 +14,7 @@ import { LabResultPayload } from "@/types/LabTypes";
 import { mergeLabFormDefaults } from "@/utils/lab";
 
 type Props = {
+  fieldNames?: string[];
   initialValues?: LabResultPayload | null;
   onSubmit: (form: ClinicalChemistryFormValues) => void;
   onCancel: () => void;
@@ -111,10 +112,17 @@ function resolveConversionValue(
 }
 
 export default function ClinicalChemistryModal({
+  fieldNames,
   initialValues,
   onSubmit,
   onCancel,
 }: Props) {
+  const visibleRows = fieldNames?.length
+    ? testRows.filter((row) => fieldNames.includes(row.name))
+    : testRows;
+  const showMealFields = visibleRows.some(
+    (row) => row.name === "FBS" || row.name === "RBS"
+  );
   const {
     control, 
     register,
@@ -171,7 +179,7 @@ export default function ClinicalChemistryModal({
             <span className="text-center">Conv.</span>
           </div>
 
-          {testRows.map((row) => (
+          {visibleRows.map((row) => (
             <div
               key={row.name}
               className="grid grid-cols-[1fr_6.5rem_6.5rem] items-center px-4 py-2 border-b border-slate-100 last:border-0"
@@ -202,23 +210,23 @@ export default function ClinicalChemistryModal({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: "Last Meal", name: "last_meal", placeholder: "e.g. 6 hours ago" },
-          { label: "Time Taken", name: "time_taken", placeholder: "e.g. 08:30 AM" },
-        ].map(({ label, name, placeholder }) => (
-          <div key={name} className="flex flex-col gap-1">
-            <Input
-              label={label}
-              placeholder={placeholder}
-              {...register(name as keyof ClinicalChemistryFormValues)}
-              error={errors[name as keyof ClinicalChemistryFormValues]?.message}
-            />
-          </div>
-        ))}
-      </div>
-
-        <div></div>
+      {showMealFields ? (
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: "Last Meal", name: "last_meal", placeholder: "e.g. 6 hours ago" },
+            { label: "Time Taken", name: "time_taken", placeholder: "e.g. 08:30 AM" },
+          ].map(({ label, name, placeholder }) => (
+            <div key={name} className="flex flex-col gap-1">
+              <Input
+                label={label}
+                placeholder={placeholder}
+                {...register(name as keyof ClinicalChemistryFormValues)}
+                error={errors[name as keyof ClinicalChemistryFormValues]?.message}
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
         <Button type="button" variant="secondary" onClick={onCancel}>

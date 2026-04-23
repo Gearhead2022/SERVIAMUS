@@ -328,10 +328,10 @@ export const upsertStructuredLabResult = async ({
       test_type:
         trimFormValue(form, "test_type") ??
         (resolvedSchemaKey === "onehOGTT"
-          ? "1H-OGTT"
+          ? "50G-OGTT"
           : resolvedSchemaKey === "twohOGTT"
-            ? "2H-OGTT"
-            : "OGTT"),
+            ? "75G-OGTT"
+            : "100G-OGTT"),
       fbs: trimFormValue(form, "FBS", "fbs"),
       fbs_conv: trimFormValue(form, "FBS_conv", "fbs_conv"),
       one_hour_after_load: trimFormValue(form, "onehagl", "one_hour_after_load"),

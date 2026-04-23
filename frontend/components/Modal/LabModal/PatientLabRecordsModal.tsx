@@ -11,8 +11,7 @@ import { getLabRecordGroupLabel, getLabTemplateLabel } from "@/utils/lab-templat
 
 type Props = {
   patient: PatientRecord;
-  onEditRecord: (record: LabRequest) => void;
-  onReprintRecord: (labId: number) => void;
+  onViewResult: (record: LabRequest) => void;
 };
 
 const groupOrder: LabRecordGroup[] = [
@@ -41,8 +40,7 @@ const formatRecordDate = (value: string) =>
 
 export default function PatientLabRecordsModal({
   patient,
-  onEditRecord,
-  onReprintRecord,
+  onViewResult,
 }: Props) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -55,6 +53,7 @@ export default function PatientLabRecordsModal({
       recordGroup,
     }
   );
+  const hasFilters = Boolean(dateFrom || dateTo || recordGroup !== "all");
 
   const groupedRecords = useMemo(() => {
     const sections = new Map<LabRecordGroup, LabRequest[]>();
@@ -74,6 +73,24 @@ export default function PatientLabRecordsModal({
       }))
       .filter((section) => section.items.length > 0);
   }, [records]);
+  const lastRecordedAt = useMemo(() => {
+    if (!records.length) {
+      return null;
+    }
+
+    return records
+      .map((record) => new Date(record.requestedDate).getTime())
+      .sort((left, right) => right - left)[0];
+  }, [records]);
+  const visibleCategorySummary = useMemo(() => {
+    if (!groupedRecords.length) {
+      return "No categories";
+    }
+
+    return groupedRecords
+      .map((section) => getLabRecordGroupLabel(section.group))
+      .join(", ");
+  }, [groupedRecords]);
 
   return (
     <div className="space-y-5 p-5">
@@ -120,10 +137,24 @@ export default function PatientLabRecordsModal({
           </div>
         </div>
 
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-[#d9ede8] bg-white px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#63867f]">
+              Encoded Records
+            </p>
+            <p className="mt-2 text-2xl font-bold text-[#143a35]">{records.length}</p>
+            <p className="mt-1 text-xs text-[#5f8a83]">Records currently visible in the modal</p>
+          </div>
+        </div>
+
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-[#456c65]">
-            {records.length} encoded laboratory record{records.length === 1 ? "" : "s"} found
-          </p>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-[#456c65]">
+            {hasFilters ? (
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[#456c65]">
+                Active filters applied
+              </span>
+            ) : null}
+          </div>
           <Button
             type="button"
             variant="secondary"
@@ -170,7 +201,7 @@ export default function PatientLabRecordsModal({
                   className="rounded-2xl border border-[#d5ebe6] bg-white p-4 shadow-sm"
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-2">
+                    <div className="min-w-0 space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-md bg-[#e6f7f3] px-2 py-1 text-xs font-semibold text-[#2e7a6e]">
                           {record.id}
@@ -180,26 +211,33 @@ export default function PatientLabRecordsModal({
                         >
                           {record.status}
                         </span>
+                        <span className="rounded-md bg-[#eef4ff] px-2 py-1 text-xs font-semibold text-[#305c9b]">
+                          {getLabRecordGroupLabel(record.recordGroup)}
+                        </span>
                       </div>
-                      <p className="text-base font-semibold text-[#173f39]">{record.testType}</p>
-                      <p className="text-sm text-[#63867f]">
-                        {getLabTemplateLabel(record)} - {formatRecordDate(record.requestedDate)}
-                      </p>
-                      <p className="text-xs text-[#6f948d]">
-                        Requested by {record.requestedBy}
-                      </p>
+                      <div>
+                        <p className="text-base font-semibold text-[#173f39]">{record.testType}</p>
+                        <p className="mt-1 text-sm text-[#63867f]">
+                          {getLabTemplateLabel(record)} - {formatRecordDate(record.requestedDate)}
+                        </p>
+                      </div>
+                      <div className="grid gap-2 text-xs text-[#5f8a83] sm:grid-cols-2">
+                        <div className="rounded-xl bg-[#f4faf8] px-3 py-2.5">
+                          <p className="font-semibold uppercase tracking-[0.16em] text-[#63867f]">
+                            Requested By
+                          </p>
+                          <p className="mt-1 text-[#476d67]">{record.requestedBy}</p>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2 lg:justify-end">
                       <Button
                         type="button"
                         variant="secondary"
-                        onClick={() => onEditRecord(record)}
+                        onClick={() => onViewResult(record)}
                       >
-                        Edit Result
-                      </Button>
-                      <Button type="button" onClick={() => onReprintRecord(record.labId)}>
-                        Reprint Result
+                        View Result
                       </Button>
                     </div>
                   </div>

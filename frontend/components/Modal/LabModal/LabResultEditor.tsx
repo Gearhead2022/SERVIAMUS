@@ -13,7 +13,11 @@ import SerologyResultModal from "./SerologyResultModal";
 import SingleChemistryModal from "./SingleChemistryModal";
 import UrinalysisModal from "./UrinalysisModal";
 import { LabRequest, LabResultPayload } from "@/types/LabTypes";
-import { resolveLabTemplate } from "@/utils/lab-templates";
+import {
+  resolveChemistryPanelFieldNames,
+  resolveClinicalChemistryFieldNames,
+  resolveLabTemplate,
+} from "@/utils/lab-templates";
 
 type Props = {
   request: LabRequest;
@@ -23,6 +27,8 @@ type Props = {
 
 export default function LabResultEditor({ request, onSubmit, onCancel }: Props) {
   const template = resolveLabTemplate(request);
+  const clinicalChemistryFieldNames = resolveClinicalChemistryFieldNames(request);
+  const chemistryPanelFieldNames = resolveChemistryPanelFieldNames(request);
 
   if (template.key === "cbc") {
     return (
@@ -67,6 +73,7 @@ export default function LabResultEditor({ request, onSubmit, onCancel }: Props) 
   if (template.key === "clinical-chemistry-panel") {
     return (
       <ClinicalChemistryModal
+        fieldNames={clinicalChemistryFieldNames}
         initialValues={request.resultPayload}
         onSubmit={onSubmit}
         onCancel={onCancel}
@@ -130,6 +137,7 @@ export default function LabResultEditor({ request, onSubmit, onCancel }: Props) 
   if (template.key === "chemistry-panel") {
     return (
       <ChemistryResultModal
+        fieldNames={chemistryPanelFieldNames}
         initialValues={request.resultPayload}
         onSubmit={onSubmit}
         onCancel={onCancel}

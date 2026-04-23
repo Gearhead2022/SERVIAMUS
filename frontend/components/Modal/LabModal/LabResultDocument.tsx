@@ -7,7 +7,14 @@ import {
   formatLabResultValue,
   hasDisplayableLabResultValue,
 } from "@/utils/lab";
-import { resolveLabTemplate } from "@/utils/lab-templates";
+import {
+  getChemistryPanelRows,
+  getClinicalChemistryRows,
+  resolveChemistryPanelFieldNames,
+  resolveClinicalChemistryFieldNames,
+  resolveLabTemplate,
+  shouldShowClinicalChemistryMealFields,
+} from "@/utils/lab-templates";
 
 type Props = {
   request: LabRequest;
@@ -34,45 +41,55 @@ function getValue(
 
 function PreviewField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="result-field">
-      <p className="result-label text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+    <div className="result-field min-w-0">
+      <p className="result-label text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
         {label}
       </p>
-      <p className="result-value mt-1 text-sm text-slate-700">{value}</p>
+      <p className="result-value mt-1 break-words text-[12px] leading-4 text-slate-700">
+        {value}
+      </p>
     </div>
   );
 }
 
 function PreviewShell({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="result-paper mx-auto w-full max-w-3xl rounded-[28px] bg-white p-6 text-sm shadow-xl print:shadow-none">
+    <div
+      data-lab-result-document
+      className="result-paper mx-auto w-full max-w-[8in] rounded-[20px] bg-white p-5 text-sm shadow-xl print:max-w-none print:rounded-none print:p-4 print:shadow-none"
+    >
       <header className="result-header border-b border-slate-300 pb-3">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/images/serviamus.jpeg"
-            alt="Serviamus logo"
-            width={64}
-            height={64}
-            className="h-16 w-16 rounded-full object-cover"
-          />
-          <div className="min-w-0 flex-1 text-center">
-            <h1 className="result-title text-lg font-bold uppercase text-blue-800">
+        <div className="grid grid-cols-[3.5rem_1fr_3.5rem] items-center gap-4">
+          <div className="flex justify-center">
+            <Image
+              src="/images/serviamus.jpeg"
+              alt="Serviamus logo"
+              width={56}
+              height={56}
+              className="h-14 w-14 rounded-full object-cover"
+              priority
+              unoptimized
+            />
+          </div>
+          <div className="min-w-0 text-center">
+            <h1 className="result-title text-[17px] font-bold uppercase leading-tight text-blue-800">
               SERVIAMUS MEDICAL CLINIC AND LABORATORY, INC.
             </h1>
-            <p className="result-subtitle text-[11px] text-slate-500">
+            <p className="result-subtitle text-[10px] text-slate-500">
               Puer Sanctus VI Building, Corner Rosario-Verbena Streets, Brgy. 33, Bacolod City
             </p>
-            <p className="result-subtitle text-[11px] text-slate-500">
+            <p className="result-subtitle text-[10px] text-slate-500">
               Mobile No. (034) 4746678
             </p>
           </div>
+          <div aria-hidden="true" className="h-14 w-14" />
         </div>
-        <h2 className="result-department mt-2 text-center font-semibold tracking-[0.3em] text-amber-600">
+        <h2 className="result-department mt-3 text-center text-sm font-semibold tracking-[0.28em] text-amber-600">
           {title}
         </h2>
       </header>
       {children}
-      <footer className="result-footer mt-8 flex justify-between gap-6 border-t border-slate-200 pt-5 text-xs">
+      <footer className="result-footer mt-6 flex justify-between gap-6 border-t border-slate-200 pt-4 text-[10px]">
         <div>
           <p className="font-semibold text-slate-700">Pathologist</p>
           <p className="mt-1 text-slate-500">Dr. Greg Ryan T. Gerongano</p>
@@ -88,14 +105,13 @@ function PreviewShell({ title, children }: { title: string; children: ReactNode 
 
 function PatientBlock({ request }: { request: LabRequest }) {
   return (
-    <div className="result-patient mt-4 space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="result-patient mt-4 space-y-3 [break-inside:avoid]">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <PreviewField label="Name" value={request.patientName} />
-        <PreviewField label="Date" value={new Date().toLocaleDateString("en-CA")} />
+        <PreviewField label="Patient ID" value={request.patientId} />
         <PreviewField label="Age" value={request.age || "______"} />
         <PreviewField label="Sex" value={request.sex || "______"} />
         <PreviewField label="Requested By" value={request.requestedBy || "__________________"} />
-        <PreviewField label="Patient ID" value={request.patientId} />
       </div>
       <div className="grid grid-cols-1 gap-3">
         <PreviewField label="Address" value={request.address || "__________________"} />
@@ -112,12 +128,26 @@ function Section({
   title: string;
 }) {
   return (
-    <section className="mt-5">
-      <h3 className="result-section-title border-b border-slate-200 pb-2 text-xs font-bold tracking-[0.24em] text-slate-600">
+    <section className="mt-4 [break-inside:avoid]">
+      <h3 className="result-section-title border-b border-slate-200 pb-2 text-[10px] font-bold tracking-[0.22em] text-slate-600">
         {title}
       </h3>
       {children}
     </section>
+  );
+}
+
+function CompactFieldGrid({
+  fields,
+}: {
+  fields: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3">
+      {fields.map((field) => (
+        <PreviewField key={field.label} label={field.label} value={field.value} />
+      ))}
+    </div>
   );
 }
 
@@ -126,27 +156,31 @@ function CbcDocument({ request, form }: Props) {
     <PreviewShell title="HEMATOLOGY">
       <PatientBlock request={request} />
       <Section title="COMPLETE BLOOD COUNT">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="Hemoglobin" value={getValue(form, "Hemoglobin")} />
-          <PreviewField label="RBC Count" value={getValue(form, "rbc_count")} />
-          <PreviewField label="WBC Count" value={getValue(form, "wbc_count")} />
-          <PreviewField label="Platelet Count" value={getValue(form, "platelet_count")} />
-          <PreviewField label="MCV" value={getValue(form, "others_mcv")} />
-          <PreviewField label="MCHC" value={getValue(form, "mchc")} />
-          <PreviewField label="Reticulocyte Count" value={getValue(form, "reticulocyte_count")} />
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "Hemoglobin", value: getValue(form, "Hemoglobin") },
+            { label: "RBC Count", value: getValue(form, "rbc_count") },
+            { label: "WBC Count", value: getValue(form, "wbc_count") },
+            { label: "Platelet Count", value: getValue(form, "platelet_count") },
+            { label: "MCV", value: getValue(form, "others_mcv") },
+            { label: "MCHC", value: getValue(form, "mchc") },
+            { label: "Reticulocyte Count", value: getValue(form, "reticulocyte_count") },
+          ]}
+        />
       </Section>
       <Section title="DIFFERENTIAL COUNT">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="Neutrophils (Seg)" value={getValue(form, "nss_1")} />
-          <PreviewField label="Neutrophils (Stab)" value={getValue(form, "nss_2")} />
-          <PreviewField label="NSS 3" value={getValue(form, "nss_3")} />
-          <PreviewField label="Lymphocytes" value={getValue(form, "lymphocytes")} />
-          <PreviewField label="Monocytes" value={getValue(form, "monocytes")} />
-          <PreviewField label="Eosinophils" value={getValue(form, "eosinophils")} />
-          <PreviewField label="Basophils" value={getValue(form, "basophils")} />
-          <PreviewField label="Remarks" value={getValue(form, "others1", "No additional remarks")} />
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "Neutrophils (Seg)", value: getValue(form, "nss_1") },
+            { label: "Neutrophils (Stab)", value: getValue(form, "nss_2") },
+            { label: "NSS 3", value: getValue(form, "nss_3") },
+            { label: "Lymphocytes", value: getValue(form, "lymphocytes") },
+            { label: "Monocytes", value: getValue(form, "monocytes") },
+            { label: "Eosinophils", value: getValue(form, "eosinophils") },
+            { label: "Basophils", value: getValue(form, "basophils") },
+            { label: "Remarks", value: getValue(form, "others1", "No additional remarks") },
+          ]}
+        />
       </Section>
       <Section title="FINAL REMARKS">
         <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
@@ -162,10 +196,12 @@ function BloodTypingDocument({ request, form }: Props) {
     <PreviewShell title="BLOOD TYPING">
       <PatientBlock request={request} />
       <Section title="RESULT">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="ABO Type" value={getValue(form, "abo_type")} />
-          <PreviewField label="Rh Type" value={getValue(form, "rh_type")} />
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "ABO Type", value: getValue(form, "abo_type") },
+            { label: "Rh Type", value: getValue(form, "rh_type") },
+          ]}
+        />
       </Section>
       <Section title="REMARKS">
         <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
@@ -181,45 +217,63 @@ function ParasitologyDocument({ request, form }: Props) {
     <PreviewShell title="PARASITOLOGY">
       <PatientBlock request={request} />
       <Section title="MACROSCOPIC">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="Color" value={getValue(form, "color")} />
-          <PreviewField label="Time Collected" value={getValue(form, "time_collected")} />
-          <PreviewField label="Consistency" value={getValue(form, "consistency")} />
-          <PreviewField label="Time Received" value={getValue(form, ["time_received", "time_recieved"])} />
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "Color", value: getValue(form, "color") },
+            { label: "Time Collected", value: getValue(form, "time_collected") },
+            { label: "Consistency", value: getValue(form, "consistency") },
+            {
+              label: "Time Received",
+              value: getValue(form, ["time_received", "time_recieved"]),
+            },
+          ]}
+        />
       </Section>
       <Section title="MICROSCOPIC">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="Pus Cells" value={`${getValue(form, "pus_cells", "____")} /HPF`} />
-          <PreviewField label="RBC" value={`${getValue(form, "rbc", "____")} /HPF`} />
-          <PreviewField label="Bacteria" value={`${getValue(form, "bacteria", "____")} /HPF`} />
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "Pus Cells", value: `${getValue(form, "pus_cells", "____")} /HPF` },
+            { label: "RBC", value: `${getValue(form, "rbc", "____")} /HPF` },
+            { label: "Bacteria", value: `${getValue(form, "bacteria", "____")} /HPF` },
+          ]}
+        />
       </Section>
       <Section title="PARASITES">
-        <div className="result-grid mt-3 grid gap-2 sm:grid-cols-2">
-          <PreviewField label="Hookworm" value={`${getValue(form, "hookworm", "____")} /smear`} />
-          <PreviewField label="Ascaris" value={`${getValue(form, "ascaris", "____")} /smear`} />
-          <PreviewField label="Trichuris" value={`${getValue(form, "trichuris", "____")} /smear`} />
-          <PreviewField label="Strongyloides" value={`${getValue(form, "strongloides", "____")} /smear`} />
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "Hookworm", value: `${getValue(form, "hookworm", "____")} /smear` },
+            { label: "Ascaris", value: `${getValue(form, "ascaris", "____")} /smear` },
+            { label: "Trichuris", value: `${getValue(form, "trichuris", "____")} /smear` },
+            { label: "Strongyloides", value: `${getValue(form, "strongloides", "____")} /smear` },
+          ]}
+        />
       </Section>
       <Section title="AMOEBA">
-        <div className="result-two-column mt-3 grid gap-4 sm:grid-cols-2">
-          <div className="result-card rounded-2xl border border-slate-200 p-4">
-            <p className="font-semibold text-slate-700">Entamoeba histolytica</p>
-            <div className="result-stack mt-3 grid gap-3">
-              <PreviewField label="Cyst" value={`${getValue(form, "histolytica_cyst", "____")} /HPF`} />
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 p-3">
+            <p className="text-sm font-semibold text-slate-700">Entamoeba histolytica</p>
+            <div className="mt-3 grid gap-3">
+              <PreviewField
+                label="Cyst"
+                value={`${getValue(form, "histolytica_cyst", "____")} /HPF`}
+              />
               <PreviewField
                 label="Trophozoite"
                 value={`${getValue(form, "histolytica_trophozoite", "____")} /HPF`}
               />
             </div>
           </div>
-          <div className="result-card rounded-2xl border border-slate-200 p-4">
-            <p className="font-semibold text-slate-700">Entamoeba coli</p>
-            <div className="result-stack mt-3 grid gap-3">
-              <PreviewField label="Cyst" value={`${getValue(form, "coli_cyst", "____")} /HPF`} />
-              <PreviewField label="Trophozoite" value={`${getValue(form, "coli_trophozoite", "____")} /HPF`} />
+          <div className="rounded-2xl border border-slate-200 p-3">
+            <p className="text-sm font-semibold text-slate-700">Entamoeba coli</p>
+            <div className="mt-3 grid gap-3">
+              <PreviewField
+                label="Cyst"
+                value={`${getValue(form, "coli_cyst", "____")} /HPF`}
+              />
+              <PreviewField
+                label="Trophozoite"
+                value={`${getValue(form, "coli_trophozoite", "____")} /HPF`}
+              />
             </div>
           </div>
         </div>
@@ -238,34 +292,40 @@ function UrinalysisDocument({ request, form }: Props) {
     <PreviewShell title="URINALYSIS">
       <PatientBlock request={request} />
       <Section title="PHYSICAL EXAMINATION">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="Color" value={getValue(form, "color")} />
-          <PreviewField label="Transparency" value={getValue(form, "transparency")} />
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "Color", value: getValue(form, "color") },
+            { label: "Transparency", value: getValue(form, "transparency") },
+          ]}
+        />
       </Section>
       <Section title="CHEMICAL EXAMINATION">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="pH" value={getValue(form, "ph_result")} />
-          <PreviewField label="Specific Gravity" value={getValue(form, "spec_grav_result")} />
-          <PreviewField label="Protein" value={getValue(form, "protein")} />
-          <PreviewField label="Nitrite" value={getValue(form, "nitrite")} />
-          <PreviewField label="Glucose" value={getValue(form, "glucose")} />
-          <PreviewField label="Ketones" value={getValue(form, "ketones")} />
-          <PreviewField label="Leukocytes" value={getValue(form, "leukocytes")} />
-          <PreviewField label="Blood" value={getValue(form, "blood")} />
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "pH", value: getValue(form, "ph_result") },
+            { label: "Specific Gravity", value: getValue(form, "spec_grav_result") },
+            { label: "Protein", value: getValue(form, "protein") },
+            { label: "Nitrite", value: getValue(form, "nitrite") },
+            { label: "Glucose", value: getValue(form, "glucose") },
+            { label: "Ketones", value: getValue(form, "ketones") },
+            { label: "Leukocytes", value: getValue(form, "leukocytes") },
+            { label: "Blood", value: getValue(form, "blood") },
+          ]}
+        />
       </Section>
       <Section title="MICROSCOPIC EXAMINATION">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="Pus Cells" value={getValue(form, "pus_cells")} />
-          <PreviewField label="RBC" value={getValue(form, "rbc")} />
-          <PreviewField label="Bacteria" value={getValue(form, "bacteria")} />
-          <PreviewField label="Squamous Cell" value={getValue(form, "squamous_cell")} />
-          <PreviewField label="Round Cell" value={getValue(form, "round_cell")} />
-          <PreviewField label="Mucous" value={getValue(form, "mucous")} />
-          <PreviewField label="Crystals" value={getValue(form, "crystals")} />
-          <PreviewField label="Casts" value={getValue(form, "casts")} />
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "Pus Cells", value: getValue(form, "pus_cells") },
+            { label: "RBC", value: getValue(form, "rbc") },
+            { label: "Bacteria", value: getValue(form, "bacteria") },
+            { label: "Squamous Cell", value: getValue(form, "squamous_cell") },
+            { label: "Round Cell", value: getValue(form, "round_cell") },
+            { label: "Mucous", value: getValue(form, "mucous") },
+            { label: "Crystals", value: getValue(form, "crystals") },
+            { label: "Casts", value: getValue(form, "casts") },
+          ]}
+        />
       </Section>
       <Section title="REMARKS">
         <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
@@ -277,45 +337,42 @@ function UrinalysisDocument({ request, form }: Props) {
 }
 
 function ClinicalChemistryDocument({ request, form }: Props) {
-  const rows: Array<[string, string, string?]> = [
-    ["FBS", "FBS", "FBS_conv"],
-    ["RBS", "RBS", "RBS_conv"],
-    ["BUN", "BUN", "BUN_conv"],
-    ["Creatinine", "creatinine", "creatinine_conv"],
-    ["Uric Acid", "uric_acid", "uric_acid_conv"],
-    ["Total Cholesterol", "cholesterol", "cholesterol_conv"],
-    ["HDL Cholesterol", "hdl_cholesterol", "hdl_cholesterol_conv"],
-    ["LDL Cholesterol", "ldl_cholesterol", "ldl_cholesterol_conv"],
-    ["Triglycerides", "triglycerides", "triglycerides_conv"],
-    ["SGPT", "sgpt"],
-  ];
+  const fieldNames = resolveClinicalChemistryFieldNames(request);
+  const rows = getClinicalChemistryRows(fieldNames);
+  const showMealFields = shouldShowClinicalChemistryMealFields(request);
 
   return (
     <PreviewShell title="CLINICAL CHEMISTRY">
       <PatientBlock request={request} />
       <Section title="TEST RESULTS">
         <div className="result-table mt-3 overflow-hidden rounded-2xl border border-slate-200">
-          <div className="result-table-head grid grid-cols-[1.2fr_1fr_1fr] bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <div className="result-table-head grid grid-cols-[1.45fr_0.85fr_0.85fr] bg-slate-50 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             <span>Test</span>
             <span>Result</span>
             <span>Conv.</span>
           </div>
-          {rows.map(([label, valueKey, convKey]) => (
+          {rows.map((row) => (
             <div
-              key={valueKey}
-              className="result-table-row grid grid-cols-[1.2fr_1fr_1fr] border-t border-slate-200 px-4 py-3 text-sm text-slate-700"
+              key={row.fieldName}
+              className="result-table-row grid grid-cols-[1.45fr_0.85fr_0.85fr] border-t border-slate-200 px-4 py-2.5 text-[12px] leading-4 text-slate-700"
             >
-              <span>{label}</span>
-              <span>{getValue(form, valueKey, "____")}</span>
-              <span>{convKey ? getValue(form, convKey, "____") : "N/A"}</span>
+              <span>{row.label}</span>
+              <span>{getValue(form, row.fieldName, "____")}</span>
+              <span>
+                {row.conversionFieldName
+                  ? getValue(form, row.conversionFieldName, "____")
+                  : "N/A"}
+              </span>
             </div>
           ))}
         </div>
       </Section>
-      <div className="result-two-column mt-5 grid gap-4 sm:grid-cols-2">
-        <PreviewField label="Last Meal" value={getValue(form, "last_meal")} />
-        <PreviewField label="Time Taken" value={getValue(form, "time_taken")} />
-      </div>
+      {showMealFields ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <PreviewField label="Last Meal" value={getValue(form, "last_meal")} />
+          <PreviewField label="Time Taken" value={getValue(form, "time_taken")} />
+        </div>
+      ) : null}
     </PreviewShell>
   );
 }
@@ -332,21 +389,25 @@ function SingleChemistryDocument({ request, form }: Props) {
     <PreviewShell title={template.label.toUpperCase()}>
       <PatientBlock request={request} />
       <Section title="RESULT">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label={config.fieldLabel} value={getValue(form, config.fieldName)} />
-          {config.conversionFieldName ? (
-            <PreviewField
-              label={config.conversionLabel ?? "Conversion"}
-              value={getValue(form, config.conversionFieldName)}
-            />
-          ) : null}
-          {config.showMealFields ? (
-            <>
-              <PreviewField label="Last Meal" value={getValue(form, "last_meal")} />
-              <PreviewField label="Time Taken" value={getValue(form, "time_taken")} />
-            </>
-          ) : null}
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: config.fieldLabel, value: getValue(form, config.fieldName) },
+            ...(config.conversionFieldName
+              ? [
+                  {
+                    label: config.conversionLabel ?? "Conversion",
+                    value: getValue(form, config.conversionFieldName),
+                  },
+                ]
+              : []),
+            ...(config.showMealFields
+              ? [
+                  { label: "Last Meal", value: getValue(form, "last_meal") },
+                  { label: "Time Taken", value: getValue(form, "time_taken") },
+                ]
+              : []),
+          ]}
+        />
       </Section>
       <Section title="REMARKS">
         <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
@@ -364,14 +425,16 @@ function SerologyDocument({ request, form }: Props) {
     <PreviewShell title={template.label.toUpperCase()}>
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="Test" value={getValue(form, "test")} />
-          <PreviewField label="Method" value={getValue(form, "method")} />
-          <PreviewField label="Specimen" value={getValue(form, "specimen")} />
-          {template.serology?.showDayOfFever ? (
-            <PreviewField label="Day of Fever" value={getValue(form, "day_of_fever")} />
-          ) : null}
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "Test", value: getValue(form, "test") },
+            { label: "Method", value: getValue(form, "method") },
+            { label: "Specimen", value: getValue(form, "specimen") },
+            ...(template.serology?.showDayOfFever
+              ? [{ label: "Day of Fever", value: getValue(form, "day_of_fever") }]
+              : []),
+          ]}
+        />
       </Section>
       <Section title="RESULT">
         <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
@@ -387,12 +450,14 @@ function FecalOccultBloodDocument({ request, form }: Props) {
     <PreviewShell title="FECAL OCCULT BLOOD TEST">
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="Test" value={getValue(form, "test")} />
-          <PreviewField label="Method" value={getValue(form, "method")} />
-          <PreviewField label="Specimen" value={getValue(form, "specimen")} />
-          <PreviewField label="Result" value={getValue(form, "result")} />
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "Test", value: getValue(form, "test") },
+            { label: "Method", value: getValue(form, "method") },
+            { label: "Specimen", value: getValue(form, "specimen") },
+            { label: "Result", value: getValue(form, "result") },
+          ]}
+        />
       </Section>
       <Section title="REMARKS">
         <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
@@ -408,13 +473,15 @@ function Hba1cDocument({ request, form }: Props) {
     <PreviewShell title="HBA1C">
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="Test Method" value={getValue(form, "test_method")} />
-          <PreviewField label="Lot No." value={getValue(form, "lot_no")} />
-          <PreviewField label="Expiration Date" value={getValue(form, "exp_date")} />
-          <PreviewField label="Specimen" value={getValue(form, "specimen")} />
-          <PreviewField label="Result" value={getValue(form, "result")} />
-        </div>
+        <CompactFieldGrid
+          fields={[
+            { label: "Test Method", value: getValue(form, "test_method") },
+            { label: "Lot No.", value: getValue(form, "lot_no") },
+            { label: "Expiration Date", value: getValue(form, "exp_date") },
+            { label: "Specimen", value: getValue(form, "specimen") },
+            { label: "Result", value: getValue(form, "result") },
+          ]}
+        />
       </Section>
       <Section title="INTERPRETATION">
         <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
@@ -426,16 +493,18 @@ function Hba1cDocument({ request, form }: Props) {
 }
 
 function ChemistryPanelDocument({ request, form }: Props) {
+  const fieldNames = resolveChemistryPanelFieldNames(request);
+
   return (
     <PreviewShell title="CHEMISTRY">
       <PatientBlock request={request} />
       <Section title="TEST RESULTS">
-        <div className="result-grid mt-3 grid grid-cols-2 gap-3">
-          <PreviewField label="Sodium" value={getValue(form, "sodium")} />
-          <PreviewField label="Potassium" value={getValue(form, "potassium")} />
-          <PreviewField label="Chloride" value={getValue(form, "chloride")} />
-          <PreviewField label="Ionized Calcium" value={getValue(form, "ionized_calcium")} />
-        </div>
+        <CompactFieldGrid
+          fields={getChemistryPanelRows(fieldNames).map((row) => ({
+            label: row.label,
+            value: getValue(form, row.fieldName),
+          }))}
+        />
       </Section>
       <Section title="REMARKS">
         <p className="result-remarks mt-3 text-sm font-medium text-blue-600">
@@ -455,7 +524,7 @@ function OgttDocument({ request, form }: Props) {
       <PatientBlock request={request} />
       <Section title="TEST RESULTS">
         <div className="result-table mt-3 overflow-hidden rounded-2xl border border-slate-200">
-          <div className="result-table-head grid grid-cols-[1.2fr_1fr_1fr] bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <div className="result-table-head grid grid-cols-[1.35fr_0.85fr_0.85fr] bg-slate-50 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             <span>Phase</span>
             <span>Result</span>
             <span>Conv.</span>
@@ -463,7 +532,7 @@ function OgttDocument({ request, form }: Props) {
           {phases.map((phase) => (
             <div
               key={phase.fieldName}
-              className="result-table-row grid grid-cols-[1.2fr_1fr_1fr] border-t border-slate-200 px-4 py-3 text-sm text-slate-700"
+              className="result-table-row grid grid-cols-[1.35fr_0.85fr_0.85fr] border-t border-slate-200 px-4 py-2.5 text-[12px] leading-4 text-slate-700"
             >
               <span>{phase.label}</span>
               <span>{getValue(form, phase.fieldName, "____")}</span>
@@ -492,8 +561,8 @@ function GenericDocument({
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {rows.length ? (
             rows.map(([key, value]) => (
-              <div key={key} className="result-card rounded-2xl border border-slate-200 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <div key={key} className="rounded-2xl border border-slate-200 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                   {key.replace(/_/g, " ")}
                 </p>
                 <p className="mt-2 text-sm text-slate-700">{formatLabResultValue(value)}</p>

@@ -11,8 +11,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   isLoading?: boolean;
   icon?: ReactNode;
-  iconPosition?: "left" | "right",
-  
+  iconPosition?: "left" | "right";
 }
 
 const baseCls =
@@ -30,8 +29,8 @@ const variants: Record<ButtonVariant, string> = {
 
   neutral:
     "text-[#6b7da0] border border-[#dce3ef] hover:border-[#0f2244] hover:text-[#0f2244]",
-  addPatient: 
-    "flex items-center gap-2 bg-[#c8102e] hover:bg-[#a50d25] text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-lg shadow-[#c8102e]/30"
+  addPatient:
+    "flex items-center gap-2 bg-[#c8102e] hover:bg-[#a50d25] text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-lg shadow-[#c8102e]/30",
 };
 
 const Button: React.FC<ButtonProps> = ({

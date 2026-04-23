@@ -663,7 +663,7 @@ async function main() {
       paymentMethod: "CASH",
       items: [
         {
-          testName: "OGTT 75G",
+          testName: "100G-OGTT",
           status: "QUEUED",
         },
       ],
@@ -688,6 +688,345 @@ async function main() {
         },
       ],
     },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "PENDING",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Complete Blood Count w/ Platelet Count",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Routine Fecalysis",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Routine Urinalysis",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Fasting Blood Sugar (FBS)",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Random Blood Sugar (RBS)",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Urea (BUN)",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Creatinine",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Uric Acid",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Total Cholesterol",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "HDL-Cholesterol",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "LDL-Cholesterol",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Triglycerides",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "1H-OGTT",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "2H-OGTT",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "100G-OGTT",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Serum Glutamic Pyruvic Transaminase",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Sodium",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Potassium",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Glycosylated Hemoglobin",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Fecal Occult Blood Test",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Pregnancy Test (Urine)",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Pregnancy Test (Serum)",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Dengue NS1",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Syphilis",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Hepatitis B Surface Antigen",
+          status: "QUEUED",
+        },
+      ],
+    },
+    {
+      patientId: patientB.patient_id,
+      reqDate: "2026-04-14",
+      requestedBy: "Dr. Seed Doctor",
+      billingStatus: "DONE",
+      paymentMethod: "GCASH",
+      items: [
+        {
+          testName: "Blood Typing",
+          status: "QUEUED",
+        },
+      ],
+    },
+
   ];
 
   for (const sample of samples) {

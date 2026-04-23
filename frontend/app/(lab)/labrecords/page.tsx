@@ -1,18 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { FileSearch } from "lucide-react";
+import { FileSearch, Printer, Search, Users } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import PatientCard from "@/components/PatientCard";
-import LabResultEditor from "@/components/Modal/LabModal/LabResultEditor";
 import PatientLabRecordsModal from "@/components/Modal/LabModal/PatientLabRecordsModal";
+import LabResultPreview from "@/components/Modal/LabModal/LabResultPreview";
 import ModalHeader from "@/components/Modal/ModalHeader";
 import RoleGuard from "@/guards/RoleGuard";
-import { useLabPatientDirectory, useSaveLabResult } from "@/hooks/Lab/useLab";
-import { LabRequest, LabResultPayload, PatientRecord } from "@/types/LabTypes";
-import { getLabTemplateLabel, resolveLabTemplate } from "@/utils/lab-templates";
+import { useLabPatientDirectory } from "@/hooks/Lab/useLab";
+import { LabRequest, PatientRecord } from "@/types/LabTypes";
 import { openLabPrintPage } from "@/utils/lab-print";
-import SweetAlert from "@/utils/SweetAlert";
 
 export default function LabRecordsPage() {
   const [selectedPatient, setSelectedPatient] = useState<PatientRecord | null>(null);
@@ -20,38 +18,15 @@ export default function LabRecordsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 400);
   const { data: patients = [], error, isLoading } = useLabPatientDirectory(debouncedSearch);
-  const { mutateAsync: persistLabResult, isPending: isSavingRecord } = useSaveLabResult();
-  const activeTemplate = activeRecord ? resolveLabTemplate(activeRecord) : null;
+  const hasSearch = debouncedSearch.trim().length > 0;
 
   const closeRecordsModal = () => {
     setActiveRecord(null);
     setSelectedPatient(null);
   };
 
-  const closeEditModal = () => {
+  const closePreviewModal = () => {
     setActiveRecord(null);
-  };
-
-  const handleSaveRecord = async (form: LabResultPayload) => {
-    if (!activeRecord || !activeTemplate) {
-      return;
-    }
-
-    try {
-      await persistLabResult({
-        labId: activeRecord.labId,
-        category: activeTemplate.apiCategory,
-        form,
-      });
-
-      await SweetAlert.successAlert(
-        "Result Updated",
-        "The laboratory record was updated successfully."
-      );
-      closeEditModal();
-    } catch {
-      // Alerts are handled in the mutation hook.
-    }
   };
 
   return (
@@ -67,39 +42,36 @@ export default function LabRecordsPage() {
         >
           <PatientLabRecordsModal
             patient={selectedPatient}
-            onEditRecord={setActiveRecord}
-            onReprintRecord={(labId) => openLabPrintPage(labId, true)}
+            onViewResult={setActiveRecord}
           />
         </ModalHeader>
       ) : null}
 
-      {activeRecord ? (
+      {activeRecord?.resultPayload ? (
         <ModalHeader
           showModal={true}
-          title={`Edit Result - ${getLabTemplateLabel(activeRecord)}`}
-          subtitle={`${activeRecord.patientName} - ${activeRecord.testType}`}
+          title={`Laboratory Result Preview - ${activeRecord.patientName}`}
+          subtitle={activeRecord.testType}
           meta={`${activeRecord.id} - ${activeRecord.patientId}`}
           sizeModal="2xlarge"
-          onClose={closeEditModal}
+          onClose={closePreviewModal}
         >
-          <div className="border-b border-[#d2ebe6] bg-[#f5fbfa] px-5 py-3">
-            <p className="text-xs font-medium text-[#2f5e57]">
-              Requested by {activeRecord.requestedBy}
-            </p>
-            <p className="mt-1 text-xs font-medium text-[#2f5e57]">
-              Use this editor to revise the saved laboratory result and keep the record updated.
-            </p>
-            {isSavingRecord ? (
-              <p className="mt-2 text-xs font-medium text-[#2f5e57]">
-                Saving updated laboratory result...
-              </p>
-            ) : null}
-          </div>
-
-          <LabResultEditor
+          <LabResultPreview
             request={activeRecord}
-            onSubmit={handleSaveRecord}
-            onCancel={closeEditModal}
+            form={activeRecord.resultPayload}
+            backLabel="Back to Records"
+            showPassToDoctor={false}
+            onBack={closePreviewModal}
+            onDownloadPdf={() =>
+              openLabPrintPage(activeRecord.labId, {
+                autoDownload: true,
+              })
+            }
+            onOpenPrintPage={() =>
+              openLabPrintPage(activeRecord.labId, {
+                autoPrint: true,
+              })
+            }
           />
         </ModalHeader>
       ) : null}
@@ -110,62 +82,74 @@ export default function LabRecordsPage() {
           background: "linear-gradient(135deg, #0f2244 0%, #1a3560 55%, #0e3d5c 100%)",
         }}
       >
-        {/* <div className="border-b border-white/10 px-8 py-5"> */}
-          {/* <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"> */}
-            {/* <div>
-              <h1 className="font-['DM_Serif_Display'] text-2xl text-white tracking-wide">
-                Laboratory Records
-              </h1> */}
-              {/* <p className="mt-1 max-w-2xl text-sm text-white/55">
-                Select a patient card to review encoded laboratory records, edit saved results,
-                and reprint official result forms from a dedicated print page.
-              </p> */}
-              {/* <p className="mt-1 text-xs text-white/40">
-                {isLoading
-                  ? "Loading patient directory..."
-                  : `${patients.length} patient${patients.length === 1 ? "" : "s"} available for laboratory record review`}
-              </p> */}
-            {/* </div> */}
 
-            {/* <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white/75 backdrop-blur-sm">
-              Use the filters inside each patient record modal to narrow results by date and test
-              category.
-            </div> */}
-          {/* </div> */}
-        {/* </div> */}
+        <div className="mx-auto max-w-7xl px-8 py-12">
+          <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">
+                Patient Directory Search
+              </p>
+              <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="relative max-w-xl flex-1">
+                  <svg
+                    className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search patients by name, address, or patient ID"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    className="w-full rounded-xl border border-white/15 bg-white/10 py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 outline-none transition focus:border-white/30 focus:bg-white/15"
+                  />
+                </div>
 
-        <div className="px-8 py-5">
-          <div className="relative max-w-md">
-            <svg
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"
-              />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search patients by name, address, or patient ID"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="w-full rounded-xl border border-white/15 bg-white/10 py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 outline-none transition focus:border-white/30 focus:bg-white/15"
-            />
+                {/* <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/75">
+                  {hasSearch
+                    ? `Showing matches for "${debouncedSearch}"`
+                    : "Showing the full laboratory patient directory"}
+                </div> */}
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-white/75">Visible Patients</p>
+                  <Users size={17} className="text-white/60" />
+                </div>
+                <p className="mt-3 text-3xl font-bold text-white">
+                  {isLoading ? "..." : patients.length}
+                </p>
+              </div>
+                    
+            </div>
           </div>
         </div>
 
-        <div className="px-8 pb-12">
+        <div className="mx-auto max-w-7xl px-8 pb-12">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-white">Patient cards</h2>
+              
+            </div>
+          </div>
+
           {isLoading ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, index) => (
                 <div
                   key={index}
-                  className="h-48 rounded-2xl bg-white/10 animate-pulse"
+                  className="h-48 animate-pulse rounded-2xl bg-white/10"
                   style={{ animationDelay: `${index * 60}ms` }}
                 />
               ))}
