@@ -129,10 +129,21 @@ export const getAllRegisteredUsers = async () => {
 }
 
 export const getRequestData = async (request_id: number) => {
+  const today = new Date();
+  const startOfDay = new Date(today);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(today);
+  endOfDay.setHours(23, 59, 59, 999);
+
   return prisma.$transaction(async (tx) => {
     const request = await tx.request.findFirst({
       where: {
         req_id: request_id,
+        req_date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
       },
       include: {
         cert: {
@@ -140,7 +151,7 @@ export const getRequestData = async (request_id: number) => {
             certificate: true,
           },
         },
-        consult: true, // no nested include
+        consult: true,
         patient: true,
       },
     });

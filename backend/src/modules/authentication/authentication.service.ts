@@ -80,7 +80,8 @@ export const loginUser = async (username: string, password: string) => {
       user_id: user.user_id,
       username: user.username,
       roles,
-      name: user.name
+      name: user.name,
+      title: user.title
     }
   };
 };
