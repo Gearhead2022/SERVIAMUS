@@ -451,9 +451,9 @@ export default function DashboardPage() {
 
       <div className="min-h-full p-6 md:p-7">
         <div className="mx-auto max-w-7xl space-y-6">
-          <section className="overflow-hidden rounded-[28px] border border-[#cfe7e1] bg-[linear-gradient(135deg,#f7fcfb_0%,#eef8f5_52%,#f6fbff_100%)] shadow-sm">
-            <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.2fr_0.8fr] lg:px-7">
-              <div className="space-y-5">
+          {/* <section className="overflow-hidden rounded-[28px] border border-[#cfe7e1] bg-[linear-gradient(135deg,#f7fcfb_0%,#eef8f5_52%,#f6fbff_100%)] shadow-sm"> */}
+            {/* <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.2fr_0.8fr] lg:px-7"> */}
+              {/* <div className="space-y-5">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[#5b7c76]">
                     Laboratory Workspace
@@ -485,9 +485,9 @@ export default function DashboardPage() {
                   >
                     Review Patient Progress
                   </Button>
-                </div>
+                </div> */}
 
-                <div className="grid gap-3 md:grid-cols-3">
+                {/* <div className="grid gap-3 md:grid-cols-3">
                   <div className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
                     <div className="flex items-center gap-2 text-[#295f56]">
                       <Clock3 size={16} />
@@ -525,8 +525,8 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-              </div>
-
+              </div> */}
+{/* 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                 <div className="rounded-2xl bg-[#133d37] p-5 text-white shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/60">
@@ -578,7 +578,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-          </section>
+          </section> */}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
