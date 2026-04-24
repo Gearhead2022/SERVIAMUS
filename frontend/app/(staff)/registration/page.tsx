@@ -16,7 +16,6 @@ import ViewPatientHistoryModal from "@/components/Modal/ChildModal/ViewPatientHi
 import ViewPrescriptionModal from "@/components/Modal/NestedModal/ViewPrescriptionModal";
 import ViewConsultationModal from "@/components/Modal/NestedModal/ViewConsultationModal";
 import { ConsultationResultProps } from "@/types/ConsultationTypes";
-import { Plus } from "lucide-react";
 import EditPatientForm from "@/components/Modal/ChildModal/EditPatientForm";
 
 const RegistrationPage = () => {
@@ -187,7 +186,6 @@ const RegistrationPage = () => {
             )}
           </div>
         </div>
-      </div>
       {/* ── View Profile Modal ── */}
 {selectedPatient && activeAction === 'profile' && (
   <ModalHeader 

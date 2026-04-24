@@ -1,3 +1,5 @@
+// TODO:FIX MERGE CONFLICTS
+
 "use client";
 
 import { useMemo } from "react";
@@ -18,7 +20,7 @@ import { UsersProps, VitalSignProps } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
 import { useRequest } from "@/hooks/Patient/usePatientRegistration";
 import { useLabTestCatalog } from "@/hooks/Lab/useLab";
-import { useRequest, useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
+import { useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Label from "@/components/ui/label";
@@ -55,7 +57,7 @@ function VitalsRow<T extends FieldValues>({
   teal,
   register,
   readonly,
-}: VitakKeyProps<T>) {
+}: VitalKeyProps<T>) {
   const fields = [
     { name: "bp", label: "BP (mmHg)", ph: "120/80" },
     { name: "temp", label: "Temp (°C)", ph: "36.6" },
@@ -112,6 +114,7 @@ const RequestForm: React.FC<{
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors },
   } = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
@@ -124,7 +127,7 @@ const RequestForm: React.FC<{
       prev_temp: vitals?.temp,
       prev_rr: vitals?.rr,
       prev_ht: vitals?.ht,
-      prev_wt: vitals?.ht,
+      prev_wt: vitals?.wt,
       created_at: '',
       patient_code: patient?.patient_code,
       address: patient?.address,
@@ -143,24 +146,6 @@ const RequestForm: React.FC<{
     await request(data);
   };
 
-  const typeIcon =
-    reqType === "CONSULTATION" ? (
-      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-      </svg>
-    ) : (
-      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-        />
-      </svg>
-    );
   const testOptions = [
     { value: "CBC", label: "CBC (Complete Blood Count)" },
     { value: "Urinalysis", label: "Urinalysis" },
@@ -427,14 +412,14 @@ const RequestForm: React.FC<{
                 )}
               />
 
-              {certificateErrors.purpose && (
+              {labErrors.test && (
                 <p className="text-xs text-red-500 mt-1">
-                  {certificateErrors.purpose.message}
+                  {labErrors.test.message}
                 </p>
               )}
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* ── CERTIFICATE fields ── */}
         {reqType === "CERTIFICATE" && (

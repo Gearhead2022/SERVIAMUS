@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchBillings, payBilling } from "@/services/billing.service";
-import { BillingRecord, PaymentMethod } from "@/types/BillingTypes";
+import {
+  getBillingByRequestId,
+  getBillingById,
+  createBilling,
+  processPayment,
+  updateBillingStatus,
+} from "@/services/billing.services";
+import { BillingRecord, PaymentMethod, PaymentProps } from "@/types/BillingTypes";
 import { getApiErrorMessage } from "@/utils/api-error";
 import SweetAlert from "@/utils/SweetAlert";
 
@@ -22,7 +28,12 @@ const mergeUpdatedBilling = (
 export const useBillings = () =>
   useQuery<BillingRecord[]>({
     queryKey: BILLINGS_QUERY_KEY,
-    queryFn: fetchBillings,
+    queryFn: async () => {
+      // Fetch from your API endpoint
+      const response = await fetch("/api/billing");
+      const data = await response.json();
+      return data.data;
+    },
     refetchInterval: 10000,
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
@@ -38,7 +49,7 @@ export const usePayBilling = () => {
     }: {
       billingId: number;
       method?: PaymentMethod;
-    }) => payBilling(billingId, method),
+    }) => processPayment({ billing_id: billingId, amount: 0, method: method || "CASH" }),
     onSuccess: (updatedBilling) => {
       queryClient.setQueryData<BillingRecord[]>(
         BILLINGS_QUERY_KEY,
@@ -47,7 +58,7 @@ export const usePayBilling = () => {
 
       SweetAlert.successAlert(
         "Payment Posted",
-        `${updatedBilling.patientName}'s laboratory billing is now marked as paid.`
+        "Billing record has been marked as paid."
       );
     },
     onError: (error: unknown) => {
@@ -58,15 +69,6 @@ export const usePayBilling = () => {
     },
   });
 };
-import {
-  getBillingByRequestId,
-  getBillingById,
-  createBilling,
-  processPayment,
-  updateBillingStatus,
-} from "@/services/billing.services";
-import SweetAlert from "@/utils/SweetAlert";
-import { PaymentProps } from "@/types/BillingTypes";
 
 export const useGetBillingByRequestId = (req_id?: number) => {
   return useQuery({
@@ -112,7 +114,6 @@ export const useProcessPayment = (onSuccess?: () => void) => {
     mutationFn: (data: PaymentProps) => processPayment(data),
 
     onSuccess: () => {
-      // Don't show alert here - let the component handle it
       queryClient.invalidateQueries({ queryKey: ["billing"] });
       if (onSuccess) onSuccess();
     },

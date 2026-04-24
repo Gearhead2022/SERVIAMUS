@@ -1,13 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createPatient, fetchAllPatient } from "@/services/patient.services";
-import { getPrevVitalSigns, createRequest, getAllUsers } from "@/services/request.services";
 import { createPatient, fetchAllPatient, updatePatient } from "@/services/patient.services";
-import { getPrevVitalSigns, createRequest } from "@/services/request.services";
 import SweetAlert from "@/utils/SweetAlert";
 import { VitalSignProps} from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
-import { UsersProps, VitalSignProps } from "@/types/RequestTypes";
-import api from "@/services/axios";
+import { getPrevVitalSigns, createRequest, getAllUsers as getAllRegisteredUsers } from "@/services/request.services";import { UsersProps } from "@/types/RequestTypes";
+
+
+
 
 export const useGetAllpatient = (search: string) => {
   return useQuery<PatientProps[]>({
@@ -18,7 +17,7 @@ export const useGetAllpatient = (search: string) => {
 
 export const usePatient = (closeModal: () => void) => {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
     mutationFn: createPatient,
 
@@ -53,57 +52,40 @@ export const useGetPrevVitalSigns = (patient_id?: number) => {
   });
 };
 
-interface RequestResponse {
-  request: {
-    req_id: number;
-    req_type: "LABORATORY" | "CONSULTATION";
-  };
-}
 
 export const useRequest = (closeModal: () => void) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: Parameters<typeof createRequest>[0]) => {
-      const response = await createRequest(data);
-      
-      // Auto-add to queue
-      await api.post("/api/queue/add", {
-        patient_id: data.patient_id,
-        queue_type: data.req_type === "LABORATORY" ? "LABORATORY" : "CONSULTATION",
-      });
-      
-      return response;
-    },
+    mutationFn: createRequest,
 
-    onSuccess: (data: RequestResponse) => {
+    onSuccess: (data: Awaited<ReturnType<typeof createRequest>>) => {
       if (data?.request?.req_type === "LABORATORY") {
         SweetAlert.successAlert(
-          "Success",
-          "Laboratory request submitted! Patient added to queue."
+          "Request Sent to Cashier",
+          "Laboratory request has been successfully submitted and sent to the billing queue."
         );
+        queryClient.invalidateQueries({ queryKey: ["request"] });
+        closeModal();
       } else {
         SweetAlert.successAlert(
           "Success",
-          "Consultation request created successfully! Patient added to queue."
+          "Request created successfully"
         );
+        queryClient.invalidateQueries({ queryKey: ["request"] });
+        closeModal();
       }
-      
-      queryClient.invalidateQueries({ queryKey: ["request"] });
-      queryClient.invalidateQueries({ queryKey: ["patient"] });
-      queryClient.invalidateQueries({ queryKey: ["billing"] });
-      queryClient.invalidateQueries({ queryKey: ["queue"] });
-      closeModal();
     },
 
     onError: (error: unknown) => {
       SweetAlert.errorAlert(
-        "Request Failed",
+        "Registration Failed",
         error instanceof Error ? error.message : "Something went wrong"
       );
     }
   });
 };
+
 export const useUpdatePatient = (closeModal: () => void) => {
   const queryClient = useQueryClient();
   
@@ -128,11 +110,9 @@ export const useUpdatePatient = (closeModal: () => void) => {
     }
   });
 };
-
 export const useGetAllUsers = () => {
   return useQuery<UsersProps[]>({
-    queryKey: ["patient"],
-    queryFn: () => getAllUsers(),
+    queryKey: ["users"],
+    queryFn: getAllRegisteredUsers,
   });
-};
 };

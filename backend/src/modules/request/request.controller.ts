@@ -1,3 +1,5 @@
+// TODO:FIX MERGE CONFLICTS
+
 import { Request, Response } from "express";
 import { getPrevVitalSigns, createRequest, getAllRegisteredUsers, getRequestData } from "./request.services";
 
@@ -82,3 +84,4 @@ export const getRequestDataController = async (req: Request, res: Response) => {
     });
   }
 };
+

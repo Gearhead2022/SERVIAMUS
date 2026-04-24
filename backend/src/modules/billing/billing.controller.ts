@@ -1,12 +1,6 @@
-import { Request, Response } from "express";
-import { PaymentMethod } from "@prisma/client";
-import { getBillingsService, payBillingService } from "./billing.services";
+// backend/src/modules/billing/billing.controller.ts
 
-export const getBillingsController = async (req: Request, res: Response) => {
-  try {
-    const status = typeof req.query.status === "string" ? req.query.status : undefined;
-    const billings = await getBillingsService(status);
-import { authorize } from "../../middlewares/authorize.middleware";
+import { Request, Response } from "express";
 import {
   createBilling,
   getBillingByRequestId,
@@ -14,47 +8,8 @@ import {
   createPayment,
   updateBillingStatus,
   getAllBillings,
+  payBilling,       
 } from "./billing.services";
-
-export const getAllBillingsController = async (req: Request, res: Response) => {
-  try {
-    const billings = await getAllBillings();
-
-    return res.status(200).json({
-      success: true,
-      data: billings,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to fetch billings.",
-    });
-  }
-};
-
-export const payBillingController = async (req: Request, res: Response) => {
-  try {
-    const billingId = Number(req.params.billingId);
-    const rawMethod = typeof req.body?.method === "string" ? req.body.method : "CASH";
-    const method = Object.values(PaymentMethod).includes(rawMethod as PaymentMethod)
-      ? (rawMethod as PaymentMethod)
-      : "CASH";
-
-    if (!billingId) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid billing record.",
-      });
-    }
-
-    const billing = await payBillingService(billingId, method);
-  } catch (error: any) {
-    return res.status(400).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
 
 export const createBillingController = async (req: Request, res: Response) => {
   try {
@@ -99,13 +54,6 @@ export const getBillingByRequestIdController = async (req: Request, res: Respons
       success: true,
       data: billing,
     });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to update billing status.",
-    });
-  }
-};
   } catch (error: any) {
     return res.status(404).json({
       success: false,
@@ -192,6 +140,45 @@ export const updateBillingStatusController = async (req: Request, res: Response)
 
     const billing = await updateBillingStatus(billingId, status);
 
+    return res.status(200).json({
+      success: true,
+      data: billing,
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+export const getAllBillingsController = async (req: Request, res: Response) => {
+  try {
+    const billings = await getAllBillings();
+    return res.status(200).json({
+      success: true,
+      data: billings,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const payBillingController = async (req: Request, res: Response) => {
+  try {
+    const billingId = Array.isArray(req.params.billingId) ? req.params.billingId[0] : req.params.billingId;
+    const id = parseInt(billingId, 10);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid billing ID",
+      });
+    }
+
+    const billing = await payBilling(id);
     return res.status(200).json({
       success: true,
       data: billing,

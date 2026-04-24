@@ -1,40 +1,36 @@
 import { Router } from "express";
 import { authorize } from "../../middlewares/authorize.middleware";
-import { getBillingsController, payBillingController } from "./billing.controller";
-
-const router = Router();
-
-router.get("/", authorize(["ADMIN", "CASHIER"]), getBillingsController);
-router.patch("/:billingId/pay", authorize(["ADMIN", "CASHIER"]), payBillingController);
-
-export default router;
 import {
+  getAllBillingsController,
+  payBillingController,
   createBillingController,
   getBillingByRequestIdController,
   getBillingByIdController,
   createPaymentController,
   updateBillingStatusController,
-  getAllBillingsController,
 } from "./billing.controller";
 
 const router = Router();
 
-// Get all billings (CASHIER only)
-router.get("/", authorize(["CASHIER"]), getAllBillingsController);
+// Get all billings (CASHIER/ADMIN only)
+router.get("/", authorize(["CASHIER", "ADMIN"]), getAllBillingsController);
 
 // Create billing from a request
-router.post("/create", createBillingController);
+router.post("/create", authorize(["CASHIER", "ADMIN"]), createBillingController);
 
 // Get billing by request ID
-router.get("/request/:req_id", getBillingByRequestIdController);
+router.get("/request/:req_id", authorize(["CASHIER", "ADMIN"]), getBillingByRequestIdController);
 
-// Get billing by billing ID (CASHIER only)
-router.get("/:billing_id", authorize(["CASHIER"]), getBillingByIdController);
+// Get billing by billing ID (CASHIER/ADMIN only)
+router.get("/:billing_id", authorize(["CASHIER", "ADMIN"]), getBillingByIdController);
 
-// Process payment (CASHIER only)
-router.post("/payment", authorize(["CASHIER"]), createPaymentController);
+// Process payment - pay billing (CASHIER/ADMIN only)
+router.patch("/:billingId/pay", authorize(["CASHIER", "ADMIN"]), payBillingController);
 
-// Update billing status (CASHIER only)
-router.put("/:billing_id", authorize(["CASHIER"]), updateBillingStatusController);
+// Create payment record (CASHIER/ADMIN only)
+router.post("/payment", authorize(["CASHIER", "ADMIN"]), createPaymentController);
+
+// Update billing status (CASHIER/ADMIN only)
+router.put("/:billing_id", authorize(["CASHIER", "ADMIN"]), updateBillingStatusController);
 
 export default router;

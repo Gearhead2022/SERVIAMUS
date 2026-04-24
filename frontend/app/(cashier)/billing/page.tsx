@@ -1,291 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  BadgeDollarSign,
-  CheckCircle2,
-  Clock3,
-  CreditCard,
-} from "lucide-react";
-"use client"
-import RoleGuard from "@/guards/RoleGuard";
-import Button from "@/components/ui/Button";
-import { useBillings, usePayBilling } from "@/hooks/Billing/useBilling";
-import { BillingRecord } from "@/types/BillingTypes";
-
-type BillingFilter = "all" | "paid" | "unpaid";
-
-const pesoFormatter = new Intl.NumberFormat("en-PH", {
-  style: "currency",
-  currency: "PHP",
-});
-
-const formatCurrency = (value: number) => pesoFormatter.format(value);
-
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "Not yet paid";
-
-  return new Date(value).toLocaleString([], {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-const getStatusClasses = (status: BillingRecord["status"]) =>
-  status === "paid"
-    ? "bg-[#e8f7ee] text-[#2f7d4b]"
-    : "bg-[#fff4df] text-[#9a6a18]";
-
-export default function BillingPage() {
-  const [activeFilter, setActiveFilter] = useState<BillingFilter>("all");
-  const { data: billings = [], isLoading } = useBillings();
-  const { mutateAsync: markBillingPaid, isPending: postingPayment } = usePayBilling();
-  const [busyBillingId, setBusyBillingId] = useState<number | null>(null);
-
-  const filteredBillings = useMemo(() => {
-    if (activeFilter === "all") {
-      return billings;
-    }
-
-    return billings.filter((billing) => billing.status === activeFilter);
-  }, [activeFilter, billings]);
-
-  const unpaidCount = useMemo(
-    () => billings.filter((billing) => billing.status === "unpaid").length,
-    [billings]
-  );
-  const paidCount = useMemo(
-    () => billings.filter((billing) => billing.status === "paid").length,
-    [billings]
-  );
-  const totalOutstanding = useMemo(
-    () =>
-      billings
-        .filter((billing) => billing.status === "unpaid")
-        .reduce((total, billing) => total + billing.totalPrice, 0),
-    [billings]
-  );
-
-  const handleMarkPaid = async (billingId: number) => {
-    try {
-      setBusyBillingId(billingId);
-      await markBillingPaid({ billingId, method: "CASH" });
-    } finally {
-      setBusyBillingId(null);
-    }
-  };
-
-  return (
-    <RoleGuard allowedRoles={["ADMIN", "CASHIER"]}>
-      <div className="min-h-full p-6 md:p-7">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <section className="rounded-3xl border border-[#d2ebe6] bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#5f8a83]">
-                  Cashier Billing
-                </p>
-                <h1 className="mt-2 text-3xl font-bold text-[#143a35]">
-                  Laboratory billing queue
-                </h1>
-                <p className="mt-2 max-w-3xl text-sm text-[#5f8a83]">
-                  Post payment here before the laboratory can accept a queued test request.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {(["all", "unpaid", "paid"] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    onClick={() => setActiveFilter(filter)}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                      activeFilter === filter
-                        ? "bg-[#143a35] text-white"
-                        : "bg-[#eef7f4] text-[#2f5e57] hover:bg-[#e2f1ec]"
-                    }`}
-                  >
-                    {filter === "all"
-                      ? "All bills"
-                      : filter === "unpaid"
-                        ? "Unpaid"
-                        : "Paid"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#2f5e57]">All Laboratory Bills</p>
-                <BadgeDollarSign size={18} className="text-[#2f9f90]" />
-              </div>
-              <p className="mt-3 text-3xl font-bold text-[#143a35]">{billings.length}</p>
-              <p className="mt-1 text-xs text-[#5f8a83]">Auto-refreshes every 10 seconds</p>
-            </div>
-
-            <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#2f5e57]">Unpaid Bills</p>
-                <Clock3 size={18} className="text-[#d18c1d]" />
-              </div>
-              <p className="mt-3 text-3xl font-bold text-[#143a35]">{unpaidCount}</p>
-              <p className="mt-1 text-xs text-[#5f8a83]">Still locked in the lab queue</p>
-            </div>
-
-            <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#2f5e57]">Paid Bills</p>
-                <CheckCircle2 size={18} className="text-[#2f9f90]" />
-              </div>
-              <p className="mt-3 text-3xl font-bold text-[#143a35]">{paidCount}</p>
-              <p className="mt-1 text-xs text-[#5f8a83]">Ready for lab acceptance</p>
-            </div>
-
-            <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#2f5e57]">Outstanding Amount</p>
-                <CreditCard size={18} className="text-[#2f9f90]" />
-              </div>
-              <p className="mt-3 text-3xl font-bold text-[#143a35]">
-                {formatCurrency(totalOutstanding)}
-              </p>
-              <p className="mt-1 text-xs text-[#5f8a83]">Remaining cashier collection</p>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-[#c8e4de] bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-[#133d37]">Billing table</h2>
-                <p className="mt-1 text-sm text-[#5f8a83]">
-                  Use the payment action to unlock the accept button in the lab queue.
-                </p>
-              </div>
-              <div className="rounded-full bg-[#e3f6f2] px-3 py-1 text-xs font-medium text-[#2e6e64]">
-                {filteredBillings.length} visible
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {isLoading ? (
-                <div className="rounded-xl border border-dashed border-[#cbe6e1] bg-[#f5fbfa] px-4 py-6 text-center text-sm text-[#5c8b84]">
-                  Loading billing records...
-                </div>
-              ) : filteredBillings.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[#cbe6e1] bg-[#f5fbfa] px-4 py-6 text-center text-sm text-[#5c8b84]">
-                  No billing records matched the current filter.
-                </div>
-              ) : (
-                filteredBillings.map((billing) => (
-                  <div
-                    key={billing.billingId}
-                    className="rounded-2xl border border-[#d5ebe6] bg-[#fbfefe] p-4"
-                  >
-                    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-md bg-[#e6f7f3] px-2 py-1 text-xs font-semibold text-[#2e7a6e]">
-                            {billing.billingCode}
-                          </span>
-                          <span
-                            className={`rounded-md px-2 py-1 text-xs font-semibold ${getStatusClasses(
-                              billing.status
-                            )}`}
-                          >
-                            {billing.status === "paid" ? "Paid" : "Unpaid"}
-                          </span>
-                        </div>
-
-                        <div>
-                          <p className="text-base font-semibold text-[#173f39]">
-                            {billing.patientName}
-                          </p>
-                          <p className="text-xs text-[#63867f]">
-                            {billing.patientCode} • Request #{billing.requestId}
-                          </p>
-                        </div>
-
-                        <div className="text-sm text-[#5f8a83]">
-                          <p>
-                            <span className="font-semibold text-[#173f39]">Tests:</span>{" "}
-                            {billing.tests.join(", ") || "No test details"}
-                          </p>
-                          <p>
-                            <span className="font-semibold text-[#173f39]">Requested by:</span>{" "}
-                            {billing.requestedBy || "Doctor"}
-                          </p>
-                          <p>
-                            <span className="font-semibold text-[#173f39]">Requested at:</span>{" "}
-                            {formatDateTime(billing.requestedDate)}
-                          </p>
-                          <p>
-                            <span className="font-semibold text-[#173f39]">Paid at:</span>{" "}
-                            {formatDateTime(billing.paidAt)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex min-w-[220px] flex-col gap-3 rounded-2xl bg-[#f4faf8] p-4">
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#63867f]">
-                            Total bill
-                          </p>
-                          <p className="mt-1 text-2xl font-bold text-[#143a35]">
-                            {formatCurrency(billing.totalPrice)}
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#63867f]">
-                            Payment method
-                          </p>
-                          <p className="mt-1 text-sm font-medium text-[#173f39]">
-                            {billing.paymentMethod ?? "Pending cashier posting"}
-                          </p>
-                        </div>
-
-                        <Button
-                          type="button"
-                          onClick={() => handleMarkPaid(billing.billingId)}
-                          disabled={billing.isPaid || postingPayment}
-                          className="w-full"
-                        >
-                          {busyBillingId === billing.billingId
-                            ? "Posting payment..."
-                            : billing.isPaid
-                              ? "Payment Posted"
-                              : "Mark as Paid"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-        </div>
-      </div>
-    </RoleGuard>
-  );
-}
 import { useState, useMemo, useEffect } from "react";
-import { useProcessPayment } from "@/hooks/Billing/useBilling";
-import { PaymentProps, BillingProps } from "@/types/BillingTypes";
+import RoleGuard from "@/guards/RoleGuard";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import ReceiptModal from "@/components/Modal/ReceiptModal";
 import SweetAlert from "@/utils/SweetAlert";
 import { useForm } from "react-hook-form";
-import { 
-  FileText, CheckCircle2, Clock, 
-  Search, ChevronRight, TrendingUp, AlertCircle 
+import { useProcessPayment } from "@/hooks/Billing/useBilling";
+import { PaymentProps, BillingProps } from "@/types/BillingTypes";
+import {
+  FileText, CheckCircle2, Clock,
+  Search, ChevronRight, TrendingUp, AlertCircle
 } from "lucide-react";
 import api from "@/services/axios";
 
@@ -323,58 +50,44 @@ const BillingDashboard = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
 
-  // Fetch bills from API
-useEffect(() => {
-  const fetchBills = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get("/api/billing");
-      
-      const billsData = res.data.data.map((billing: BillingResponse) => ({
-        billing_id: billing.billing_id,
-        billing_code: billing.billing_code,
-        patient_name: billing.request?.patient?.name || "Unknown",
-        amount: Number(billing.total_price),
-        status: billing.status,
-        date: new Date(billing.date).toISOString().split("T")[0],
-        req_type: billing.request?.req_type || "LABORATORY",
-      }));
-      
-      setBills(billsData);
-    } catch (error) {
-      console.error("Failed to fetch bills:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchBills = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get("/api/billing");
+        const billsData = res.data.data.map((billing: BillingResponse) => ({
+          billing_id: billing.billing_id,
+          billing_code: billing.billing_code,
+          patient_name: billing.request?.patient?.name || "Unknown",
+          amount: Number(billing.total_price),
+          status: billing.status,
+          date: new Date(billing.date).toISOString().split("T")[0],
+          req_type: billing.request?.req_type || "LABORATORY",
+        }));
+        setBills(billsData);
+      } catch (error) {
+        console.error("Failed to fetch bills:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchBills();
-}, []);
+    fetchBills();
+  }, []);
 
- const { mutateAsync: processPayment, isPending: paymentPending } = useProcessPayment(() => {
-});
+  const { mutateAsync: processPayment, isPending: paymentPending } = useProcessPayment(() => {});
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-  } = useForm<PaymentProps>({
-    defaultValues: {
-      method: "CASH",
-    },
+  const { register, handleSubmit, reset } = useForm<PaymentProps>({
+    defaultValues: { method: "CASH" },
   });
 
-  // Filter bills
   const filteredBills = useMemo(() => {
     return bills.filter((bill) => {
       const matchesSearch =
         search === "" ||
         bill.patient_name.toLowerCase().includes(search.toLowerCase()) ||
         bill.billing_code.toLowerCase().includes(search.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === "ALL" || bill.status === statusFilter;
-
+      const matchesStatus = statusFilter === "ALL" || bill.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [search, statusFilter, bills]);
@@ -388,44 +101,34 @@ useEffect(() => {
       .reduce((sum, b) => sum + b.amount, 0),
   };
 
-const onSubmit = async (data: PaymentProps) => {
-  if (!selectedBilling) return;
-  setIsProcessing(true);
-
-  try {
-    await processPayment({
-      ...data,
-      billing_id: selectedBilling.billing_id,
-      amount: selectedBilling.total_price - selectedBilling.discount,
-    });
-    
-    // Show receipt for CASH immediately
-    if (data.method === "CASH") {
-      setTimeout(() => setShowReceipt(true), 500);
-    } else {
-      // Show alert for online transactions
-      SweetAlert.successAlert(
-        "Success",
-        "Payment processed successfully"
-      );
-      reset();
-      setSelectedBilling(null);
-      setTimeout(() => window.location.reload(), 1500);
+  const onSubmit = async (data: PaymentProps) => {
+    if (!selectedBilling) return;
+    setIsProcessing(true);
+    try {
+      await processPayment({
+        ...data,
+        billing_id: selectedBilling.billing_id,
+        amount: selectedBilling.total_price - selectedBilling.discount,
+      });
+      if (data.method === "CASH") {
+        setTimeout(() => setShowReceipt(true), 500);
+      } else {
+        SweetAlert.successAlert("Success", "Payment processed successfully");
+        reset();
+        setSelectedBilling(null);
+        setTimeout(() => window.location.reload(), 1500);
+      }
+    } finally {
+      setIsProcessing(false);
     }
-  } finally {
-    setIsProcessing(false);
-  }
-};
+  };
 
   return (
     <RoleGuard allowedRoles={["CASHIER"]}>
       <div
         className="min-h-screen font-['DM_Sans']"
-        style={{
-          background: "linear-gradient(135deg, #0f2244 0%, #1a3560 55%, #0e3d5c 100%)",
-        }}
+        style={{ background: "linear-gradient(135deg, #0f2244 0%, #1a3560 55%, #0e3d5c 100%)" }}
       >
-        {/* Header */}
         <div className="border-b border-white/10 px-8 py-6">
           <h1 className="font-['DM_Serif_Display'] text-3xl text-white tracking-wide mb-2">
             Billing Management
@@ -434,7 +137,6 @@ const onSubmit = async (data: PaymentProps) => {
         </div>
 
         <div className="px-8 py-8">
-          {/* Stats Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {[
               { label: "Total Bills", value: stats.total, icon: FileText, color: "#0f2244", bg: "#eef1f9" },
@@ -457,12 +159,9 @@ const onSubmit = async (data: PaymentProps) => {
             ))}
           </div>
 
-          {/* Main Content */}
           <div className="grid grid-cols-3 gap-6">
-            {/* Bills List */}
             <div className="col-span-2">
               <div className="bg-white rounded-2xl overflow-hidden">
-                {/* Header */}
                 <div className="px-6 py-4 border-b border-[#dce3ef] flex items-center justify-between gap-4 flex-wrap">
                   <div>
                     <h2 className="text-lg font-semibold text-[#0f2244]">Bills Queue</h2>
@@ -488,17 +187,12 @@ const onSubmit = async (data: PaymentProps) => {
                       <option value="PENDING">Pending</option>
                       <option value="DONE">Completed</option>
                     </select>
-                    <Button 
-                      variant="primary" 
-                      onClick={() => window.location.reload()}
-                      className="!text-xs !px-3"
-                    >
+                    <Button variant="primary" onClick={() => window.location.reload()} className="!text-xs !px-3">
                       Refresh
                     </Button>
                   </div>
                 </div>
 
-                {/* Bills Table */}
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -527,26 +221,17 @@ const onSubmit = async (data: PaymentProps) => {
                         </tr>
                       ) : (
                         filteredBills.map((bill) => (
-                          <tr
-                            key={bill.billing_id}
-                            className="border-b border-[#f0f3fa] hover:bg-[#f7f8fc] transition"
-                          >
+                          <tr key={bill.billing_id} className="border-b border-[#f0f3fa] hover:bg-[#f7f8fc] transition">
                             <td className="px-6 py-3">
                               <span className="font-semibold text-[#0f2244]">{bill.billing_code}</span>
                             </td>
                             <td className="px-6 py-3 text-[#1a2a45]">{bill.patient_name}</td>
                             <td className="px-6 py-3 font-semibold text-[#0f2244]">₱{bill.amount.toLocaleString()}</td>
-                            <td className="px-6 py-3 text-[#6b7da0]">
-                              {new Date(bill.date).toLocaleDateString()}
-                            </td>
+                            <td className="px-6 py-3 text-[#6b7da0]">{new Date(bill.date).toLocaleDateString()}</td>
                             <td className="px-6 py-3">
-                              <span
-                                className={`inline-block px-3 py-1 rounded-lg text-xs font-semibold ${
-                                  bill.status === "DONE"
-                                    ? "bg-[#e0f2f1] text-[#0e7c7b]"
-                                    : "bg-[#fff3e0] text-[#f57c00]"
-                                }`}
-                              >
+                              <span className={`inline-block px-3 py-1 rounded-lg text-xs font-semibold ${
+                                bill.status === "DONE" ? "bg-[#e0f2f1] text-[#0e7c7b]" : "bg-[#fff3e0] text-[#f57c00]"
+                              }`}>
                                 {bill.status}
                               </span>
                             </td>
@@ -584,14 +269,11 @@ const onSubmit = async (data: PaymentProps) => {
               </div>
             </div>
 
-            {/* Payment Panel */}
             <div>
               {selectedBilling ? (
                 <div className="bg-white rounded-2xl p-6 sticky top-8">
                   <div className="h-[3px] -mx-6 mb-4" style={{ background: "#c8102e" }} />
                   <h3 className="font-['DM_Serif_Display'] text-lg text-[#0f2244] mb-4">{selectedBilling.billing_code}</h3>
-
-                  {/* Bill Summary */}
                   <div className="space-y-3 mb-6 pb-6 border-b border-[#dce3ef]">
                     <div className="flex justify-between text-sm">
                       <span className="text-[#6b7da0]">Patient</span>
@@ -609,46 +291,27 @@ const onSubmit = async (data: PaymentProps) => {
                     )}
                     <div className="flex justify-between text-base font-bold">
                       <span>Total Due</span>
-                      <span className="text-[#0f2244]">
-                        ₱{(selectedBilling.total_price - selectedBilling.discount).toFixed(2)}
-                      </span>
+                      <span className="text-[#0f2244]">₱{(selectedBilling.total_price - selectedBilling.discount).toFixed(2)}</span>
                     </div>
                   </div>
-
-                  {/* Payment Form */}
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    <div>
-                      <Select label="Payment Method" {...register("method")}>
-                        <option value="CASH">Cash</option>
-                        <option value="GCASH">GCash</option>
-                        <option value="CARD">Card</option>
-                        <option value="BANK_TRANSFER">Bank Transfer</option>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Input
-                        label="Reference No. (Optional)"
-                        type="text"
-                        placeholder="GCash/Bank reference"
-                        {...register("reference_no")}
-                      />
-                    </div>
-
+                    <Select label="Payment Method" {...register("method")}>
+                      <option value="CASH">Cash</option>
+                      <option value="GCASH">GCash</option>
+                      <option value="CARD">Card</option>
+                      <option value="BANK_TRANSFER">Bank Transfer</option>
+                    </Select>
+                    <Input
+                      label="Reference No. (Optional)"
+                      type="text"
+                      placeholder="GCash/Bank reference"
+                      {...register("reference_no")}
+                    />
                     <div className="flex gap-2 pt-4">
-                      <Button
-                        variant="danger"
-                        type="button"
-                        onClick={() => setSelectedBilling(null)}
-                      >
+                      <Button variant="danger" type="button" onClick={() => setSelectedBilling(null)}>
                         Cancel
                       </Button>
-                      <Button
-                        variant="primary"
-                        type="submit"
-                        isLoading={paymentPending || isProcessing}
-                        className="flex-1"
-                      >
+                      <Button variant="primary" type="submit" isLoading={paymentPending || isProcessing} className="flex-1">
                         Process Payment
                       </Button>
                     </div>
@@ -663,22 +326,20 @@ const onSubmit = async (data: PaymentProps) => {
               )}
             </div>
           </div>
+
           {showReceipt && selectedBilling && (
-              <ReceiptModal
-                billingCode={selectedBilling.billing_code}
-                patientName={selectedBilling.patient.name}
-                amount={selectedBilling.total_price - selectedBilling.discount}
-                paymentMethod="CASH"
-                onClose={() => {
-                  setShowReceipt(false);
-                  window.location.reload();
-                }}
-                onPrint={() => window.print()}
-              />
-            )}
+            <ReceiptModal
+              billingCode={selectedBilling.billing_code}
+              patientName={selectedBilling.patient.name}
+              amount={selectedBilling.total_price - selectedBilling.discount}
+              paymentMethod="CASH"
+              onClose={() => { setShowReceipt(false); window.location.reload(); }}
+              onPrint={() => window.print()}
+            />
+          )}
         </div>
       </div>
-      {/* Payment Confirmation Dialog */}
+
       {showPaymentConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40">
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-8 text-center space-y-6">
@@ -687,26 +348,13 @@ const onSubmit = async (data: PaymentProps) => {
             </div>
             <div>
               <h2 className="font-['DM_Serif_Display'] text-xl text-[#0f2244] mb-2">Payment Successful</h2>
-              <p className="text-[#6b7da0] text-sm">Amount: ₱{selectedBilling?.total_price.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</p>
+              <p className="text-[#6b7da0] text-sm">
+                Amount: ₱{selectedBilling?.total_price.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+              </p>
             </div>
             <div className="flex gap-3">
-              <Button
-                variant="danger"
-                onClick={() => setShowPaymentConfirm(false)}
-                className="flex-1"
-              >
-                Close
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setShowPaymentConfirm(false);
-                  if (selectedBilling) {
-                    setShowReceipt(true);
-                  }
-                }}
-                className="flex-1"
-              >
+              <Button variant="danger" onClick={() => setShowPaymentConfirm(false)} className="flex-1">Close</Button>
+              <Button variant="primary" onClick={() => { setShowPaymentConfirm(false); if (selectedBilling) setShowReceipt(true); }} className="flex-1">
                 Show Receipt
               </Button>
             </div>

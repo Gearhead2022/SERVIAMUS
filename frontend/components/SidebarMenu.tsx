@@ -59,7 +59,6 @@ export default function SidebarMenu() {
         <div className="flex items-center gap-2.5 overflow-hidden">
           {/* <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(251,146,60,0.35)] shrink-0" /> */}
           <img src="/images/serviamus.jpeg" className="rounded-2xl" alt="" width={50} height={50} />
-          <img src="images/serviamus.jpeg" className="rounded-2xl" alt="" width={50} height={50} />
           <div className={clsx(
             "overflow-hidden transition-all duration-300",
             isOpen ? "w-auto opacity-100" : "w-0 opacity-0"

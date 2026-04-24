@@ -1,6 +1,5 @@
-// HAS 400 ERROR WHEN TESTING WITHOUT ACCESS
 import api from "./axios";
-import { CreateRequestProps, UsersProps } from "@/types/RequestTypes";
+import { CreateRequestProps} from "@/types/RequestTypes";
 
 export const getPrevVitalSigns = async (patient_id: number) => {
   const res = await api.get("/api/request/prevVitals", {
