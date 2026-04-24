@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (doctor_user) {
-      router.replace("/doctordashboard");
+      router.replace("/docDashboard");
     }
 
     if (laboratory_user) {

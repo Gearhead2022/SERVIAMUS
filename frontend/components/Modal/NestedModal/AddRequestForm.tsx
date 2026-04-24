@@ -16,7 +16,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { requestSchema } from "@/schemas/request.schema";
 import { UsersProps, VitalSignProps } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
-import { useRequest } from "@/hooks/Patient/usePatientRegistration";
 import { useLabTestCatalog } from "@/hooks/Lab/useLab";
 import { useRequest, useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
 import Input from "@/components/ui/Input";
@@ -417,7 +416,9 @@ const RequestForm: React.FC<{
               )}
             </div>
           </div>
-        )}
+        ): 
+        null
+        };
 
         {/* ── CERTIFICATE fields ── */}
         {reqType === "CERTIFICATE" && (
