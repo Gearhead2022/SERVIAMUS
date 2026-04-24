@@ -1,8 +1,24 @@
-import { PrismaClient, LaboratoryRequestItemStatus, Prisma } from "@prisma/client";
+import {
+  BillStatus,
+  LaboratoryRequestItemStatus,
+  PaymentMethod,
+  Prisma,
+  PrismaClient,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
+import {
+  ensureLabBillingForRequest,
+  syncBillingStatusByRequestId,
+} from "../src/modules/billing/billing.helpers";
 import { createLaboratoryRequestWithItems } from "../src/modules/lab/lab.helpers";
 import { upsertStructuredLabResult } from "../src/modules/lab/lab.result-writers";
-import { normalizeLabForm, requestStatusFromItemStatuses } from "../src/modules/lab/lab.utils";
+import {
+  categorizeLabTest,
+  normalizeLabForm,
+  requestStatusFromItemStatuses,
+  toSchemaKey,
+} from "../src/modules/lab/lab.utils";
+import type { LabResultPayload } from "../src/modules/lab/lab.types";
 
 const prisma = new PrismaClient();
 
