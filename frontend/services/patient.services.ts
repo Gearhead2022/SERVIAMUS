@@ -2,9 +2,9 @@ import api from "./axios";
 import { PatientProps } from "@/types/PatientTypes";
 
 export const fetchAllPatient = async (search: string) => {
-  const res = await api.get("/api/patient/getAllPatients", { 
-      params: { search }
-    }
+  const res = await api.get("/api/patient/getAllPatients", {
+    params: { search }
+  }
   );
   return res.data.data;
 };

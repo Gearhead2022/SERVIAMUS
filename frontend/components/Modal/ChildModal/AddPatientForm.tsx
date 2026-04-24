@@ -81,7 +81,7 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
           <div>
             <Input
               label="Contact Number"
-              
+
               placeholder="+63 9XX XXX XXXX"
               {...register("contact_number")}
               error={errors.contact_number?.message}
@@ -91,13 +91,13 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
 
         {/* Address — full width */}
         <div>
-           <Input
-              label="Address"
-              type="text"
-              placeholder="Street, City, Province"
-              {...register("address")}
-              error={errors.address?.message}
-            />
+          <Input
+            label="Address"
+            type="text"
+            placeholder="Street, City, Province"
+            {...register("address")}
+            error={errors.address?.message}
+          />
         </div>
 
         {/* 2-column row: Birth Date + Sex */}

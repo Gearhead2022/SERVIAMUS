@@ -47,7 +47,7 @@ export const loginUser = async (username: string, password: string) => {
     include: {
       roles: {
         include: {
-            role: true
+          role: true
         }
       }
     }
@@ -86,12 +86,12 @@ export const loginUser = async (username: string, password: string) => {
 };
 
 export const getRoles = async () => {
-    const get = await prisma.roleTypes.findMany({
-        select:{
-            role_id:true,
-            role_name:true,
-            role_desc: true,
-        }
-    })
-    return get;
+  const get = await prisma.roleTypes.findMany({
+    select: {
+      role_id: true,
+      role_name: true,
+      role_desc: true,
+    }
+  })
+  return get;
 }

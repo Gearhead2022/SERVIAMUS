@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(user);
     setIsAuthenticated(true);
-    
+
     const admin_user = user.roles.includes('ADMIN');
     const doctor_user = user.roles.includes('DOCTOR');
     const laboratory_user = user.roles.includes('LAB') || user.roles.includes('LABORATORY');
