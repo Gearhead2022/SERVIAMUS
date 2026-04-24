@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { consultationRecordHistory, patientHistoricalRecord, patientHistoricalRecordByRequest, createConsultationResult, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getPatientPrescription, getStatistics, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
+import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getPatientPrescription, getStatistics, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
 import { RequestStatus } from "@prisma/client";
 
 
@@ -74,7 +74,7 @@ export const getPatientRecordController = async (req: Request, res: Response) =>
   try {
     const patientId = Number(req.params.id);
 
-    const request = await patientHistoricalRecord(patientId);
+    const request = await consultationRecords(patientId);
 
     return res.status(200).json({
       success: true,
@@ -227,7 +227,7 @@ export const getPrescriptionByRequestController = async (req: Request, res: Resp
       });
     }
 
-    const prescriptions = await patientHistoricalRecordByRequest(requestId);
+    const prescriptions = await consultationRecordsByRequest(requestId);
 
     return res.status(200).json({
       success: true,

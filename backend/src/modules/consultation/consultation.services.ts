@@ -1,5 +1,7 @@
+import { request } from "express";
 import { prisma } from "../../config/prismaClient";
-import { MedicalCertificatePayload, PatientConsultationRecordsPayload, PrescriptionPayload } from "./consultation.types";import { RequestStatus } from "@prisma/client";
+import { MedicalCertificatePayload, PatientConsultationRecordsPayload, PrescriptionPayload } from "./consultation.types";
+import { RequestStatus } from "@prisma/client";
 /**
  * CONSULTATION RECORDS
  */
@@ -20,8 +22,8 @@ export const createConsultationResult = async (
       throw new Error("No vitals found for this patient");
     }
 
-    const records = await tx.patientHistoricalRecord.upsert({
-     where: { phr_id: payload.phr_id },
+    const records = await tx.consultationRecords.upsert({
+      where: { patient_id: payload.patient_id },
       update: {
         pmh_allergy: payload.pmh_allergy ?? false,
         pmh_admission: payload.pmh_admission ?? false,
@@ -63,10 +65,6 @@ export const createConsultationResult = async (
       },
       create: {
         patient_id: payload.patient_id,
-        vs_id: vitals.vs_id, 
-        hist_illness: payload.hist_illness, 
-        consultation_date: new Date(payload.consultation_date),
-        chief_complaint: payload.chief_complaint,  
 
         pmh_allergy: payload.pmh_allergy ?? false,
         pmh_admission: payload.pmh_admission ?? false,
@@ -227,14 +225,14 @@ export const requestAction = async (
   });
 };
 
-export const patientHistoricalRecord = async (patient_id: number) => {
+export const consultationRecords = async (patient_id: number) => {
   const today = new Date();
   const startOfDay = new Date(today.setHours(0, 0, 0, 0));
   const endOfDay = new Date(today.setHours(23, 59, 59, 999));
 
   return prisma.$transaction(async (tx) => {
 
-    const baseline = await tx.patientHistoricalRecord.findFirst({
+    const baseline = await tx.consultationRecords.findUnique({
       where: { patient_id },
     });
 
@@ -339,19 +337,18 @@ export const createPresciptions = async (payload: PrescriptionPayload) => {
         gen_notes: payload.gen_notes,
 
         medicines: {
-        create: payload.medicines.map((m) => ({
-          medicine: m.medicine_name,
-          dosage: m.dose ?? m.dose ?? "",
-          strength: m.strength,
-          form: m.form,
-          dose: m.dose,
-          frequency: m.frequency,
-          route: m.route,
-          duration: m.duration,
-          quantity: m.quantity,
-          instruction: m.instruction,
-        })),
-      },
+          create: payload.medicines.map((m) => ({
+            medicine_name: m.medicine_name,
+            strength: m.strength,
+            form: m.form,
+            dose: m.dose,
+            frequency: m.frequency,
+            route: m.route,
+            duration: m.duration,
+            quantity: m.quantity,
+            instruction: m.instruction,
+          })),
+        },
       },
       include: {
         medicines: true, // optional but useful
@@ -388,7 +385,7 @@ export const getAllPatientConsultationRecord = async (
     },
   });
 
-  const baseline = await prisma.patientHistoricalRecord.findFirst({
+  const baseline = await prisma.consultationRecords.findUnique({
     where: { patient_id },
   });
 
@@ -474,7 +471,7 @@ export const getPatientPrescription = async (consultation_id: number) => {
   })
 }
 
-export const patientHistoricalRecordByRequest = async (consultation_id: number) => {
+export const consultationRecordsByRequest = async (consultation_id: number) => {
   return prisma.$transaction(async (tx) => {
 
     const consultation = await tx.consultation.findFirst({
@@ -489,7 +486,7 @@ export const patientHistoricalRecordByRequest = async (consultation_id: number) 
     if (!consultation) return null;
 
     const baseline = consultation.phr_id
-      ? await tx.patientHistoricalRecord.findUnique({
+      ? await tx.consultationRecords.findUnique({
         where: { phr_id: consultation.phr_id },
       })
       : null;
@@ -578,7 +575,7 @@ export const consultationRecordHistory = async () => {
       .map(c => c.phr_id)
       .filter(Boolean) as number[];
 
-    const baselines = await tx.patientHistoricalRecord.findMany({
+    const baselines = await tx.consultationRecords.findMany({
       where: {
         phr_id: {
           in: phrIds,
@@ -624,7 +621,7 @@ export const consultationRecordHistory = async () => {
         req_id: c.consultRequest.request.req_id,
         patient_id: c.consultRequest.request.patient_id,
         req_date: c.consultRequest.request.req_date,
-        req_type: c.consultRequest.request.req_type,
+        req_type: c.consultRequest.request.req_date,
         status: c.consultRequest.request.status,
       }
 
@@ -882,7 +879,7 @@ export const medicalCertificateRecordHistory = async () => {
         req_id: c.med_cert_request.request.req_id,
         patient_id: c.med_cert_request.request.patient_id,
         req_date: c.med_cert_request.request.req_date,
-        req_type: c.med_cert_request.request.req_type,
+        req_type: c.med_cert_request.request.req_date,
         status: c.med_cert_request.request.status,
       }
 

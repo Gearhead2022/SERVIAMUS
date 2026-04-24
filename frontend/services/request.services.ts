@@ -1,5 +1,5 @@
 import api from "./axios";
-import { CreateRequestProps} from "@/types/RequestTypes";
+import { CreateRequestProps, UsersProps } from "@/types/RequestTypes";
 
 export const getPrevVitalSigns = async (patient_id: number) => {
   const res = await api.get("/api/request/prevVitals", {

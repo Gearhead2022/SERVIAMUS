@@ -469,8 +469,8 @@ const PatientConsultationForm: React.FC<{ patient: PatientProps | undefined, vit
   function mapToPrisma(data: RegisterConsultationFormValues) {
     return {
       // ─── STEP 1 ─────────────────────────
-      cons_id: cons_id, // ⚠️ ensure this exists or remove if create mode
-      patient_id: patient?.patient_id ?? 0, // safer fallback
+      cons_id: cons_id,
+      patient_id: patient?.patient_id ?? 0,
 
       full_name: data.name,
       consultation_date: new Date(data.consultation_date),

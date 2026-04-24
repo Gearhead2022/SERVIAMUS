@@ -2,15 +2,40 @@
 import { prisma } from "../../config/prismaClient";
 import { addToQueue } from "../queue/queue.services";
 
-export const createRequest = async (payload: any) => {
-  const { patient_id, req_type, req_date, req_by, test } = payload;
+export const getPrevVitalSigns = async (patient_id: number) => {
+  return prisma.$transaction(async (tx) => {
+    const prevVitals = await tx.vitallSign.findFirst({
+      where: { patient_id },
+      orderBy: { vs_id: "desc" },
+      select: {
+        bp: true,
+        rr: true,
+        cr: true,
+        temp: true,
+        wt: true,
+        ht: true,
+        created_at: true,
+        patient: {
+          select: {
+            patient_code: true
+          }
+        }
+
+
+      },
+    });
+
+    return prevVitals;
+  });
+};
 
   const result = await prisma.$transaction(async (tx) => {
     // Create the request
     const request = await tx.request.create({
       data: {
-        patient_id,
-        req_type,
+        patient_id: payload.patient_id,
+        req_date: new Date(payload.req_date),
+        req_type: payload.req_type as 'CONSULTATION' | 'LABORATORY' | 'CERTIFICATE',
         status: "WAITING",
         req_date: new Date(req_date),
       },
@@ -81,12 +106,23 @@ export const createRequest = async (payload: any) => {
       });
     }
 
-    return {
-      request: {
-        req_id: request.req_id,
-        req_type,
-      },
-    };
+    if (payload.req_type === "CERTIFICATE") {
+
+      const med = await tx.medicalCertificateRequest.create({
+        data: {
+          req_id: request.req_id,
+          physician: payload.physician,
+          purpose: payload.purpose,
+        },
+        include: {
+          certificate: true
+        }
+      });
+
+      return { request, med };
+    }
+
+    throw new Error("Invalid request type");
   });
 
   // Add to queue AFTER transaction completes successfully
@@ -95,86 +131,77 @@ export const createRequest = async (payload: any) => {
   return result;
 };
 
-export const getPrevVitalSigns = async (patient_id: number) => {
-  const latestRecord = await prisma.patientHistoricalRecord.findFirst({
-    where: { patient_id },
-    include: { vitals: true },
-    orderBy: { created_at: "desc" },
-  });
-
-  if (!latestRecord || !latestRecord.vitals) {
-    return null;
-  }
-
-  return {
-    vs_id: latestRecord.vitals.vs_id,
-    bp: latestRecord.vitals.bp,
-    temp: latestRecord.vitals.temp,
-    cr: latestRecord.vitals.cr,
-    rr: latestRecord.vitals.rr,
-    wt: latestRecord.vitals.wt,
-    ht: latestRecord.vitals.ht,
-    created_at: latestRecord.created_at,
-  };
-};
-
 export const getAllRegisteredUsers = async () => {
-  return prisma.users.findMany({
-    where: { is_active: true },
-    select: {
-      user_id: true,
-      name: true,
-      username: true,
-      license_no: true,
-      title: true,
-      ptr_no: true,
-      roles: {
-        select: {
-          role: {
-            select: {
-              role_id: true,
-              role_name: true,
-            },
-          },
+  return prisma.$transaction(async (tx) => {
+    const data = tx.users.findMany({
+      where: {
+        is_active: true,
+        roles: {
+          some: {
+            role: {
+              role_name: 'DOCTOR'
+            }
+          }
+        }
+      },
+      select: {
+        user_id: true,
+        username: true,
+        name: true,
+        license_no: true,
+        title: true,
+        ptr_no: true,
+      }
+    });
+
+    return data;
+  })
+}
+
+export const getRequestData = async (request_id: number) => {
+  const today = new Date();
+  const startOfDay = new Date(today);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(today);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  return prisma.$transaction(async (tx) => {
+    const request = await tx.request.findFirst({
+      where: {
+        req_id: request_id,
+        req_date: {
+          gte: startOfDay,
+          lte: endOfDay,
         },
       },
-    },
-  });
-};
+      include: {
+        cert: {
+          include: {
+            certificate: true,
+          },
+        },
+        consult: true,
+        patient: true,
+      },
+    });
 
-export const getRequestData = async (requestId: number) => {
-  const request = await prisma.request.findUnique({
-    where: { req_id: requestId },
-    include: {
-      patient: true,
+    if (!request?.consult?.cons_id) {
+      return request;
+    }
+
+    const consultation = await tx.consultation.findFirst({
+      where: {
+        cons_id: request.consult.cons_id,
+      },
+    });
+
+    return {
+      ...request,
       consult: {
-        include: {
-          vitals: true,
-          doctor: true,
-          consultations: true,
-        },
+        ...request.consult,
+        consultation,
       },
-      laboratory: {
-        include: {
-          items: {
-            include: {
-              test: true,
-            },
-          },
-        },
-      },
-      medical_certificate: {
-        include: {
-          doctor: true,
-          certificate: true,
-        },
-      },
-    },
+    };
   });
-
-  if (!request) {
-    throw new Error("Request not found");
-  }
-
-  return request;
 };

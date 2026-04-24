@@ -10,6 +10,7 @@ import {
   Search, ArrowRight, Activity,
   Stethoscope, TestTube2, UserSearch,
   Calendar, TrendingUp,
+  User,
 } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useGetAllRequest, useRequestAction, useConsultationRecords, useStatisticsRecords } from "@/hooks/Consultation/useConsultation";
@@ -22,8 +23,8 @@ import AddPrescriptionForm from "@/components/Modal/ChildModal/AddPrescriptionFo
 import AddMedicalCertificateForm from "@/components/Modal/ChildModal/AddMedicalCertificateForm";
 import { useRequestData } from "@/hooks/Consultation/useConsultation";
 import { PatientProps } from "@/types/PatientTypes";
-
-const DOCTOR = { name: "Dr. Maria Santos", title: "General Practitioner", initials: "MS" };
+import { useAuth } from "@/context/AuthContext";
+import { formattedIsoPH, formattedIsoTimePH } from "@/utils/Date";
 
 interface ActivityItem {
   id: number; action: string; patient: string;
@@ -231,6 +232,7 @@ function CertificateActions({ currentRequest, onMedical, onDone }: CertificateCa
 
 //  MAIN PAGE
 const Dashboard = () => {
+  const { user } = useAuth();
 
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
@@ -240,12 +242,6 @@ const Dashboard = () => {
   const [addConsultationOpen, setAddConsultationOpen] = useState<boolean>(false);
   const [addAssesmentOpen, setAddAssesmentOpen] = useState<boolean>(false);
   const [addPrescriptionOpen, setAddPrescriptionOpen] = useState<boolean>(false);
-
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("en-PH", {
-    weekday: "long", month: "long", day: "numeric", year: "numeric",
-  });
-  const timeStr = now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });
 
   const [currentRequestId, setCurrentRequestId] = useState<number | null>(null);
 
@@ -306,7 +302,7 @@ const Dashboard = () => {
   const getStorageKey = (type: string) =>
     type === "CONSULTATION" ? "consult_id" : "cert_id";
 
-  console.log('data_from_main', currentRequest)
+  // console.log('data_from_main', currentRequest)
 
   const handleRequestAction = async (request_id: number, status: Status, request: RequestProps, custom_id: number | undefined) => {
     const confirmed = await SweetAlert.confirmationAlert2(
@@ -330,6 +326,8 @@ const Dashboard = () => {
       }
 
       setCurrentRequestId(request_id);
+    } else if (status === 'CANCELED') {
+      return;
     } else {
       localStorage.removeItem("request_id");
       localStorage.removeItem(key);
@@ -383,34 +381,17 @@ const Dashboard = () => {
               <div className="flex items-center gap-4">
                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
                   style={{ background: "#c8102e", boxShadow: "0 4px 20px rgba(200,16,46,0.4)" }}>
-                  {DOCTOR.initials}
+                  <User />
                 </div>
                 <div>
                   <h1 className="text-black text-xl leading-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
-                    <strong className="text-black/50">Good morning,</strong> {DOCTOR.name}
+                    <strong className="text-black/50">Good morning,</strong> {user?.name ?? "User"}
                   </h1>
                   <p className="text-[12px] mt-0.5 text-black/50">
-                    {DOCTOR.title} &nbsp;·&nbsp; {dateStr} &nbsp;·&nbsp;
-                    <span className="font-mono">{timeStr}</span>
+                    {user?.title ?? "Doctor"} &nbsp;·&nbsp; {formattedIsoPH()} &nbsp;·&nbsp;
+                    <span className="font-mono">{formattedIsoTimePH()}</span>
                   </p>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 flex-wrap">
-                {[
-                  { label: "View Requests", href: "#pending", solid: false },
-                  { label: "Patient Search", href: "/doctor/patients", solid: false },
-                  { label: "Start Consult", href: "#queue", solid: true },
-                ].map(({ label, href, solid }) => (
-                  <Link key={label} href={href}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all"
-                    style={solid
-                      ? { background: "#c8102e", color: "white", boxShadow: "0 4px 14px rgba(200,16,46,0.4)" }
-                      : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.12)" }
-                    }>
-                    {label}
-                  </Link>
-                ))}
               </div>
             </div>
           </div>
@@ -503,7 +484,7 @@ const Dashboard = () => {
                             return requestInfo.cert?.mcr_id;
                           };
 
-                          const handleAcceptRequest = (requestInfo: RequestProps) => {
+                          const handleAcceptRequest = (requestInfo: RequestProps, type: string) => {
                             const relatedId = getRelatedId(requestInfo);
 
                             if (!relatedId) {
@@ -513,7 +494,7 @@ const Dashboard = () => {
 
                             handleRequestAction(
                               requestInfo.req_id,
-                              "SERVING",
+                              type as Status,
                               requestInfo,
                               relatedId
                             );
@@ -572,14 +553,14 @@ const Dashboard = () => {
                                       variant="acceptRequest"
                                       className="!text-[10.5px] !px-2.5 !py-1 !rounded-lg !font-semibold"
                                       iconPosition="left"
-                                      onClick={() => handleAcceptRequest(requestInfo)}
+                                      onClick={() => handleAcceptRequest(requestInfo, 'SERVING')}
                                     >
                                       Accept
                                     </Button>
                                     <Button variant="declineRequest"
                                       className="!text-[10.5px] !px-2.5 !py-1 !rounded-lg !font-semibold"
                                       iconPosition="left"
-                                      onClick={() => handleAcceptRequest(requestInfo)}>
+                                      onClick={() => handleAcceptRequest(requestInfo, 'CANCELED')}>
                                       Decline
                                     </Button>
                                   </div>

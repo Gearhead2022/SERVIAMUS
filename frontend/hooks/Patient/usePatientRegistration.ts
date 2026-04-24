@@ -3,10 +3,8 @@ import { createPatient, fetchAllPatient, updatePatient } from "@/services/patien
 import SweetAlert from "@/utils/SweetAlert";
 import { VitalSignProps} from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
-import { getPrevVitalSigns, createRequest, getAllUsers as getAllRegisteredUsers } from "@/services/request.services";import { UsersProps } from "@/types/RequestTypes";
-
-
-
+import { getPrevVitalSigns, createRequest, getAllUsers as getAllRegisteredUsers } from "@/services/request.services";
+import { UsersProps } from "@/types/RequestTypes";
 
 export const useGetAllpatient = (search: string) => {
   return useQuery<PatientProps[]>({
@@ -17,7 +15,7 @@ export const useGetAllpatient = (search: string) => {
 
 export const usePatient = (closeModal: () => void) => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: createPatient,
 

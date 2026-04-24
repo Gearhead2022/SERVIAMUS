@@ -84,4 +84,3 @@ export const getRequestDataController = async (req: Request, res: Response) => {
     });
   }
 };
-

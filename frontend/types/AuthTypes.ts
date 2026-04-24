@@ -15,6 +15,7 @@ export interface LoginResponse {
     roles: string[];
     username: string;
     name: string;
+    title: string;
   };
 }
 
