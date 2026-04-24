@@ -12,6 +12,7 @@ interface AuthUser {
   roles: string[];
   username: string;
   name: string;
+  title: string;
 }
 
 interface AuthContextType {
@@ -55,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const cashier_user = user.roles.includes('CASHIER');
 
     if (admin_user) {
-      router.replace("/dashboard"); 
+      router.replace("/dashboard");
     }
 
     if (doctor_user) {

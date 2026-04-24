@@ -1,7 +1,6 @@
 import api from "./axios";
 import { ConsultationResultProps, MedicalCertificateProps, PrescriptionProps, Status } from "@/types/ConsultationTypes";
 
-
 export const consultationResults = async (
   data: ConsultationResultProps
 ) => {
