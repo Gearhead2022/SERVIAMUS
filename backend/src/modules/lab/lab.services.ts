@@ -1,19 +1,28 @@
-import { Prisma } from "@prisma/client";
+import { LaboratoryCategory, Prisma } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
+import { LabModuleError } from "./lab.errors";
 import { CreateLabRequestInput, SaveLabResultInput } from "./lab.types";
 import { createLaboratoryRequestWithItems } from "./lab.helpers";
 import { upsertStructuredLabResult } from "./lab.result-writers";
 import {
   normalizeLabForm,
   requestStatusFromItemStatuses,
+  resolveApiLabCategory,
+  resolveCombinedLabResultFamily,
+  resolveLabRecordGroup,
   serializeLabResultPayload,
   splitLabTests,
-  toApiLabCategory,
   toApiLabStatus,
-  toDbLabCategory,
   toDbLabStatus,
   toSchemaKey,
 } from "./lab.utils";
+
+type LabCatalogItem = {
+  test_id: number;
+  name: string;
+  category: LaboratoryCategory;
+  schema_key: string | null;
+};
 
 type RawPatientRow = {
   patient_id: number;
@@ -35,6 +44,12 @@ type RawPatientRecordRow = RawPatientRow & {
   vital_signs_count: number;
 };
 
+type PatientLabRecordsFilters = {
+  dateFrom?: string;
+  dateTo?: string;
+  recordGroup?: string;
+};
+
 const labRequestInclude = Prisma.validator<Prisma.LaboratoryRequestInclude>()({
   request: {
     select: {
@@ -42,6 +57,21 @@ const labRequestInclude = Prisma.validator<Prisma.LaboratoryRequestInclude>()({
       patient_id: true,
       req_date: true,
       status: true,
+      billing: {
+        select: {
+          billing_id: true,
+          billing_code: true,
+          total_price: true,
+          status: true,
+          payments: {
+            select: {
+              payment_date: true,
+            },
+            orderBy: [{ payment_date: "desc" }],
+            take: 1,
+          },
+        },
+      },
       patient: {
         select: {
           patient_id: true,
@@ -87,10 +117,54 @@ const normalizeRequestedBy = (value?: string | null) => {
   return trimmed ? trimmed : null;
 };
 
+const parseRequestedDate = (value?: string) => {
+  if (!value) {
+    return new Date();
+  }
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    throw new LabModuleError("Requested date is invalid.", 400);
+  }
+
+  return parsedDate;
+};
+
+const parseRecordFilterDate = (
+  value: string | undefined,
+  label: string,
+  endOfDay = false
+) => {
+  if (!value?.trim()) {
+    return null;
+  }
+
+  const normalizedValue = value.includes("T")
+    ? value
+    : `${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}`;
+  const parsedDate = new Date(normalizedValue);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    throw new LabModuleError(`${label} is invalid.`, 400);
+  }
+
+  return parsedDate;
+};
+
+const ensurePaidBilling = (isPaid: boolean, message: string) => {
+  if (!isPaid) {
+    throw new LabModuleError(message, 409);
+  }
+};
+
 const toDisplayItem = (
   record: LabRequestRecord,
   item: LabRequestRecord["items"][number]
 ) => {
+  const latestPayment = record.request.billing?.payments[0] ?? null;
+  const isPaid = record.request.billing?.status === "DONE";
+
   const completedTests = record.items
     .filter((entry) => entry.status === "DONE")
     .map((entry) => entry.test.name);
@@ -119,7 +193,21 @@ const toDisplayItem = (
     requestedDate: record.request.req_date.toISOString(),
     requestStatus: toApiLabStatus(requestStatus),
     status: toApiLabStatus(item.status),
-    category: toApiLabCategory(item.test.category),
+    billingCode: record.request.billing?.billing_code ?? null,
+    billingStatus: isPaid ? "paid" : "unpaid",
+    billingTotal: record.request.billing ? Number(record.request.billing.total_price) : 0,
+    isPaid,
+    paidAt: latestPayment?.payment_date?.toISOString() ?? null,
+    category: resolveApiLabCategory({
+      category: item.test.category,
+      schemaKey: item.test.schema_key,
+      testName: item.test.name,
+    }),
+    recordGroup: resolveLabRecordGroup({
+      category: item.test.category,
+      schemaKey: item.test.schema_key,
+      testName: item.test.name,
+    }),
     schemaKey: item.test.schema_key,
     tests: record.items.map((entry) => entry.test.name),
     testType: item.test.name,
@@ -160,16 +248,48 @@ const getDisplayItemById = async (tx: Prisma.TransactionClient, labId: number) =
   });
 
   if (!record) {
-    throw new Error("Lab request not found.");
+    throw new LabModuleError("Lab request not found.", 404);
   }
 
   const item = record.items.find((entry) => entry.item_id === labId);
 
   if (!item) {
-    throw new Error("Lab request item not found.");
+    throw new LabModuleError("Lab request item not found.", 404);
   }
 
   return toDisplayItem(record, item);
+};
+
+const getRelatedCombinedLabResultItems = async (
+  tx: Prisma.TransactionClient,
+  laboratoryRequestId: number,
+  family: NonNullable<ReturnType<typeof resolveCombinedLabResultFamily>>
+) => {
+  const items = await tx.laboratoryRequestItem.findMany({
+    where: {
+      laboratory_request_id: laboratoryRequestId,
+    },
+    select: {
+      item_id: true,
+      processed_by: true,
+      result_payload: true,
+      status: true,
+      test: {
+        select: {
+          name: true,
+          schema_key: true,
+        },
+      },
+    },
+  });
+
+  return items.filter((item) =>
+    resolveCombinedLabResultFamily({
+      schemaKey: item.test.schema_key,
+      testName: item.test.name,
+    })
+      === family
+  );
 };
 
 const syncParentRequestStatus = async (
@@ -189,7 +309,7 @@ const syncParentRequestStatus = async (
   });
 
   if (!parentRequest) {
-    throw new Error("Lab request not found.");
+    throw new LabModuleError("Lab request not found.", 404);
   }
 
   await tx.request.update({
@@ -212,6 +332,82 @@ export const getAllUsersService = async () => {
       },
     },
   });
+};
+
+const getCatalogPreferenceScore = (item: LabCatalogItem) => {
+  const normalizedName = item.name.trim().toLowerCase();
+
+  if (item.schema_key === "onehOGTT" && normalizedName.includes("1h")) {
+    return 100;
+  }
+
+  if (item.schema_key === "onehOGTT" && normalizedName.includes("50g")) {
+    return 100;
+  }
+
+  if (item.schema_key === "twohOGTT" && normalizedName.includes("2h")) {
+    return 100;
+  }
+
+  if (item.schema_key === "twohOGTT" && normalizedName.includes("75g")) {
+    return 100;
+  }
+
+  if (
+    item.schema_key === "OGTT" &&
+    (normalizedName === "ogtt" || normalizedName.includes("100g"))
+  ) {
+    return 100;
+  }
+
+  return normalizedName.length > 4 ? 10 : 0;
+};
+
+export const getLabTestsService = async () => {
+  const tests = await prisma.laboratoryTest.findMany({
+    select: {
+      test_id: true,
+      name: true,
+      category: true,
+      schema_key: true,
+    },
+    orderBy: [{ name: "asc" }, { test_id: "asc" }],
+  });
+
+  const groupedByKey = new Map<string, LabCatalogItem[]>();
+
+  tests.forEach((test) => {
+    const groupingKey = test.schema_key?.trim() || test.name.trim().toLowerCase();
+    const currentGroup = groupedByKey.get(groupingKey) ?? [];
+    currentGroup.push(test);
+    groupedByKey.set(groupingKey, currentGroup);
+  });
+
+  return Array.from(groupedByKey.values())
+    .map((group) =>
+      [...group].sort((left, right) => {
+        const scoreDiff =
+          getCatalogPreferenceScore(right) - getCatalogPreferenceScore(left);
+
+        if (scoreDiff !== 0) {
+          return scoreDiff;
+        }
+
+        return left.name.localeCompare(right.name);
+      })[0]
+    )
+    .map((test) => ({
+      testId: test.test_id,
+      name: test.name,
+      displayName: test.name,
+      category: resolveApiLabCategory({
+        category: test.category,
+        schemaKey: test.schema_key,
+        testName: test.name,
+      }),
+      schemaKey: test.schema_key,
+    }))
+    .sort((left, right) => left.displayName.localeCompare(right.displayName));
 };
 
 export const searchPatientsService = async (search?: string) => {
@@ -298,7 +494,7 @@ export const createLabRequestService = async ({
     const normalizedTests = splitLabTests(tests.join(", "));
 
     if (!normalizedTests.length) {
-      throw new Error("At least one laboratory test is required.");
+      throw new LabModuleError("At least one laboratory test is required.", 400);
     }
 
     const patient = await tx.patients.findUnique({
@@ -307,18 +503,19 @@ export const createLabRequestService = async ({
     });
 
     if (!patient) {
-      throw new Error("Selected patient was not found.");
+      throw new LabModuleError("Selected patient was not found.", 404);
     }
 
     const finalRequestedBy =
       normalizeRequestedBy(requestedBy) ?? (await getUserName(tx, userId));
+    const resolvedRequestedDate = parseRequestedDate(requestedDate);
 
     const request = await tx.request.create({
       data: {
         patient_id: patientId,
         req_type: "LABORATORY",
         status: "WAITING",
-        req_date: requestedDate ? new Date(requestedDate) : new Date(),
+        req_date: resolvedRequestedDate,
       },
     });
 
@@ -361,6 +558,73 @@ export const getLabRequestsService = async (status?: string) => {
   });
 };
 
+export const getLabRequestByIdService = async (labId: number) => {
+  return prisma.$transaction(async (tx) => getDisplayItemById(tx, labId));
+};
+
+export const getPatientLabRecordsService = async (
+  patientId: number,
+  filters: PatientLabRecordsFilters = {}
+) => {
+  return prisma.$transaction(async (tx) => {
+    const patient = await tx.patients.findUnique({
+      where: { patient_id: patientId },
+      select: { patient_id: true },
+    });
+
+    if (!patient) {
+      throw new LabModuleError("Patient not found.", 404);
+    }
+
+    const dateFrom = parseRecordFilterDate(filters.dateFrom, "Date from");
+    const dateTo = parseRecordFilterDate(filters.dateTo, "Date to", true);
+
+    if (dateFrom && dateTo && dateFrom.getTime() > dateTo.getTime()) {
+      throw new LabModuleError("Date from cannot be later than date to.", 400);
+    }
+
+    const records = await tx.laboratoryRequest.findMany({
+      where: {
+        request: {
+          is: {
+            patient_id: patientId,
+            ...(dateFrom || dateTo
+              ? {
+                  req_date: {
+                    ...(dateFrom ? { gte: dateFrom } : {}),
+                    ...(dateTo ? { lte: dateTo } : {}),
+                  },
+                }
+              : {}),
+          },
+        },
+      },
+      include: labRequestInclude,
+    });
+
+    return records
+      .filter((record) => record.items.length > 0)
+      .flatMap((record) =>
+        record.items
+          .filter((item) => item.result_payload)
+          .map((item) => toDisplayItem(record, item))
+      )
+      .filter(
+        (item) => !filters.recordGroup || item.recordGroup === filters.recordGroup
+      )
+      .sort((left, right) => {
+        const timeDiff =
+          new Date(right.requestedDate).getTime() - new Date(left.requestedDate).getTime();
+
+        if (timeDiff !== 0) {
+          return timeDiff;
+        }
+
+        return right.labId - left.labId;
+      });
+  });
+};
+
 export const updateLabRequestStatusService = async (
   labId: number,
   status: "queued" | "pending" | "done",
@@ -373,17 +637,76 @@ export const updateLabRequestStatusService = async (
         item_id: true,
         laboratory_request_id: true,
         processed_by: true,
+        status: true,
+        result_payload: true,
+        test: {
+          select: {
+            name: true,
+            schema_key: true,
+          },
+        },
+        laboratoryRequest: {
+          select: {
+            request: {
+              select: {
+                billing: {
+                  select: {
+                    status: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
     if (!existingItem) {
-      throw new Error("Lab request item not found.");
+      throw new LabModuleError("Lab request item not found.", 404);
     }
 
     const dbStatus = toDbLabStatus(status);
+    const isBillingPaid = existingItem.laboratoryRequest.request.billing?.status === "DONE";
+    const combinedResultFamily = resolveCombinedLabResultFamily({
+      schemaKey: existingItem.test.schema_key,
+      testName: existingItem.test.name,
+    });
+    const relatedGroupItems = combinedResultFamily
+      ? await getRelatedCombinedLabResultItems(
+          tx,
+          existingItem.laboratory_request_id,
+          combinedResultFamily
+        )
+      : [existingItem];
+    const targetItemIds = relatedGroupItems.map((item) => item.item_id);
+
+    if (dbStatus !== "QUEUED") {
+      ensurePaidBilling(
+        isBillingPaid,
+        "Patient billing must be paid before this request can move forward in the laboratory."
+      );
+    }
+
+    if (dbStatus === "DONE" && relatedGroupItems.some((item) => item.status === "QUEUED")) {
+      throw new LabModuleError(
+        "Accept the laboratory request before marking it as completed.",
+        409
+      );
+    }
+
+    if (dbStatus === "DONE" && relatedGroupItems.some((item) => !item.result_payload)) {
+      throw new LabModuleError(
+        "Save laboratory results before marking this request as completed.",
+        409
+      );
+    }
 
     await tx.laboratoryRequestItem.updateMany({
-      where: { item_id: labId },
+      where: {
+        item_id: {
+          in: targetItemIds,
+        },
+      },
       data: {
         status: dbStatus,
         completed_at: dbStatus === "DONE" ? new Date() : null,
@@ -425,6 +748,11 @@ export const saveLabResultService = async ({
             request: {
               select: {
                 patient_id: true,
+                billing: {
+                  select: {
+                    status: true,
+                  },
+                },
               },
             },
           },
@@ -433,37 +761,78 @@ export const saveLabResultService = async ({
     });
 
     if (!existingItem) {
-      throw new Error("Lab request item not found.");
+      throw new LabModuleError("Lab request item not found.", 404);
     }
 
-    await tx.laboratoryTest.update({
-      where: { test_id: existingItem.test_id },
-      data: {
-        category: toDbLabCategory(category),
-        schema_key: toSchemaKey(existingItem.test.name),
-      },
+    ensurePaidBilling(
+      existingItem.laboratoryRequest.request.billing?.status === "DONE",
+      "Patient billing must be paid before laboratory results can be encoded."
+    );
+
+    if (existingItem.status === "QUEUED") {
+      throw new LabModuleError(
+        "Accept the laboratory request before encoding results.",
+        409
+      );
+    }
+
+    if (!existingItem.test.schema_key) {
+      await tx.laboratoryTest.update({
+        where: { test_id: existingItem.test_id },
+        data: {
+          schema_key: toSchemaKey(existingItem.test.name),
+        },
+      });
+    }
+
+    const combinedResultFamily = resolveCombinedLabResultFamily({
+      schemaKey: existingItem.test.schema_key,
+      testName: existingItem.test.name,
     });
+    const relatedGroupItems = combinedResultFamily
+      ? await getRelatedCombinedLabResultItems(
+          tx,
+          existingItem.laboratory_request_id,
+          combinedResultFamily
+        )
+      : [
+          {
+            item_id: existingItem.item_id,
+            processed_by: existingItem.processed_by,
+            result_payload: null,
+            status: existingItem.status,
+            test: existingItem.test,
+          },
+        ];
+    const targetItemIds = relatedGroupItems.map((item) => item.item_id);
+    const nextStatus = existingItem.status === "DONE" ? "DONE" : "PROCESSING";
 
     await tx.laboratoryRequestItem.updateMany({
-      where: { item_id: labId },
+      where: {
+        item_id: {
+          in: targetItemIds,
+        },
+      },
       data: {
         result_payload: normalizeLabForm(form),
-        status: existingItem.status === "DONE" ? "DONE" : "PROCESSING",
-        completed_at: existingItem.status === "DONE" ? new Date() : null,
+        status: nextStatus,
+        completed_at: nextStatus === "DONE" ? new Date() : null,
         processed_by: userId ?? existingItem.processed_by ?? null,
       },
     });
 
-    await upsertStructuredLabResult({
-      tx,
-      patientId: existingItem.laboratoryRequest.request.patient_id,
-      labId,
-      testName: existingItem.test.name,
-      schemaKey: existingItem.test.schema_key,
-      form,
-      medTechUserId: userId ?? null,
-      pathologistUserId,
-    });
+    for (const relatedItem of relatedGroupItems) {
+      await upsertStructuredLabResult({
+        tx,
+        patientId: existingItem.laboratoryRequest.request.patient_id,
+        labId: relatedItem.item_id,
+        testName: relatedItem.test.name,
+        schemaKey: relatedItem.test.schema_key,
+        form,
+        medTechUserId: userId ?? null,
+        pathologistUserId,
+      });
+    }
 
     await syncParentRequestStatus(tx, existingItem.laboratory_request_id);
 

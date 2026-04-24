@@ -1,13 +1,26 @@
+// TODO:FIX MERGE CONFLICTS
+
 "use client";
 
-import z from "zod";
+import { useMemo } from "react";
+import { z } from "zod";
 import Select from "react-select";
-import { useForm, UseFormRegister, FieldValues, Path, FieldErrors, Controller } from "react-hook-form";
+import {
+  Controller,
+  FieldErrors,
+  FieldValues,
+  Path,
+  UseFormRegister,
+  useForm,
+  useWatch,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { requestSchema } from "@/schemas/request.schema";
 import { UsersProps, VitalSignProps } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
-import { useRequest, useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
+import { useRequest } from "@/hooks/Patient/usePatientRegistration";
+import { useLabTestCatalog } from "@/hooks/Lab/useLab";
+import { useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Label from "@/components/ui/label";
@@ -23,7 +36,7 @@ type Certificate = Extract<RequestFormValues, { req_type: "CERTIFICATE" }>;
 const inputCls =
   "w-full bg-[#f0f3fa] border border-[1.5px] border-[#dce3ef] rounded-lg px-3 py-2.5 text-sm text-[#1a2a45] font-['DM_Sans'] outline-none transition focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white placeholder:text-[#b0bcd4]";
 
-interface VitakKeyProps<T extends FieldValues> {
+interface VitalKeyProps<T extends FieldValues> {
   prefix: string;
   register: UseFormRegister<T>;
   errors: FieldErrors<T>;
@@ -43,9 +56,8 @@ function VitalsRow<T extends FieldValues>({
   label,
   teal,
   register,
-  errors,
   readonly,
-}: VitakKeyProps<T>) {
+}: VitalKeyProps<T>) {
   const fields = [
     { name: "bp", label: "BP (mmHg)", ph: "120/80" },
     { name: "temp", label: "Temp (°C)", ph: "36.6" },
@@ -89,13 +101,14 @@ function VitalsRow<T extends FieldValues>({
   );
 }
 
-/* ── Main Component ── */
 const RequestForm: React.FC<{
   patient: PatientProps;
   vitals: VitalSignProps | undefined;
   onClose: () => void;
 }> = ({ patient, vitals, onClose }) => {
   const { mutateAsync: request, isPending } = useRequest(onClose);
+  const { data: labTests = [], isLoading: loadingLabTests } = useLabTestCatalog();
+
   const { data: UserList } = useGetAllUsers();
   const {
     register,
@@ -114,7 +127,7 @@ const RequestForm: React.FC<{
       prev_temp: vitals?.temp,
       prev_rr: vitals?.rr,
       prev_ht: vitals?.ht,
-      prev_wt: vitals?.ht,
+      prev_wt: vitals?.wt,
       created_at: '',
       patient_code: patient?.patient_code,
       address: patient?.address,
@@ -181,9 +194,7 @@ const RequestForm: React.FC<{
 
   return (
     <div className="font-['DM_Sans']">
-
-      {/* Header band */}
-      <div className="bg-[#f7f8fc] border-b border-[#dce3ef] px-6 py-4 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-[#dce3ef] bg-[#f7f8fc] px-6 py-4">
         <div className="flex items-center gap-3">
           <div
             className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white ${reqType === "LABORATORY" ? "bg-[#0e7c7b]" : reqType === 'CONSULTATION' ? "bg-[#0f2244]" : "bg-[#a3852c]"
@@ -195,9 +206,8 @@ const RequestForm: React.FC<{
             <h2 className="font-['DM_Serif_Display'] text-[#0f2244] text-base leading-tight">
               {reqType === "CONSULTATION" ? "Consultation Request" : reqType === "LABORATORY" ? "Laboratory Request" : "Certificate Request"}
             </h2>
-            <p className="text-[11px] text-[#6b7da0] mt-0.5">
-              Patient:{" "}
-              <span className="font-semibold text-[#1a2a45]">{patient.name}</span>
+            <p className="mt-0.5 text-[11px] text-[#6b7da0]">
+              Patient: <span className="font-semibold text-[#1a2a45]">{patient.name}</span>
             </p>
 
           </div>
@@ -230,9 +240,7 @@ const RequestForm: React.FC<{
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="px-6 pt-5 pb-6 space-y-5 bg-white">
-
-        {/* Patient row */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 bg-white px-6 pb-6 pt-5">
         <div className="grid grid-cols-4 gap-4">
           <div>
             <Input
@@ -359,8 +367,7 @@ const RequestForm: React.FC<{
 
         )}
 
-        {/* ── LABORATORY fields ── */}
-        {reqType === "LABORATORY" && (
+        {reqType === "LABORATORY" ? (
           <div className="space-y-4">
             <div className="col-span-2">
               <Input
@@ -381,7 +388,6 @@ const RequestForm: React.FC<{
 
             <div>
               <Label>Select Test</Label>
-
               <Controller
                 control={control}
                 name="test"
@@ -389,29 +395,31 @@ const RequestForm: React.FC<{
                   <Select
                     {...field}
                     options={testOptions}
-                    placeholder="— Choose a test —"
+                    placeholder={
+                      loadingLabTests ? "Loading laboratory tests..." : "Choose laboratory tests"
+                    }
                     isMulti
                     className={`text-sm ${inputCls}`}
                     classNamePrefix="react-select"
                     onChange={(selected) =>
-                      field.onChange(selected.map((opt) => opt.value))
+                      field.onChange((selected ?? []).map((option) => option.value))
                     }
-                    value={testOptions.filter(opt =>
-                      field.value?.includes(opt.value)
+                    value={testOptions.filter((option) =>
+                      field.value?.includes(option.value)
                     )}
                     isClearable
                   />
                 )}
               />
 
-              {certificateErrors.purpose && (
+              {labErrors.test && (
                 <p className="text-xs text-red-500 mt-1">
-                  {certificateErrors.purpose.message}
+                  {labErrors.test.message}
                 </p>
               )}
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* ── CERTIFICATE fields ── */}
         {reqType === "CERTIFICATE" && (
@@ -495,13 +503,8 @@ const RequestForm: React.FC<{
 
         )}
 
-        {/* Divider + Actions */}
-        <div className="pt-1 border-t border-[#dce3ef] flex items-center justify-end gap-2.5">
-          <Button
-            type="button"
-            variant="danger"
-            onClick={onClose}
-          >
+        <div className="flex items-center justify-end gap-2.5 border-t border-[#dce3ef] pt-1">
+          <Button type="button" variant="danger" onClick={onClose}>
             Cancel
           </Button>
 
@@ -513,7 +516,6 @@ const RequestForm: React.FC<{
             Submit ✓
           </Button>
         </div>
-
       </form>
     </div >
   );

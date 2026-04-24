@@ -1,96 +1,134 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import {
+  createSerologySchema,
+  serologyDefaultValues,
+  SerologyFormValues,
+} from "@/schemas/lab.schema";
+import { LabResultPayload } from "@/types/LabTypes";
+import { mergeLabFormDefaults } from "@/utils/lab";
 
 type Props = {
-  onSubmit: (form: Record<string, string>) => void;
+  config?: {
+    defaultMethod?: string;
+    defaultSpecimen?: string;
+    defaultTestName?: string;
+    lockedFields?: Array<"method" | "specimen" | "test">;
+    requireDayOfFever?: boolean;
+    resultLabel?: string;
+    resultPlaceholder?: string;
+    showDayOfFever?: boolean;
+  };
+  initialValues?: LabResultPayload | null;
+  onSubmit: (form: SerologyFormValues) => void;
   onCancel: () => void;
 };
 
-const initialForm: Record<string, string> = {
-  method: "",
-  specimen: "",
-  result: "",
-  dayoffever: "",
-};
-
-export default function SerologyModal({ onSubmit, onCancel }: Props) {
-  const [form, setForm] = useState<Record<string, string>>(initialForm);
-
-  const set = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-
-  const fieldInput = (name: string, placeholder = "—") => (
-    <input
-      type="text"
-      name={name}
-      value={form[name]}
-      onChange={set}
-      placeholder={placeholder}
-      className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-200"
-    />
+export default function SerologyResultModal({
+  config,
+  initialValues,
+  onSubmit,
+  onCancel,
+}: Props) {
+  const schema = useMemo(
+    () =>
+      createSerologySchema({
+        requireDayOfFever: config?.requireDayOfFever,
+      }),
+    [config?.requireDayOfFever]
   );
 
+  const defaultValues = useMemo(
+    () =>
+      mergeLabFormDefaults(serologyDefaultValues, {
+        method: config?.defaultMethod ?? "",
+        specimen: config?.defaultSpecimen ?? "",
+        test: config?.defaultTestName ?? "",
+        ...(initialValues ?? {}),
+      }),
+    [config, initialValues]
+  );
+
+  const lockedFields = new Set(config?.lockedFields ?? []);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SerologyFormValues>({
+    resolver: zodResolver(schema),
+    defaultValues,
+  });
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(form);
-      }}
-      className="p-5 space-y-5"
-    >
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 p-5">
       <div>
         <div className="mb-2 flex items-center gap-2">
           <div className="h-4 w-1 shrink-0 rounded-full bg-teal-600" />
-          <h6 className="text-xs font-bold uppercase tracking-widest text-teal-700">General</h6>
+          <h6 className="text-xs font-bold uppercase tracking-widest text-teal-700">
+            Test Details
+          </h6>
         </div>
         <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          {[
-            { label: "Test", name: "test" },
-            { label: "Method", name: "method" },
-            { label: "Specimen", name: "specimen" },
-          ].map(({ label, name }) => (
-            <div key={name} className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-500">{label}</label>
-              {fieldInput(name)}
-            </div>
-          ))}
+          <Input
+            label="Test"
+            placeholder="Enter serology test"
+            readOnly={lockedFields.has("test")}
+            {...register("test")}
+            error={errors.test?.message}
+          />
+          <Input
+            label="Method"
+            placeholder="Enter method used"
+            readOnly={lockedFields.has("method")}
+            {...register("method")}
+            error={errors.method?.message}
+          />
+          <Input
+            label="Specimen"
+            placeholder="Enter specimen"
+            readOnly={lockedFields.has("specimen")}
+            {...register("specimen")}
+            error={errors.specimen?.message}
+          />
+          {config?.showDayOfFever ? (
+            <Input
+              label="Day of Fever"
+              placeholder="Enter day of fever"
+              {...register("day_of_fever")}
+              error={errors.day_of_fever?.message}
+            />
+          ) : null}
         </div>
       </div>
 
       <div>
         <div className="mb-2 flex items-center gap-2">
-          <div className="h-4 w-1 shrink-0 rounded-full bg-#23324a-600" />
+          <div className="h-4 w-1 shrink-0 rounded-full bg-teal-600" />
           <h6 className="text-xs font-bold uppercase tracking-widest text-teal-700">
             Result
           </h6>
         </div>
-        <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          {[
-            { label: "Result", name: "result" },
-          ].map(({ label, name }) => (
-            <div key={name} className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-500">{label}</label>
-              {fieldInput(name)}
-            </div>
-          ))}
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <Input
+            label={config?.resultLabel ?? "Result"}
+            placeholder={config?.resultPlaceholder ?? "Enter result"}
+            {...register("result")}
+            error={errors.result?.message}
+          />
         </div>
       </div>
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-        >
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
-        <button
-          type="submit"
-          className="rounded-lg bg-[#152859] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1c3570]"
-        >
-          Save Results
-        </button>
+        </Button>
+        <Button type="submit">Save Results</Button>
       </div>
     </form>
   );

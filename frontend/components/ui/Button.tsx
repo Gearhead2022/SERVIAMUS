@@ -16,8 +16,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   isLoading?: boolean;
   icon?: ReactNode;
-  iconPosition?: "left" | "right",
-
+  iconPosition?: "left" | "right";
 }
 
 const baseCls =

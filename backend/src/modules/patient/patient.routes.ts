@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAllPatientsController, addPatientController } from "./patient.controller";
+import { getAllPatientsController, addPatientController, getPatientByIdController, updatePatientController } from "./patient.controller";
 const router = Router();
 
 router.get(
@@ -10,6 +10,16 @@ router.get(
 router.post(
   "/patientAdd",
   addPatientController
+);
+
+router.get(
+  "/:id",
+  getPatientByIdController
+);
+
+router.put(
+  "/:id",
+  updatePatientController
 );
 
 export default router;

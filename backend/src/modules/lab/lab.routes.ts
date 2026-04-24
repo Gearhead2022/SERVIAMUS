@@ -3,7 +3,10 @@ import { authorize } from "../../middlewares/authorize.middleware";
 import {
   createLabRequestController,
   getAllUsersController,
+  getLabRequestByIdController,
   getLabRequestsController,
+  getLabTestsController,
+  getPatientLabRecordsController,
   getPatientRecordsController,
   saveLabResultController,
   searchPatientsController,
@@ -19,12 +22,27 @@ router.get(
   searchPatientsController
 );
 router.get(
+  "/tests",
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  getLabTestsController
+);
+router.get(
   "/records",
   authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
   getPatientRecordsController
 );
+router.get(
+  "/patients/:patientId/records",
+  authorize(["ADMIN", "LAB", "LABORATORY"]),
+  getPatientLabRecordsController
+);
 router.post("/requests", authorize(["ADMIN", "DOCTOR"]), createLabRequestController);
 router.get("/requests", authorize(["ADMIN", "LAB", "LABORATORY"]), getLabRequestsController);
+router.get(
+  "/requests/:labId",
+  authorize(["ADMIN", "LAB", "LABORATORY"]),
+  getLabRequestByIdController
+);
 router.patch(
   "/requests/:labId/status",
   authorize(["ADMIN", "LAB", "LABORATORY"]),

@@ -1,86 +1,17 @@
 import api from "./axios";
+import {
+  CreateLabRequestPayload,
+  LabRequest,
+  LabTestCatalogItem,
+  PatientLabRecordFilters,
+  PatientRecord,
+  RequestStatus,
+  SaveLabResultPayload,
+  SearchPatientResult,
+} from "@/types/LabTypes";
+import { normalizeLabPayload } from "@/utils/lab";
 
-export type LabCategory =
-  | "clinical-chemistry"
-  | "hematology"
-  | "parasitology"
-  | "urinalysis"
-  | "other";
-export type RequestStatus = "queued" | "pending" | "done";
-
-export type LabRequest = {
-  labId: number;
-  requestId: number;
-  laboratoryRequestId: number;
-  id: string;
-  patientName: string;
-  patientId: string;
-  rawPatientId: number;
-  testType: string;
-  category: LabCategory;
-  tests: string[];
-  completedTests: string[];
-  pendingTests: string[];
-  totalTests: number;
-  completedCount: number;
-  requestedAt: string;
-  requestedDate: string;
-  age: string;
-  priority: "Routine" | "Urgent";
-  status: RequestStatus;
-  requestStatus: RequestStatus;
-  requestedBy: string;
-  address: string;
-  sex: string;
-  resultPayload?: Record<string, string> | null;
-};
-
-type LabRequestApiResponse = {
-  labId: number;
-  requestId: number;
-  laboratoryRequestId: number;
-  id: string;
-  patientId: string;
-  rawPatientId: number;
-  patientName: string;
-  age: string;
-  sex: string;
-  address: string;
-  requestedBy: string;
-  requestedAt: string;
-  requestedDate: string;
-  status: RequestStatus;
-  requestStatus: RequestStatus;
-  category: LabCategory;
-  tests: string[];
-  completedTests: string[];
-  pendingTests: string[];
-  totalTests: number;
-  completedCount: number;
-  testType: string;
-  priority: "Routine" | "Urgent";
-  resultPayload?: Record<string, string> | null;
-};
-
-export type SearchPatientResult = {
-  patient_id: number;
-  name: string;
-  age: number;
-  sex: string;
-  address: string;
-  contact_number?: string | null;
-};
-
-export type PatientRecord = SearchPatientResult & {
-  patient_code: string;
-  birth_date?: string | null;
-  religion?: string | null;
-  created_at: string;
-  lab_requests_count: number;
-  medical_records_count: number;
-  history_count: number;
-  vital_signs_count: number;
-};
+type LabRequestApiResponse = LabRequest;
 
 const toFrontendRequest = (item: LabRequestApiResponse): LabRequest => {
   const requestedAtDate = new Date(item.requestedAt || item.requestedDate);
@@ -93,6 +24,7 @@ const toFrontendRequest = (item: LabRequestApiResponse): LabRequest => {
       hour12: true,
     }),
     requestedDate: requestedAtDate.toISOString(),
+    resultPayload: normalizeLabPayload(item.resultPayload),
   };
 };
 
@@ -104,7 +36,7 @@ export const searchPatients = async (search: string) => {
   return (res.data.data ?? []) as SearchPatientResult[];
 };
 
-export const createLabRequest = async (payload: { patientId: number; tests: string[]; requestedBy?: string }) => {
+export const createLabRequest = async (payload: CreateLabRequestPayload) => {
   const res = await api.post("/api/lab/requests", payload);
   return toFrontendRequest(res.data.data as LabRequestApiResponse);
 };
@@ -123,17 +55,47 @@ export const fetchLabRequests = async () => {
   return items.map(toFrontendRequest);
 };
 
+export const fetchLabRequest = async (labId: number) => {
+  const res = await api.get(`/api/lab/requests/${labId}`);
+  return toFrontendRequest(res.data.data as LabRequestApiResponse);
+};
+
+export const fetchLabTests = async () => {
+  const res = await api.get("/api/lab/tests");
+  return (res.data.data ?? []) as LabTestCatalogItem[];
+};
+
 export const updateLabRequestStatus = async (labId: number, status: RequestStatus) => {
   const res = await api.patch(`/api/lab/requests/${labId}/status`, { status });
   return toFrontendRequest(res.data.data as LabRequestApiResponse);
 };
 
-export const saveLabResult = async (payload: {
-  labId: number;
-  category: LabCategory;
-  form: Record<string, string>;
-  pathologistUserId?: number | null;
-}) => {
+export const saveLabResult = async (payload: SaveLabResultPayload) => {
   const res = await api.post("/api/lab/results", payload);
   return toFrontendRequest(res.data.data as LabRequestApiResponse);
+};
+
+export const fetchPatientLabRecords = async (
+  patientId: number,
+  filters: PatientLabRecordFilters = {}
+) => {
+  const params = new URLSearchParams();
+
+  if (filters.dateFrom) {
+    params.set("dateFrom", filters.dateFrom);
+  }
+
+  if (filters.dateTo) {
+    params.set("dateTo", filters.dateTo);
+  }
+
+  if (filters.recordGroup && filters.recordGroup !== "all") {
+    params.set("recordGroup", filters.recordGroup);
+  }
+
+  const res = await api.get(`/api/lab/patients/${patientId}/records`, {
+    params,
+  });
+  const items = (res.data.data ?? []) as LabRequestApiResponse[];
+  return items.map(toFrontendRequest);
 };

@@ -47,26 +47,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(user);
     setIsAuthenticated(true);
-
+    
     const admin_user = user.roles.includes('ADMIN');
-    const doctor_user = user.roles.includes('DOCTOR');
     const laboratory_user = user.roles.includes('LAB');
     const staff_user = user.roles.includes('STAFF');
+    const doctor_user = user.roles.includes('DOCTOR');
+    const cashier_user = user.roles.includes('CASHIER');
 
     if (admin_user) {
-      router.replace("dashboard");
-    }
-
-    if (doctor_user) {
-      router.replace("docDashboard");
-    }
-
-    if (laboratory_user) {
-      router.replace("labdashboard");
-    }
-
-    if (staff_user) {
-      router.replace("registration");
+      router.replace("/dashboard"); 
+    } else if (laboratory_user) {
+      router.replace("/labdashboard");
+    } else if (staff_user) {
+      router.replace("/registration");
+    } else if (doctor_user) {
+      router.replace("/docDashboard");
+    } else if (cashier_user) {
+      router.replace("/billing");
     }
   };
 

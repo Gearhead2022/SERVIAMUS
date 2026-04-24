@@ -6,10 +6,9 @@ import protectedRoutes from '../src/routes/protected';
 import authentocationRoutes from './modules/authentication/authentication.routes';
 import { errorHandler } from "./middlewares/error.middleware";
 
-const PORT = Number(process.env.PORT) || 5000;
-
-
 dotenv.config();
+
+const PORT = Number(process.env.PORT) || 5006;
 
 const app = express();
 
@@ -44,6 +43,6 @@ app.use('/api', protectedRoutes);
 
 app.use(errorHandler);
 
-app.listen(5006, () => {
-  console.log('Server running on port 5006');
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
