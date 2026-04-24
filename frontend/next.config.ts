@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     allowedDevOrigins: [
         "172.168.30.107",
         "172.168.30.107:5006",
@@ -16,8 +17,14 @@ const nextConfig: NextConfig = {
         "192.168.1.9:5006",
         "192.168.1.9:3006",
 >>>>>>> 926af12 (reseted)
+=======
+    allowedDevOrigins:[
+    "172.168.30.108",
+        "172.168.30.108:5006",
+        "172.168.30.108:3006",
+>>>>>>> origin/johns
     ]
-
+    
 };
 
 

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getPrevVitalSignsController, createRequestController, getAllRegisteredUsersController, getRequestDataController } from "./request.controller";
+import { getPrevVitalSignsController, createRequestController } from "./request.controller";
 
 
 const router = Router();
@@ -14,16 +14,6 @@ router.get(
 router.post(
   "/requestAdd",
   createRequestController
-);
-
-router.get(
-  "/getAllUsers",
-  getAllRegisteredUsersController
-); getRequestDataController
-
-router.get(
-  "/:id/requestData",
-  getRequestDataController
 );
 
 export default router;

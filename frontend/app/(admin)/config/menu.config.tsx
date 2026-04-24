@@ -12,7 +12,7 @@ export interface MenuItem {
   label: string;
   path: string;
   icon?: ReactNode;
-  iconOnly?: ReactNode;
+  iconOnly? : ReactNode;
   roles: string[];
 }
 
@@ -30,7 +30,7 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/pages/admin/users",
     icon: <ShoppingCart size={18} />,
     iconOnly: <ShoppingCart size={30} />,
-    roles: ["ADMIN"]
+    roles: [ "ADMIN"]
   },
   {
     label: "Services",
@@ -54,25 +54,25 @@ export const MENU_ITEMS: MenuItem[] = [
     roles: ["ADMIN"]
   },
 
-  // DOCTOR
+  // STAFF
 
   {
-    label: "Queue & Dashboard",
-    path: "/docDashboard",
+    label: "Dashboard",
+    path: "/pages/doctor/dashboard",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
     roles: ["DOCTOR"]
   },
   {
-    label: "Registry & Request",
-    path: "/patientHistoryList",
+    label: "Consultations",
+    path: "/pages/doctor/consultation",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
     roles: ["DOCTOR"]
   },
   {
-    label: "History & Records",
-    path: "/historyRecords",
+    label: "Request",
+    path: "/pages/doctor/consultation",
     icon: <Home size={18} />,
     iconOnly: <Home size={30} />,
     roles: ["DOCTOR"]

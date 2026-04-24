@@ -7,13 +7,6 @@ export const requestSchema = z.discriminatedUnion("req_type", [
     name: z.string().min(1, "Full name is required"),
     patient_code: z.string(),
     req_date: z.string().min(1, "Consultation date is required"),
-    age: z
-      .string()
-      .min(1, "Age is required")
-      .refine((val) => !isNaN(Number(val)), {
-        message: "Age must be a number",
-      }),
-    address: z.string().min(1, "Address is required"),
 
     // vitals
     prev_bp: z.string().optional(),
@@ -29,7 +22,6 @@ export const requestSchema = z.discriminatedUnion("req_type", [
     rr: z.string().optional(),
     wt: z.string().optional(),
     ht: z.string().optional(),
-    physician: z.number(),
     created_at: z.string().optional(),
   }),
 
@@ -37,34 +29,10 @@ export const requestSchema = z.discriminatedUnion("req_type", [
     req_type: z.literal("LABORATORY"),
     patient_id: z.number(),
     patient_code: z.string(),
-    age: z
-      .string()
-      .min(1, "Age is required")
-      .refine((val) => !isNaN(Number(val)), {
-        message: "Age must be a number",
-      }),
-    address: z.string().min(1, "Address is required"),
     name: z.string().min(1, "Full name is required"),
-    req_date: z.string().min(1, "Laboratory date is required"),
+    req_date: z.string().min(1, "Consultation date is required"),
     req_by: z.string().min(1, "Requested by is required"),
 
     test: z.array(z.string()).min(1, "At least one test is required")
-  }),
-
-  z.object({
-    req_type: z.literal("CERTIFICATE"),
-    patient_id: z.number(),
-    patient_code: z.string(),
-    name: z.string().min(1, "Full name is required"),
-    age: z
-      .string()
-      .min(1, "Age is required")
-      .refine((val) => !isNaN(Number(val)), {
-        message: "Age must be a number",
-      }),
-    address: z.string().min(1, "Address is required"),
-    purpose: z.string().min(1, "Purpose is required"),
-    physician: z.number(),
-    req_date: z.string().min(1, "Requested by is required"),
   }),
 ]);
