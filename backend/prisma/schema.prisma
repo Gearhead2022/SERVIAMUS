@@ -64,7 +64,7 @@ model UserRole {
   user_id Int
   role_id Int
 
-  user Users     @relation(fields: [user_id], references: [user_id])
+  user Users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   role RoleTypes @relation(fields: [role_id], references: [role_id], onDelete: Cascade)
 
   @@id([user_id, role_id])
@@ -308,17 +308,17 @@ model LaboratoryRequest {
   req_id Int    @unique
   req_by String @db.VarChar(50)
 
-  request Request                 @relation(fields: [req_id], references: [req_id])
+  request Request                @relation(fields: [req_id], references: [req_id])
   items   LaboratoryRequestItem[]
 
   @@map("laboratory_request")
 }
 
 model LaboratoryTest {
-  test_id    Int                @id @default(autoincrement())
-  name       String             @db.VarChar(100)
-  category   LaboratoryCategory @default(OTHER)
-  schema_key String?            @db.VarChar(50)
+  test_id     Int                @id @default(autoincrement())
+  name        String             @db.VarChar(100)
+  category    LaboratoryCategory @default(OTHER)
+  schema_key  String?            @db.VarChar(50)
 
   items LaboratoryRequestItem[]
 
@@ -339,17 +339,17 @@ model LaboratoryRequestItem {
   created_at   DateTime  @default(now())
   updated_at   DateTime? @updatedAt
 
-  laboratoryRequest         LaboratoryRequest        @relation(fields: [laboratory_request_id], references: [id], onDelete: Cascade)
-  test                      LaboratoryTest           @relation(fields: [test_id], references: [test_id])
-  processor                 Users?                   @relation(fields: [processed_by], references: [user_id])
-  hematology_result         HematologyResult?
-  serology_result           SerologyResult?
-  parasitology_result       ParasitologyResult?
-  urinalysis_result         UrinalysisResult?
-  clinical_chemistry_result ClinicalChemistryResult?
-  hba1c_result              HbA1cResult?
-  chemistry_result          ChemistryResult?
-  ogtt_result               OgttResult?
+  laboratoryRequest          LaboratoryRequest        @relation(fields: [laboratory_request_id], references: [id], onDelete: Cascade)
+  test                       LaboratoryTest           @relation(fields: [test_id], references: [test_id])
+  processor                  Users?                   @relation(fields: [processed_by], references: [user_id])
+  hematology_result          HematologyResult?
+  serology_result            SerologyResult?
+  parasitology_result        ParasitologyResult?
+  urinalysis_result          UrinalysisResult?
+  clinical_chemistry_result  ClinicalChemistryResult?
+  hba1c_result               HbA1cResult?
+  chemistry_result           ChemistryResult?
+  ogtt_result                OgttResult?
 
   @@index([laboratory_request_id])
   @@index([status])
@@ -503,35 +503,35 @@ model UrinalysisResult {
 }
 
 model ClinicalChemistryResult {
-  cc_id                Int       @id @default(autoincrement())
-  patient_id           Int
-  lab_id               Int       @unique
-  fbs                  String?   @db.VarChar(50)
-  rbs                  String?   @db.VarChar(50)
-  bun                  String?   @db.VarChar(50)
-  creatinine           String?   @db.VarChar(50)
-  uric_acid            String?   @db.VarChar(50)
-  cholesterol          String?   @db.VarChar(50)
-  hdl_cholesterol      String?   @db.VarChar(50)
-  ldl_cholesterol      String?   @db.VarChar(50)
-  triglycerides        String?   @db.VarChar(50)
-  sgpt                 String?   @db.VarChar(50)
-  fbs_conv             String?   @db.VarChar(50)
-  rbs_conv             String?   @db.VarChar(50)
-  bun_conv             String?   @db.VarChar(50)
-  creatinine_conv      String?   @db.VarChar(50)
-  uric_acid_conv       String?   @db.VarChar(50)
-  cholesterol_conv     String?   @db.VarChar(50)
-  hdl_cholesterol_conv String?   @db.VarChar(50)
-  ldl_cholesterol_conv String?   @db.VarChar(50)
-  triglycerides_conv   String?   @db.VarChar(50)
-  last_meal            String?   @db.VarChar(100)
-  time_taken           String?   @db.VarChar(100)
-  med_tech_user_id     Int?
-  pth_user_id          Int?
-  result_date          DateTime  @default(now()) @db.Date
-  created_at           DateTime  @default(now())
-  updated_at           DateTime? @updatedAt
+  cc_id                    Int       @id @default(autoincrement())
+  patient_id               Int
+  lab_id                   Int       @unique
+  fbs                      String?   @db.VarChar(50)
+  rbs                      String?   @db.VarChar(50)
+  bun                      String?   @db.VarChar(50)
+  creatinine               String?   @db.VarChar(50)
+  uric_acid                String?   @db.VarChar(50)
+  cholesterol              String?   @db.VarChar(50)
+  hdl_cholesterol          String?   @db.VarChar(50)
+  ldl_cholesterol          String?   @db.VarChar(50)
+  triglycerides            String?   @db.VarChar(50)
+  sgpt                     String?   @db.VarChar(50)
+  fbs_conv                 String?   @db.VarChar(50)
+  rbs_conv                 String?   @db.VarChar(50)
+  bun_conv                 String?   @db.VarChar(50)
+  creatinine_conv          String?   @db.VarChar(50)
+  uric_acid_conv           String?   @db.VarChar(50)
+  cholesterol_conv         String?   @db.VarChar(50)
+  hdl_cholesterol_conv     String?   @db.VarChar(50)
+  ldl_cholesterol_conv     String?   @db.VarChar(50)
+  triglycerides_conv       String?   @db.VarChar(50)
+  last_meal                String?   @db.VarChar(100)
+  time_taken               String?   @db.VarChar(100)
+  med_tech_user_id         Int?
+  pth_user_id              Int?
+  result_date              DateTime  @default(now()) @db.Date
+  created_at               DateTime  @default(now())
+  updated_at               DateTime? @updatedAt
 
   patient     Patients              @relation(fields: [patient_id], references: [patient_id])
   lab         LaboratoryRequestItem @relation(fields: [lab_id], references: [item_id], onDelete: Cascade)
@@ -545,20 +545,20 @@ model ClinicalChemistryResult {
 }
 
 model HbA1cResult {
-  hba_id                Int       @id @default(autoincrement())
-  patient_id            Int
-  lab_id                Int       @unique
-  test_method           String?   @db.VarChar(100)
-  lot_no                String?   @db.VarChar(100)
-  exp_date              DateTime? @db.Date
-  specimen              String?   @db.VarChar(100)
-  result                String?   @db.VarChar(50)
-  result_interpretation String?   @db.Text
-  med_tech_user_id      Int?
-  pth_user_id           Int?
-  result_date           DateTime  @default(now()) @db.Date
-  created_at            DateTime  @default(now())
-  updated_at            DateTime? @updatedAt
+  hba_id                  Int       @id @default(autoincrement())
+  patient_id              Int
+  lab_id                  Int       @unique
+  test_method             String?   @db.VarChar(100)
+  lot_no                  String?   @db.VarChar(100)
+  exp_date                DateTime? @db.Date
+  specimen                String?   @db.VarChar(100)
+  result                  String?   @db.VarChar(50)
+  result_interpretation   String?   @db.Text
+  med_tech_user_id        Int?
+  pth_user_id             Int?
+  result_date             DateTime  @default(now()) @db.Date
+  created_at              DateTime  @default(now())
+  updated_at              DateTime? @updatedAt
 
   patient     Patients              @relation(fields: [patient_id], references: [patient_id])
   lab         LaboratoryRequestItem @relation(fields: [lab_id], references: [item_id], onDelete: Cascade)
@@ -627,6 +627,23 @@ model OgttResult {
   @@map("ogtt_results")
 }
 
+model Queue {
+  queue_id      Int       @id @default(autoincrement())
+  patient_id    Int
+  queue_type    QueueType
+  queue_number  Int
+  status        QueueStatus @default(WAITING)
+  serving_at    DateTime?
+  completed_at  DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime? @updatedAt
+
+  patient Patients @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
+
+  @@index([patient_id])
+  @@index([queue_type])
+  @@index([status])
+  @@map("queue")
 enum LaboratoryCategory {
   Clinical_Chemistry
   Clinical_Microscopy
@@ -745,25 +762,15 @@ model BillingService {
   @@map("billing_services")
 }
 
-model Payment {
-  payment_id Int @id @default(autoincrement())
-
-  billing_id Int
-  billing    Billing @relation(fields: [billing_id], references: [billing_id])
-
-  amount       Decimal       @db.Decimal(12, 2)
-  method       PaymentMethod
-  payment_date DateTime      @default(now())
-
-  reference_no String? @db.VarChar(50) // for GCash / bank / etc.
-
-  created_at DateTime @default(now())
+enum QueueType {
+  CONSULTATION
+  LABORATORY
 }
 
-enum PaymentMethod {
-  CASH
-  GCASH
-  CARD
-  BANK_TRANSFER
+enum QueueStatus {
+  WAITING
+  SERVING
+  COMPLETED
+  SKIPPED
 }
 

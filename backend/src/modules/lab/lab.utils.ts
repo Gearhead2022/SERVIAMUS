@@ -78,7 +78,7 @@ const normalizeTestLabel = (value: string) => value.trim().replace(/\s+/g, " ");
 const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> = {
   CBC: {
     apiCategory: "hematology",
-    category: "Hematology",
+    category: "HEMATOLOGY",
     aliases: [
       "cbc",
       "complete blood count",
@@ -88,12 +88,12 @@ const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> 
   },
   BT: {
     apiCategory: "hematology",
-    category: "Hematology",
+    category: "HEMATOLOGY",
     aliases: ["blood typing", "blood type"],
   },
   parasitology: {
     apiCategory: "parasitology",
-    category: "Clinical_Microscopy",
+    category: "PARASITOLOGY",
     aliases: [
       "routine fecalysis",
       "fecalysis",
@@ -104,72 +104,72 @@ const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> 
   },
   urinalysis: {
     apiCategory: "urinalysis",
-    category: "Clinical_Microscopy",
+    category: "URINALYSIS",
     aliases: ["routine urinalysis", "urinalysis"],
   },
   clinical_chemistry: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["creatinine", "clinical chemistry", "blood chemistry"],
   },
   FBS: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["fbs", "fasting blood sugar", "fasting blood sugar fbs"],
   },
   RBS: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["rbs", "random blood sugar", "random blood sugar rbs"],
   },
   BUN: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["bun", "urea bun", "urea", "urea blood urea nitrogen"],
   },
   uricacid: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["uric acid", "uricacid"],
   },
   totalcholesterol: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["total cholesterol", "cholesterol"],
   },
   HDL: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["hdl", "hdl cholesterol", "hdl cholesterol"],
   },
   LDL: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["ldl", "ldl cholesterol", "ldl cholesterol"],
   },
   triglycerides: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["triglycerides", "triglyceride"],
   },
   SGPT: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["sgpt", "serum glutamic pyruvic transaminase"],
   },
   sodium: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["sodium"],
   },
   potassium: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["potassium"],
   },
   hba1c: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: [
       "hba1c",
       "hb a1c",
@@ -179,12 +179,12 @@ const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> 
   },
   OGTT: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["ogtt", "oral glucose tolerance test", "100g ogtt", "ogtt 100g", "100g-ogtt"],
   },
   onehOGTT: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: [
       "1h ogtt",
       "1h-ogtt",
@@ -197,7 +197,7 @@ const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> 
   },
   twohOGTT: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: [
       "2h ogtt",
       "2h-ogtt",
@@ -210,17 +210,17 @@ const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> 
   },
   FOBT: {
     apiCategory: "other",
-    category: "Clinical_Microscopy",
+    category: "OTHER",
     aliases: ["fobt", "fecal occult blood test", "faecal occult blood test"],
   },
   dengue: {
     apiCategory: "other",
-    category: "Serology",
+    category: "SEROLOGY",
     aliases: ["dengue", "dengue ns1", "ns1"],
   },
   hbsag: {
     apiCategory: "other",
-    category: "Serology",
+    category: "SEROLOGY",
     aliases: [
       "hbsag",
       "hepatitis b surface antigen",
@@ -229,32 +229,32 @@ const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> 
   },
   syphilis: {
     apiCategory: "other",
-    category: "Serology",
+    category: "SEROLOGY",
     aliases: ["syphilis", "vdrl", "rpr"],
   },
   serumPT: {
     apiCategory: "other",
-    category: "Serology",
+    category: "SEROLOGY",
     aliases: ["pregnancy test serum", "serum pregnancy test", "serum pt"],
   },
   urinePT: {
     apiCategory: "other",
-    category: "Serology",
+    category: "SEROLOGY",
     aliases: ["pregnancy test urine", "urine pregnancy test", "urine pt"],
   },
   hematology: {
     apiCategory: "hematology",
-    category: "Hematology",
+    category: "HEMATOLOGY",
     aliases: ["hematology"],
   },
   serology: {
     apiCategory: "other",
-    category: "Serology",
+    category: "SEROLOGY",
     aliases: ["serology"],
   },
   chemistry: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: [
       "chemistry",
       "electrolytes",
@@ -266,7 +266,7 @@ const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> 
   },
   ogtt: {
     apiCategory: "clinical-chemistry",
-    category: "Clinical_Chemistry",
+    category: "CLINICAL_CHEMISTRY",
     aliases: ["glucose load", "glucose tolerance"],
   },
   general: {
@@ -438,8 +438,8 @@ export const resolveApiLabCategory = ({
     return schemaDefinition.apiCategory;
   }
 
-  if (category === "Hematology") return "hematology";
-  if (category === "Clinical_Chemistry") return "clinical-chemistry";
+  if (category === "HEMATOLOGY") return "hematology";
+  if (category === "CLINICAL_CHEMISTRY") return "clinical-chemistry";
   return "other";
 };
 
@@ -522,19 +522,15 @@ export const resolveLabRecordGroup = ({
     return "serology";
   }
 
-  if (category === "Hematology") {
+  if (category === "HEMATOLOGY") {
     return "hematology";
   }
 
-  if (category === "Clinical_Chemistry") {
+  if (category === "CLINICAL_CHEMISTRY") {
     return "clinical-chemistry";
   }
 
-  if (category === "Clinical_Microscopy") {
-    return "clinical-microscopy";
-  }
-
-  if (category === "Serology") {
+  if (category === "SEROLOGY") {
     return "serology";
   }
 
@@ -562,17 +558,17 @@ export const resolveCombinedLabResultFamily = ({
 };
 
 export const toApiLabCategory = (category: LaboratoryCategory): ApiLabCategory => {
-  if (category === "Hematology") return "hematology";
-  if (category === "Clinical_Chemistry") return "clinical-chemistry";
+  if (category === "HEMATOLOGY") return "hematology";
+  if (category === "CLINICAL_CHEMISTRY") return "clinical-chemistry";
   return "other";
 };
 
 export const toDbLabCategory = (category: ApiLabCategory): LaboratoryCategory => {
-  if (category === "hematology") return "Hematology";
+  if (category === "hematology") return "HEMATOLOGY";
   if (category === "parasitology" || category === "urinalysis") {
-    return "Clinical_Microscopy";
+    return "OTHER";
   }
-  if (category === "clinical-chemistry") return "Clinical_Chemistry";
+  if (category === "clinical-chemistry") return "CLINICAL_CHEMISTRY";
   return "OTHER";
 };
 
@@ -677,32 +673,3 @@ export const toNullableDate = (value?: string | null) => {
   const parsed = new Date(trimmed);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
-
-// export const trimFormValue = (
-//   form: Record<string, string>,
-//   ...keys: string[]
-// ) => {
-//   for (const key of keys) {
-//     const value = form[key];
-
-//     if (typeof value === "string") {
-//       const trimmed = value.trim();
-//       if (trimmed) {
-//         return trimmed;
-//       }
-//     }
-//   }
-
-//   return null;
-// };
-
-// export const toNullableDate = (value?: string | null) => {
-//   const trimmed = value?.trim();
-
-//   if (!trimmed) {
-//     return null;
-//   }
-
-//   const parsed = new Date(trimmed);
-//   return Number.isNaN(parsed.getTime()) ? null : parsed;
-// };

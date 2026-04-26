@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import clsx from "clsx";
 import { ChevronLeft } from "lucide-react";
 import { useEffect, useState } from "react";
+import QueueManagementBox from "./Dashboard/QueueManagementBox";
 
 export default function SidebarMenu() {
   const { user } = useAuth();
@@ -39,6 +40,9 @@ export default function SidebarMenu() {
         item.roles.some(role => user.roles.includes(role))
       )
     : [];
+
+  // Only show queue box for STAFF
+  const isStaff = user?.roles.includes("STAFF");
 
   return (
     <aside
@@ -99,6 +103,13 @@ export default function SidebarMenu() {
           );
         })}
       </nav>
+
+      {/* Queue Management - Only for STAFF */}
+      {isStaff && isOpen && (
+        <div className="border-t border-white/[0.06] p-3">
+          <QueueManagementBox />
+        </div>
+      )}
     </aside>
   );
 }

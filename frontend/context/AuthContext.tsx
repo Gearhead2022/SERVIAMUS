@@ -50,9 +50,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(true);
 
     const admin_user = user.roles.includes('ADMIN');
-    const doctor_user = user.roles.includes('DOCTOR');
-    const laboratory_user = user.roles.includes('LAB') || user.roles.includes('LABORATORY');
+    const laboratory_user = user.roles.includes('LAB');
     const staff_user = user.roles.includes('STAFF');
+    const doctor_user = user.roles.includes('DOCTOR');
     const cashier_user = user.roles.includes('CASHIER');
 
     if (admin_user) {
@@ -65,13 +65,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (laboratory_user) {
       router.replace("/labdashboard");
-    }
-
-    if (staff_user) {
+    } else if (staff_user) {
       router.replace("/registration");
-    }
-
-    if (cashier_user) {
+    } else if (doctor_user) {
+      router.replace("/docDashboard");
+    } else if (cashier_user) {
       router.replace("/billing");
     }
   };

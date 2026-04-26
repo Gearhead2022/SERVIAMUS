@@ -1,7 +1,6 @@
+// backend/src/modules/request/request.services.ts
 import { prisma } from "../../config/prismaClient";
-import { createLaboratoryRequestWithItems } from "../lab/lab.helpers";
-import { splitLabTests } from "../lab/lab.utils";
-import { CreateRequestProps } from "./request.types";
+import { addToQueue } from "../queue/queue.services";
 
 export const getPrevVitalSigns = async (patient_id: number) => {
   return prisma.$transaction(async (tx) => {
@@ -30,55 +29,81 @@ export const getPrevVitalSigns = async (patient_id: number) => {
   });
 };
 
-export const createRequest = async (payload: CreateRequestProps) => {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
+    // Create the request
     const request = await tx.request.create({
       data: {
         patient_id: payload.patient_id,
         req_date: new Date(payload.req_date),
         req_type: payload.req_type as 'CONSULTATION' | 'LABORATORY' | 'CERTIFICATE',
         status: "WAITING",
+        req_date: new Date(req_date),
       },
     });
 
-    if (payload.req_type === "CONSULTATION") {
-      const vitals = await tx.vitallSign.create({
-        data: {
-          patient_id: payload.patient_id,
-          bp: payload.bp ?? null,
-          temp: payload.temp ?? null,
-          cr: payload.cr ?? null,
-          rr: payload.rr ?? null,
-          wt: payload.wt ?? null,
-          ht: payload.ht ?? null,
-        },
-      });
-
-      const consult = await tx.consultationRequest.create({
+    // Handle LABORATORY requests
+    if (req_type === "LABORATORY") {
+      await tx.laboratoryRequest.create({
         data: {
           req_id: request.req_id,
-          vs_id: vitals.vs_id,
-          physician: payload.physician,
+          req_by,
         },
       });
 
-      return { request, vitals, consult };
-    }
-
-    if (payload.req_type === "LABORATORY") {
-      const normalizedTests = splitLabTests(payload.test.join(", "));
-
-      if (!normalizedTests.length) {
-        throw new Error("At least one laboratory test is required.");
-      }
-
-      const lab = await createLaboratoryRequestWithItems(tx, {
-        reqId: request.req_id,
-        requestedBy: payload.req_by,
-        tests: normalizedTests,
+      const services = await tx.services.findMany({
+        where: { is_active: true },
       });
 
-      return { request, lab };
+      if (services.length === 0) {
+        throw new Error("No services found. Please configure services first.");
+      }
+
+      const totalPrice = services.reduce((sum: number, svc: any) => sum + Number(svc.price), 0);
+
+      const billingCount = await tx.billing.count();
+      const billingCode = `BILL${new Date().getFullYear()}${String(billingCount + 1).padStart(5, "0")}`;
+
+      const billing = await tx.billing.create({
+        data: {
+          billing_code: billingCode,
+          req_id: request.req_id,
+          total_price: totalPrice,
+          discount: 0,
+          date: new Date(),
+          status: "PENDING",
+        },
+      });
+
+      await Promise.all(
+        services.map((svc) =>
+          tx.billingService.create({
+            data: {
+              billing_id: billing.billing_id,
+              service_id: svc.service_id,
+              price: svc.price,
+            },
+          })
+        )
+      );
+
+    } else if (req_type === "CONSULTATION") {
+      let vitalSigns = await tx.vitallSign.findFirst({
+        where: { patient_id },
+        orderBy: { created_at: "desc" },
+      });
+
+      if (!vitalSigns) {
+        vitalSigns = await tx.vitallSign.create({
+          data: { patient_id },
+        });
+      }
+
+      await tx.consultationRequest.create({
+        data: {
+          req_id: request.req_id,
+          vs_id: vitalSigns.vs_id,
+        },
+      });
     }
 
     if (payload.req_type === "CERTIFICATE") {
@@ -99,6 +124,11 @@ export const createRequest = async (payload: CreateRequestProps) => {
 
     throw new Error("Invalid request type");
   });
+
+  // Add to queue AFTER transaction completes successfully
+  await addToQueue(patient_id, req_type as "CONSULTATION" | "LABORATORY");
+
+  return result;
 };
 
 export const getAllRegisteredUsers = async () => {

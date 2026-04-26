@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createPatient, fetchAllPatient } from "@/services/patient.services";
-import { getPrevVitalSigns, createRequest, getAllUsers } from "@/services/request.services";
+import { createPatient, fetchAllPatient, updatePatient } from "@/services/patient.services";
 import SweetAlert from "@/utils/SweetAlert";
+import { VitalSignProps} from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
-import { UsersProps, VitalSignProps } from "@/types/RequestTypes";
+import { getPrevVitalSigns, createRequest, getAllUsers as getAllRegisteredUsers } from "@/services/request.services";
+import { UsersProps } from "@/types/RequestTypes";
 
 export const useGetAllpatient = (search: string) => {
   return useQuery<PatientProps[]>({
@@ -56,13 +57,22 @@ export const useRequest = (closeModal: () => void) => {
   return useMutation({
     mutationFn: createRequest,
 
-    onSuccess: () => {
-      SweetAlert.successAlert(
-        "Success",
-        "Request created successfully"
-      );
-      queryClient.invalidateQueries({ queryKey: ["request"] });
-      closeModal();
+    onSuccess: (data: Awaited<ReturnType<typeof createRequest>>) => {
+      if (data?.request?.req_type === "LABORATORY") {
+        SweetAlert.successAlert(
+          "Request Sent to Cashier",
+          "Laboratory request has been successfully submitted and sent to the billing queue."
+        );
+        queryClient.invalidateQueries({ queryKey: ["request"] });
+        closeModal();
+      } else {
+        SweetAlert.successAlert(
+          "Success",
+          "Request created successfully"
+        );
+        queryClient.invalidateQueries({ queryKey: ["request"] });
+        closeModal();
+      }
     },
 
     onError: (error: unknown) => {
@@ -74,9 +84,33 @@ export const useRequest = (closeModal: () => void) => {
   });
 };
 
+export const useUpdatePatient = (closeModal: () => void) => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ patientId, data }: { patientId: number; data: PatientProps }) =>
+      updatePatient(patientId, data),
+
+    onSuccess: () => {
+      SweetAlert.successAlert(
+        "Success",
+        "Patient updated successfully"
+      );
+      queryClient.invalidateQueries({ queryKey: ["patient"] });
+      closeModal();
+    },
+
+    onError: (error: unknown) => {
+      SweetAlert.errorAlert(
+        "Update Failed",
+        error instanceof Error ? error.message : "Something went wrong"
+      );
+    }
+  });
+};
 export const useGetAllUsers = () => {
   return useQuery<UsersProps[]>({
-    queryKey: ["patient"],
-    queryFn: () => getAllUsers(),
+    queryKey: ["users"],
+    queryFn: getAllRegisteredUsers,
   });
 };

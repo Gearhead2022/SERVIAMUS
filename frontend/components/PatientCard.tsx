@@ -66,6 +66,9 @@ const PatientCard = ({ patient, onClick }: PatientCardProps) => {
           {patient.contact_number && (
             <span className="text-xs text-[#6b7da0] truncate">{patient.contact_number}</span>
           )}
+          {patient.philhealth_id && (
+            <span className="text-xs text-[#6b7da0] truncate">{patient.philhealth_id}</span>
+          )}
         </div>
 
         {/* Footer */}

@@ -1,3 +1,5 @@
+// TODO:FIX MERGE CONFLICTS
+
 "use client";
 
 import { useMemo } from "react";
@@ -57,14 +59,13 @@ function VitalsRow<T extends FieldValues>({
   readonly,
 }: VitalKeyProps<T>) {
   const fields = [
-    { name: "bp", label: "BP (mmHg)", placeholder: "120/80" },
-    { name: "temp", label: "Temp (°C)", placeholder: "36.6" },
-    { name: "cr", label: "Pulse (bpm)", placeholder: "72" },
-    { name: "rr", label: "RR (/min)", placeholder: "16" },
-    { name: "wt", label: "Weight (kg)", placeholder: "60" },
-    { name: "ht", label: "Height (cm)", placeholder: "165" },
+    { name: "bp", label: "BP (mmHg)", ph: "120/80" },
+    { name: "temp", label: "Temp (°C)", ph: "36.6" },
+    { name: "cr", label: "Pulse (bpm)", ph: "72" },
+    { name: "rr", label: "RR (/min)", ph: "16" },
+    { name: "wt", label: "Weight (kg)", ph: "60" },
+    { name: "ht", label: "Height (cm)", ph: "165" },
   ];
-
   return (
     <div className="mb-5">
       <h4
@@ -125,7 +126,7 @@ const RequestForm: React.FC<{
       prev_temp: vitals?.temp,
       prev_rr: vitals?.rr,
       prev_ht: vitals?.ht,
-      prev_wt: vitals?.ht,
+      prev_wt: vitals?.wt,
       created_at: '',
       patient_code: patient?.patient_code,
       address: patient?.address,
@@ -410,16 +411,14 @@ const RequestForm: React.FC<{
                 )}
               />
 
-              {certificateErrors.purpose && (
+              {labErrors.test && (
                 <p className="text-xs text-red-500 mt-1">
-                  {certificateErrors.purpose.message}
+                  {labErrors.test.message}
                 </p>
               )}
             </div>
           </div>
-        ) :
-          null
-        };
+        ) : null}
 
         {/* ── CERTIFICATE fields ── */}
         {reqType === "CERTIFICATE" && (

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { patientSchema } from "@/schemas/patient.schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { usePatient } from "@/hooks/Patient/usePatientRegistration";
+import { useUpdatePatient } from "@/hooks/Patient/usePatientRegistration";
 import { PatientProps } from "@/types/PatientTypes";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -12,8 +12,9 @@ import Button from "@/components/ui/Button";
 
 type PatientFormValues = z.infer<typeof patientSchema>;
 
-const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void }> = ({ patient, onClose }) => {
-  const { mutateAsync: registerPatient, isPending } = usePatient(onClose);
+const EditPatientForm: React.FC<{ patient: PatientProps; onClose: () => void }> = ({ patient, onClose }) => {
+  const { mutateAsync: updatePatientMutation, isPending } = useUpdatePatient(onClose);
+  
   const {
     register,
     handleSubmit,
@@ -22,18 +23,17 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
     resolver: zodResolver(patientSchema),
     mode: "onSubmit",
     defaultValues: {
-      patient_code: '',
-      name: patient?.name ?? "",
-      address: "",
-      contact_number: "",
-      birth_date: "",
-      sex: "male",
-      age: "",
-      religion: "",
-      philhealth_id: patient?.philhealth_id ?? "",
+      patient_code: patient.patient_code ?? "",
+      name: patient.name ?? "",
+      address: patient.address ?? "",
+      contact_number: patient.contact_number ?? "",
+      birth_date: patient.birth_date ?? "",
+      sex: (patient.sex as "male" | "female") ?? "male",
+      age: String(patient.age) ?? "",
+      religion: patient.religion ?? "",
+      philhealth_id: patient.philhealth_id ?? "", 
     },
   });
-
   const formatPhilHealthId = (value: string) => {
   // Remove all non-digits
   const digits = value.replace(/\D/g, '');
@@ -50,7 +50,11 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
   });
 
   const onSubmit = async (data: PatientFormValues) => {
-    await registerPatient(mapToPrisma(data));
+    if (!patient.patient_id) return;
+    await updatePatientMutation({
+      patientId: patient.patient_id,
+      data: mapToPrisma(data),
+    });
   };
 
   return (
@@ -61,15 +65,15 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
         <div className="w-8 h-8 rounded-lg bg-[#0f2244] flex items-center justify-center flex-shrink-0">
           <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round"
-              d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
         </div>
         <div>
           <h2 className="font-['DM_Serif_Display'] text-[#0f2244] text-base leading-tight">
-            {patient ? "Update Patient Record" : "New Patient Registration"}
+            Update Patient Record
           </h2>
           <p className="text-[11px] text-[#6b7da0] mt-0.5">
-            {patient ? `Editing record for ${patient.name}` : "Fill in the details below to register a patient"}
+            Editing record for {patient.name}
           </p>
         </div>
       </div>
@@ -87,12 +91,11 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
           />
         </div>
 
-        {/* 2-column row: Consultation Date + Contact Number */}
+        {/* Contact Number */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Input
               label="Contact Number"
-
               placeholder="+63 9XX XXX XXXX"
               {...register("contact_number")}
               error={errors.contact_number?.message}
@@ -111,13 +114,12 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
           />
         </div>
 
-        {/* 2-column row: Birth Date + Sex */}
+        {/* Birth Date + Sex */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Input
               label="Birth Date"
               type="date"
-              placeholder="Street, City, Province"
               {...register("birth_date")}
               error={errors.birth_date?.message}
             />
@@ -135,7 +137,7 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
           </div>
         </div>
 
-        {/* 2-column row: Age + Religion */}
+        {/* Age + Religion */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Input
@@ -150,12 +152,13 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
             <Input
               label="Religion"
               type="text"
-              placeholder="Years"
+              placeholder="e.g. Catholic"
               {...register("religion")}
               error={errors.religion?.message}
             />
           </div>
         </div>
+
         {/* PhilHealth ID */}
           <div>
             <Input
@@ -178,7 +181,7 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
         {/* Submit */}
         <div className="flex justify-end gap-2">
           <Button variant="danger" type="button" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" type="submit" isLoading={isPending}>Submit ✓</Button>
+          <Button variant="primary" type="submit" isLoading={isPending}>Update ✓</Button>
         </div>
 
       </form>
@@ -186,4 +189,4 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
   );
 };
 
-export default PatientForm;
+export default EditPatientForm;
