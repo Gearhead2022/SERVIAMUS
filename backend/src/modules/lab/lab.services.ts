@@ -229,6 +229,27 @@ const getUserName = async (tx: Prisma.TransactionClient, userId: number) => {
   return normalizeRequestedBy(user?.name) ?? "Doctor";
 };
 
+const ensurePersonnelUserExists = async (
+  tx: Prisma.TransactionClient,
+  userId: number | null | undefined,
+  label: string
+) => {
+  if (!userId) {
+    return null;
+  }
+
+  const user = await tx.users.findUnique({
+    where: { user_id: userId },
+    select: { user_id: true },
+  });
+
+  if (!user) {
+    throw new LabModuleError(`${label} was not found.`, 400);
+  }
+
+  return user.user_id;
+};
+
 const getLabRequestRecords = async (tx: Prisma.TransactionClient) => {
   return tx.laboratoryRequest.findMany({
     include: labRequestInclude,
@@ -324,13 +345,30 @@ const syncParentRequestStatus = async (
 
 export const getAllUsersService = async () => {
   return prisma.users.findMany({
-    include: {
+    where: {
+      is_active: true,
+    },
+    select: {
+      is_active: true,
+      license_no: true,
+      name: true,
+      ptr_no: true,
       roles: {
-        include: {
-          role: true,
+        select: {
+          role: {
+            select: {
+              role_desc: true,
+              role_id: true,
+              role_name: true,
+            },
+          },
         },
       },
+      title: true,
+      user_id: true,
+      username: true,
     },
+    orderBy: [{ name: "asc" }, { user_id: "asc" }],
   });
 };
 
@@ -725,6 +763,7 @@ export const saveLabResultService = async ({
   labId,
   category,
   form,
+  medTechUserId,
   userId,
   pathologistUserId,
 }: SaveLabResultInput) => {
@@ -789,6 +828,16 @@ export const saveLabResultService = async ({
       schemaKey: existingItem.test.schema_key,
       testName: existingItem.test.name,
     });
+    const resolvedMedTechUserId =
+      (await ensurePersonnelUserExists(tx, medTechUserId, "Selected medical technologist")) ??
+      userId ??
+      existingItem.processed_by ??
+      null;
+    const resolvedPathologistUserId = await ensurePersonnelUserExists(
+      tx,
+      pathologistUserId,
+      "Selected pathologist"
+    );
     const relatedGroupItems = combinedResultFamily
       ? await getRelatedCombinedLabResultItems(
           tx,
@@ -817,7 +866,7 @@ export const saveLabResultService = async ({
         result_payload: normalizeLabForm(form),
         status: nextStatus,
         completed_at: nextStatus === "DONE" ? new Date() : null,
-        processed_by: userId ?? existingItem.processed_by ?? null,
+        processed_by: resolvedMedTechUserId,
       },
     });
 
@@ -829,8 +878,8 @@ export const saveLabResultService = async ({
         testName: relatedItem.test.name,
         schemaKey: relatedItem.test.schema_key,
         form,
-        medTechUserId: userId ?? null,
-        pathologistUserId,
+        medTechUserId: resolvedMedTechUserId,
+        pathologistUserId: resolvedPathologistUserId,
       });
     }
 

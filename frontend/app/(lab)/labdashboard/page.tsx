@@ -621,9 +621,9 @@ export default function DashboardPage() {
                   <h2 className="text-lg font-semibold text-[#133d37]">
                     Request Notifications Queue
                   </h2>
-                  <p className="mt-1 text-sm text-[#5f8a83]">
+                  {/* <p className="mt-1 text-sm text-[#5f8a83]">
                     Review each laboratory entry before accepting it into the active work queue.
-                  </p>
+                  </p> */}
                 </div>
                 <div className="rounded-full bg-[#e3f6f2] px-3 py-1 text-xs font-medium text-[#2e6e64]">
                   {queued.length} queued
@@ -753,9 +753,9 @@ export default function DashboardPage() {
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-[#133d37]">Pending Test Entries</h2>
-                    <p className="mt-1 text-sm text-[#5f8a83]">
+                    {/* <p className="mt-1 text-sm text-[#5f8a83]">
                       Open a request here to encode results and continue to the preview step.
-                    </p>
+                    </p> */}
                   </div>
                   <Microscope size={17} className="text-[#2f9f90]" />
                 </div>
@@ -796,12 +796,12 @@ export default function DashboardPage() {
                               </p>
                               <div>
                                 <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-[#5b7c76]">
-                                  <span>Progress</span>
+                                  {/* <span>Progress</span>
                                   <span>
                                     {formatProgressLabel(item.completedCount, item.totalTests)}
-                                  </span>
+                                  </span> */}
                                 </div>
-                                <div className="h-2 overflow-hidden rounded-full bg-[#e3f3ef]">
+                                {/* <div className="h-2 overflow-hidden rounded-full bg-[#e3f3ef]">
                                   <div
                                     className="h-full rounded-full bg-[#152859]"
                                     style={{
@@ -811,7 +811,7 @@ export default function DashboardPage() {
                                       )}%`,
                                     }}
                                   />
-                                </div>
+                                </div> */}
                               </div>
                               <p className="text-xs text-[#6f948d]">
                                 Requested by {item.requestedBy}
@@ -900,10 +900,6 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-[#133d37]">Patient Request Preview</h2>
-                <p className="mt-1 text-sm text-[#5f8a83]">
-                  Patient-level request progress, split into pending and done groups, with date and
-                  laboratory category filters.
-                </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

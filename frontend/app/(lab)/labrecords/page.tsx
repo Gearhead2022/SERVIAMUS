@@ -78,21 +78,21 @@ export default function LabRecordsPage() {
 
       <div
         className="min-h-screen font-['DM_Sans']"
-        style={{
-          background: "linear-gradient(135deg, #0f2244 0%, #1a3560 55%, #0e3d5c 100%)",
-        }}
+        // style={{
+        //   background: "linear-gradient(135deg, #0f2244 0%, #1a3560 55%, #0e3d5c 100%)",
+        // }}
       >
 
         <div className="mx-auto max-w-7xl px-8 py-12">
           <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">
+            <div className="rounded-3xl border border-white/10 bg-white rounded-3xl border border-black/75 p-6 backdrop-blur-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-black">
                 Patient Directory Search
               </p>
               <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div className="relative max-w-xl flex-1">
                   <svg
-                    className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30"
+                    className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-teal-600"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth={2}
@@ -109,7 +109,7 @@ export default function LabRecordsPage() {
                     placeholder="Search patients by name, address, or patient ID"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    className="w-full rounded-xl border border-white/15 bg-white/10 py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 outline-none transition focus:border-white/30 focus:bg-white/15"
+                    className="w-full rounded-xl border border-teal/80 bg-white/100 py-2.5 pl-10 pr-4 text-sm text-black placeholder-white/30 outline-none transition focus:border-black/100 focus:bg-white/65"
                   />
                 </div>
 
@@ -122,12 +122,12 @@ export default function LabRecordsPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm">
+              <div className="rounded-3xl border border-white/10 bg-white/100 p-5 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-white/75">Visible Patients</p>
+                  <p className="text-sm font-medium text-black">Visible Patients</p>
                   <Users size={17} className="text-white/60" />
                 </div>
-                <p className="mt-3 text-3xl font-bold text-white">
+                <p className="mt-3 text-3xl font-bold text-black">
                   {isLoading ? "..." : patients.length}
                 </p>
               </div>

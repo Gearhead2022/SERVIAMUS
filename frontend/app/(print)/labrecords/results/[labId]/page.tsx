@@ -11,8 +11,40 @@ import SweetAlert from "@/utils/SweetAlert";
 import {
   downloadLabResultPdf,
   getLabResultPdfFileName,
-  openLabResultPdfForPrint,
 } from "@/utils/lab-pdf";
+
+function PrintPageSkeleton() {
+  return (
+    <div className="animate-pulse rounded-[28px] border border-[#c8e4de] bg-white p-6 shadow-sm">
+      <div className="mx-auto max-w-[8in] space-y-5">
+        <div className="flex items-center gap-4 border-b border-slate-200 pb-4">
+          <div className="h-14 w-14 rounded-full bg-slate-200" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-1/2 rounded-full bg-slate-200" />
+            <div className="h-3 w-2/3 rounded-full bg-slate-100" />
+            <div className="h-3 w-1/3 rounded-full bg-slate-100" />
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div
+              key={index}
+              className="h-[52px] rounded-2xl border border-slate-200 bg-slate-50"
+            />
+          ))}
+        </div>
+        <div className="space-y-3">
+          <div className="h-3 w-32 rounded-full bg-slate-200" />
+          <div className="h-24 rounded-2xl border border-slate-200 bg-slate-50" />
+        </div>
+        <div className="space-y-3">
+          <div className="h-3 w-40 rounded-full bg-slate-200" />
+          <div className="h-32 rounded-2xl border border-slate-200 bg-slate-50" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const getPdfErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message.trim()) {
@@ -25,13 +57,31 @@ const getPdfErrorMessage = (error: unknown, fallback: string) => {
 export default function LabResultPrintPage() {
   const params = useParams<{ labId: string }>();
   const searchParams = useSearchParams();
-  const hasAutoOpenedPrintPdf = useRef(false);
+  const hasAutoTriggeredPrint = useRef(false);
   const hasAutoDownloaded = useRef(false);
+  const shouldCloseAfterPrint = useRef(false);
   const documentRef = useRef<HTMLDivElement | null>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
-  const [isPreparingPrint, setIsPreparingPrint] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const labId = Number(params.labId);
   const { data: request, error, isLoading } = useLabRequest(labId);
+
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      setIsPrinting(false);
+
+      if (shouldCloseAfterPrint.current) {
+        shouldCloseAfterPrint.current = false;
+        window.close();
+      }
+    };
+
+    window.addEventListener("afterprint", handleAfterPrint);
+
+    return () => {
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+  }, []);
 
   const handleDownloadPdf = useCallback(async () => {
     if (!request || !request.resultPayload || !documentRef.current) {
@@ -59,7 +109,7 @@ export default function LabResultPrintPage() {
     }
   }, [request]);
 
-  const handleOpenPrintablePdf = useCallback(async () => {
+  const handlePrintPage = useCallback((closeAfterPrint = false) => {
     if (!request || !request.resultPayload || !documentRef.current) {
       SweetAlert.errorAlert(
         "Print Failed",
@@ -68,25 +118,11 @@ export default function LabResultPrintPage() {
       return;
     }
 
-    try {
-      setIsPreparingPrint(true);
-      await openLabResultPdfForPrint({
-        element: documentRef.current,
-        fileName: getLabResultPdfFileName(request),
-        targetWindow: window,
-      });
-    } catch (error) {
-      console.error("Laboratory PDF print preparation failed.", error);
-      SweetAlert.errorAlert(
-        "Print Failed",
-        getPdfErrorMessage(
-          error,
-          "Unable to prepare the laboratory PDF for printing. Please try again."
-        )
-      );
-    } finally {
-      setIsPreparingPrint(false);
-    }
+    shouldCloseAfterPrint.current = closeAfterPrint;
+    setIsPrinting(true);
+    window.requestAnimationFrame(() => {
+      window.print();
+    });
   }, [request]);
 
   useEffect(() => {
@@ -96,7 +132,7 @@ export default function LabResultPrintPage() {
       searchParams.get("download") !== "1" ||
       hasAutoDownloaded.current ||
       isDownloadingPdf ||
-      isPreparingPrint
+      isPrinting
     ) {
       return;
     }
@@ -110,7 +146,7 @@ export default function LabResultPrintPage() {
   }, [
     handleDownloadPdf,
     isDownloadingPdf,
-    isPreparingPrint,
+    isPrinting,
     request?.resultPayload,
     searchParams,
   ]);
@@ -120,23 +156,23 @@ export default function LabResultPrintPage() {
       !request?.resultPayload ||
       !documentRef.current ||
       searchParams.get("autoprint") !== "1" ||
-      hasAutoOpenedPrintPdf.current ||
+      hasAutoTriggeredPrint.current ||
       isDownloadingPdf ||
-      isPreparingPrint
+      isPrinting
     ) {
       return;
     }
 
-    hasAutoOpenedPrintPdf.current = true;
+    hasAutoTriggeredPrint.current = true;
     const printTimer = window.setTimeout(() => {
-      void handleOpenPrintablePdf();
+      handlePrintPage(true);
     }, 450);
 
     return () => window.clearTimeout(printTimer);
   }, [
-    handleOpenPrintablePdf,
+    handlePrintPage,
     isDownloadingPdf,
-    isPreparingPrint,
+    isPrinting,
     request?.resultPayload,
     searchParams,
   ]);
@@ -160,24 +196,22 @@ export default function LabResultPrintPage() {
                 type="button"
                 variant="secondary"
                 onClick={handleDownloadPdf}
-                disabled={isDownloadingPdf || isPreparingPrint || !request?.resultPayload}
+                disabled={isDownloadingPdf || isPrinting || !request?.resultPayload}
               >
                 {isDownloadingPdf ? "Downloading PDF..." : "Download PDF"}
               </Button>
               <Button
                 type="button"
-                onClick={handleOpenPrintablePdf}
-                disabled={isDownloadingPdf || isPreparingPrint || !request?.resultPayload}
+                onClick={() => handlePrintPage()}
+                disabled={isDownloadingPdf || isPrinting || !request?.resultPayload}
               >
-                {isPreparingPrint ? "Preparing Print..." : "Print Result"}
+                {isPrinting ? "Opening Print..." : "Print Result"}
               </Button>
             </div>
           </div>
 
           {isLoading ? (
-            <div className="rounded-3xl border border-[#c8e4de] bg-white px-6 py-10 text-center text-sm text-[#5f8a83]">
-              Loading printable result...
-            </div>
+            <PrintPageSkeleton />
           ) : error ? (
             <div className="rounded-3xl border border-[#f0c6c0] bg-white px-6 py-10 text-center text-sm text-[#9a4f45]">
               {getApiErrorMessage(error, "Unable to load the printable laboratory result.")}

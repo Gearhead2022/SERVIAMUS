@@ -228,7 +228,7 @@ export const updateLabRequestStatusController = async (req: Request, res: Respon
 
 export const saveLabResultController = async (req: Request, res: Response) => {
   try {
-    const { labId, category, form, pathologistUserId } = req.body ?? {};
+    const { labId, category, form, medTechUserId, pathologistUserId } = req.body ?? {};
     const userId = req.user?.user_id;
 
     if (
@@ -247,6 +247,7 @@ export const saveLabResultController = async (req: Request, res: Response) => {
       labId: Number(labId),
       category,
       form,
+      medTechUserId: typeof medTechUserId === "number" ? medTechUserId : null,
       userId,
       pathologistUserId:
         typeof pathologistUserId === "number" ? pathologistUserId : null,
