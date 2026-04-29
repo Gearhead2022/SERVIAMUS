@@ -149,47 +149,47 @@ const RequestForm: React.FC<{
     label: "Clinical Chemistry",
     options: [
       { label: "Fasting Blood Sugar", value: "FBS" },
-      { label: "Random Blood Sugar", value: "RBS" },
-      { label: "Urea (BUN)", value: "UREA" },
+      { label: "Random Blood Sugar", value: "Random Blood Sugar" },
+      { label: "Urea (BUN)", value: "Urea (BUN)" },
       { label: "Creatinine", value: "Creatinine" },
       { label: "Uric Acid", value: "Uric Acid" },
       { label: "Total Cholesterol", value: "Total Cholesterol" },
       { label: "HDL-Cholesterol", value: "HDL-Cholesterol" },
       { label: "LDL-Cholesterol", value: "LDL-Cholesterol" },
-      { label: "Random Blood Sugar", value: "Triglycerides" },
-      { label: "50g OGGT", value: "onehOGTT" },
-      { label: "75g OGGT", value: "twohOGTT" },
+      { label: "Triglycerides", value: "Triglycerides" },
+      { label: "50g OGGT", value: "1H-OGTT" },
+      { label: "75g OGGT", value: "2H-OGTT" },
       { label: "100g OGGT", value: "OGTT" },
-      { label: "SGPT", value: "SGPT" },
+      { label: "SGPT", value: "Serum Glutamic Pyruvic Transaminase" },
       { label: "Sodium", value: "Sodium" },
       { label: "Potassium", value: "Potassium" },
-      { label: "HbA1c", value: "hba1c" }, 
+      { label: "HbA1c", value: "HbA1c" }, 
 
     ],
   },
   {
     label: "Clinical Microscopy",
     options: [
-      { label: "Routine Urinalysis", value: "urinalysis" },
-      { label: "Cholesterol", value: "fecalysis" },
-      { label: "Fecal Occult Blood Test", value: "FOBT" },
+      { label: "Urinalysis", value: "Urinalysis" },
+      { label: "Fecalysis", value: "Fecalysis" },
+      { label: "Fecal Occult Blood Test", value: "Fecal Occult Blood Test" },
     ],
   },
   {
     label: "Serology",
     options: [
-      { label: "Pregnancy Test (Urine)", value: "urinePT" },
-      { label: "Pregnancy Test (Serum)", value: "serumPT" },
-      { label: "Dengue NS1", value: "dengue" },
-      { label: "Syphilis", value: "syphilis" },
-      { label: "Hepatitis B Surface Antigen", value: "hbsag" },
+      { label: "Pregnancy Test (Urine)", value: "Pregnancy Test (Urine)" },
+      { label: "Pregnancy Test (Serum)", value: "Pregnancy Test (Serum)" },
+      { label: "Dengue NS1", value: "Dengue NS1" },
+      { label: "Syphilis", value: "Syphilis" },
+      { label: "Hepatitis B Surface Antigen", value: "Hepatitis B Surface Antigen" },
     ],
   },
    {
     label: "Hematology  ",
     options: [
-      { label: "Complete Blood Count with Platelet Count", value: "CBC" },
-      { label: "Blood Typing", value: "BT" },
+      { label: "Complete Blood Count with Platelet Count", value: "Complete Blood Count with Platelet Count" },
+      { label: "Blood Typing", value: "Blood Typing" },
     ],
   },
   ];
@@ -419,7 +419,7 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
           </div>
 
         )}
-
+{/* GG Laboratory section */}
         {reqType === "LABORATORY" ? (
           <div className="space-y-4">
             <div className="col-span-2">
@@ -455,10 +455,18 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
                     value={flatTestOptions.filter((option) =>
                       field.value?.includes(option.value)
                     )}
-                    />
-
+                  className="mb-5 z-10"  />
                 )}
+              
               />
+              {/* <Input
+                label="Add Other Test (if not in the list)"
+                type="text"
+                {...register("req_by" as const)}
+                className="bg-[#f7f8fc]"
+                placeholder="Enter Tests Here..."
+              /> */}
+
 
               {certificateErrors.purpose && (
                 <p className="text-xs text-red-500 mt-1">

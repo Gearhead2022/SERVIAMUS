@@ -815,17 +815,11 @@ export const saveLabResultService = async ({
       );
     }
 
-    if (!existingItem.test.schema_key) {
-      await tx.laboratoryTest.update({
-        where: { test_id: existingItem.test_id },
-        data: {
-          schema_key: toSchemaKey(existingItem.test.name),
-        },
-      });
-    }
+    // laboratory_tests is static, so infer missing metadata without updating the catalog row.
+    const resolvedSchemaKey = existingItem.test.schema_key ?? toSchemaKey(existingItem.test.name);
 
     const combinedResultFamily = resolveCombinedLabResultFamily({
-      schemaKey: existingItem.test.schema_key,
+      schemaKey: resolvedSchemaKey,
       testName: existingItem.test.name,
     });
     const resolvedMedTechUserId =
@@ -850,7 +844,10 @@ export const saveLabResultService = async ({
             processed_by: existingItem.processed_by,
             result_payload: null,
             status: existingItem.status,
-            test: existingItem.test,
+            test: {
+              ...existingItem.test,
+              schema_key: resolvedSchemaKey,
+            },
           },
         ];
     const targetItemIds = relatedGroupItems.map((item) => item.item_id);
@@ -876,7 +873,7 @@ export const saveLabResultService = async ({
         patientId: existingItem.laboratoryRequest.request.patient_id,
         labId: relatedItem.item_id,
         testName: relatedItem.test.name,
-        schemaKey: relatedItem.test.schema_key,
+        schemaKey: relatedItem.test.schema_key ?? toSchemaKey(relatedItem.test.name),
         form,
         medTechUserId: resolvedMedTechUserId,
         pathologistUserId: resolvedPathologistUserId,

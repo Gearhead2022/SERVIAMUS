@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { ensureLabBillingForRequest } from "../billing/billing.helpers";
-import { categorizeLabTest, splitLabTests, toSchemaKey } from "./lab.utils";
+import { splitLabTests, toSchemaKey } from "./lab.utils";
 
 type CreateLaboratoryRequestWithItemsInput = {
   reqId: number;
@@ -8,14 +8,13 @@ type CreateLaboratoryRequestWithItemsInput = {
   tests: string[];
 };
 
-const findOrCreateLaboratoryTest = async (
+const resolveLaboratoryTest = async (
   tx: Prisma.TransactionClient,
   testName: string
 ) => {
   const resolvedSchemaKey = toSchemaKey(testName);
-  const resolvedCategory = categorizeLabTest(testName, resolvedSchemaKey);
 
-  const existingTest = await tx.laboratoryTest.findFirst({
+  const testByName = await tx.laboratoryTest.findFirst({
     where: {
       name: testName,
     },
@@ -27,36 +26,29 @@ const findOrCreateLaboratoryTest = async (
     },
   });
 
-  if (existingTest) {
-    const shouldSyncMetadata =
-      !existingTest.schema_key || existingTest.category === "OTHER";
-
-    if (shouldSyncMetadata) {
-      await tx.laboratoryTest.update({
-        where: {
-          test_id: existingTest.test_id,
-        },
-        data: {
-          category: resolvedCategory,
-          schema_key: resolvedSchemaKey,
-        },
-      });
-    }
-
-    return existingTest;
+  if (testByName) {
+    return testByName;
   }
 
-  return tx.laboratoryTest.create({
-    data: {
-      name: testName,
-      category: resolvedCategory,
+  const testBySchemaKey = await tx.laboratoryTest.findFirst({
+    where: {
       schema_key: resolvedSchemaKey,
     },
     select: {
       test_id: true,
       name: true,
+      category: true,
+      schema_key: true,
     },
+    orderBy: [{ test_id: "asc" }],
   });
+
+  if (testBySchemaKey) {
+    return testBySchemaKey;
+  }
+
+  // The laboratory_tests table is a static catalog; request creation should only link to existing rows.
+  throw new Error(`Laboratory test "${testName}" is not configured in the test catalog.`);
 };
 
 export const createLaboratoryRequestWithItems = async (
@@ -93,7 +85,7 @@ export const createLaboratoryRequestWithItems = async (
   const resolvedTests = [];
 
   for (const testName of normalizedTests) {
-    const test = await findOrCreateLaboratoryTest(tx, testName);
+    const test = await resolveLaboratoryTest(tx, testName);
     resolvedTests.push(test);
   }
 

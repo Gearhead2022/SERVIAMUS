@@ -175,6 +175,27 @@ export default function DashboardPage() {
     () => requests.filter((item) => item.status === "queued"),
     [requests]
   );
+  const queuedRequestCards = useMemo(() => {
+    const groupedRequests = new Map<number, LabRequest>();
+
+    queued.forEach((item) => {
+      if (!groupedRequests.has(item.requestId)) {
+        // Keep one queue card per parent lab request; each test still stays as its own item for encoding.
+        groupedRequests.set(item.requestId, item);
+      }
+    });
+
+    return Array.from(groupedRequests.values()).sort((left, right) => {
+      const timeDiff =
+        new Date(right.requestedDate).getTime() - new Date(left.requestedDate).getTime();
+
+      if (timeDiff !== 0) {
+        return timeDiff;
+      }
+
+      return right.requestId - left.requestId;
+    });
+  }, [queued]);
   const pending = useMemo(
     () => requests.filter((item) => item.status === "pending"),
     [requests]
@@ -311,11 +332,18 @@ export default function DashboardPage() {
 
     try {
       setBusyRequestId(request.labId);
-      const updated = await updateRequestStatus({
-        labId: request.labId,
-        status: "pending",
-      });
-      syncSelectedRequest(updated);
+      const queuedItemsInRequest = queued.filter(
+        (item) => item.requestId === request.requestId && item.status === "queued"
+      );
+
+      // Accept the whole queue card so a multi-test request does not leave sibling tests behind.
+      for (const item of queuedItemsInRequest) {
+        const updated = await updateRequestStatus({
+          labId: item.labId,
+          status: "pending",
+        });
+        syncSelectedRequest(updated);
+      }
     } catch {
       // Alerts are handled in the lab hook.
     } finally {
@@ -800,7 +828,7 @@ export default function DashboardPage() {
                   <Clock3 size={16} />
                 </div>
               </div>
-              <p className="stat-value">{queued.length}</p>
+              <p className="stat-value">{queuedRequestCards.length}</p>
             </div>
             <div className="stat-card" style={{ "--accent-line": "linear-gradient(90deg, #1e4d8c, #3b82d4)" } as React.CSSProperties}>
               <div className="flex items-start justify-between">
@@ -840,16 +868,16 @@ export default function DashboardPage() {
                 <div>
                   <h2 className="section-title">Request Notifications Queue</h2>
                 </div>
-                <span className="section-badge">{queued.length} queued</span>
+                <span className="section-badge">{queuedRequestCards.length} queued</span>
               </div>
 
               <div className="space-y-3">
                 {loadingRequests ? (
                   <div className="empty-state">Loading laboratory requests…</div>
-                ) : queued.length === 0 ? (
+                ) : queuedRequestCards.length === 0 ? (
                   <div className="empty-state">No queued requests at the moment.</div>
                 ) : (
-                  queued.map((item) => {
+                  queuedRequestCards.map((item) => {
                     const template = resolveLabTemplate(item);
                     return (
                       <div key={item.labId} className="request-item">
@@ -869,7 +897,7 @@ export default function DashboardPage() {
                             <div>
                               <p className="text-sm font-semibold text-[#0f1e3c]">{item.patientName}</p>
                               <p className="mt-0.5 text-xs text-[#6b7d90]">
-                                {item.patientId} · {item.testType}
+                                {item.patientId} · {item.tests.join(", ")}
                               </p>
                             </div>
 
