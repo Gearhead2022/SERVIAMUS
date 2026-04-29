@@ -85,7 +85,7 @@ function VitalsRow<T extends FieldValues>({
               {...register(
                 (prefix ? `${prefix}_${f.name}` : f.name) as Path<T>
               )}
-              placeholder={f.ph}
+              placeholder={f.placeholder}
               className={`w-full text-center text-sm rounded-md px-2 py-2 border outline-none transition ${teal
                 ? "bg-[#e0f4f4] border-[#b0dede] focus:border-[#0e7c7b] focus:shadow-[0_0_0_3px_rgba(14,124,123,0.1)] focus:bg-white"
                 : "bg-[#f0f3fa] border-[#dce3ef] focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white"
@@ -112,6 +112,7 @@ const RequestForm: React.FC<{
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors },
   } = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
@@ -142,16 +143,71 @@ const RequestForm: React.FC<{
   const onSubmit = async (data: RequestFormValues) => {
     await request(data);
   };
-
+  
   const testOptions = [
-    { value: "CBC", label: "CBC (Complete Blood Count)" },
-    { value: "Urinalysis", label: "Urinalysis" },
-    { value: "X-Ray", label: "X-Ray" },
-    { value: "Blood Chemistry", label: "Blood Chemistry" },
-    { value: "Fecalysis", label: "Fecalysis" },
-    { value: "ECG", label: "ECG" },
-    { value: "Ultrasound", label: "Ultrasound" },
+     {
+    label: "Clinical Chemistry",
+    options: [
+      { label: "Fasting Blood Sugar", value: "FBS" },
+      { label: "Random Blood Sugar", value: "RBS" },
+      { label: "Urea (BUN)", value: "UREA" },
+      { label: "Creatinine", value: "Creatinine" },
+      { label: "Uric Acid", value: "Uric Acid" },
+      { label: "Total Cholesterol", value: "Total Cholesterol" },
+      { label: "HDL-Cholesterol", value: "HDL-Cholesterol" },
+      { label: "LDL-Cholesterol", value: "LDL-Cholesterol" },
+      { label: "Random Blood Sugar", value: "Triglycerides" },
+      { label: "50g OGGT", value: "onehOGTT" },
+      { label: "75g OGGT", value: "twohOGTT" },
+      { label: "100g OGGT", value: "OGTT" },
+      { label: "SGPT", value: "SGPT" },
+      { label: "Sodium", value: "Sodium" },
+      { label: "Potassium", value: "Potassium" },
+      { label: "HbA1c", value: "hba1c" }, 
+
+    ],
+  },
+  {
+    label: "Clinical Microscopy",
+    options: [
+      { label: "Routine Urinalysis", value: "urinalysis" },
+      { label: "Cholesterol", value: "fecalysis" },
+      { label: "Fecal Occult Blood Test", value: "FOBT" },
+    ],
+  },
+  {
+    label: "Serology",
+    options: [
+      { label: "Pregnancy Test (Urine)", value: "urinePT" },
+      { label: "Pregnancy Test (Serum)", value: "serumPT" },
+      { label: "Dengue NS1", value: "dengue" },
+      { label: "Syphilis", value: "syphilis" },
+      { label: "Hepatitis B Surface Antigen", value: "hbsag" },
+    ],
+  },
+   {
+    label: "Hematology  ",
+    options: [
+      { label: "Complete Blood Count with Platelet Count", value: "CBC" },
+      { label: "Blood Typing", value: "BT" },
+    ],
+  },
   ];
+
+  type TestOption = {
+  label: string;
+  value: string;
+};
+
+type TestGroup = {
+  label: string;
+  options: TestOption[];
+};
+
+// const testOptions: TestGroup[] = [...];
+
+const flatTestOptions = testOptions.flatMap((group) => group.options);
+
 
   const purposeOptions = [
     { value: "Fit To Work", label: "Fit to work" },
@@ -389,23 +445,18 @@ const RequestForm: React.FC<{
                 control={control}
                 name="test"
                 render={({ field }) => (
-                  <Select
+                    <Select<TestOption, true>
                     {...field}
                     options={testOptions}
-                    placeholder={
-                      loadingLabTests ? "Loading laboratory tests..." : "Choose laboratory tests"
-                    }
                     isMulti
-                    className={`text-sm ${inputCls}`}
-                    classNamePrefix="react-select"
                     onChange={(selected) =>
-                      field.onChange((selected ?? []).map((option) => option.value))
+                      field.onChange(selected.map((option) => option.value))
                     }
-                    value={testOptions.filter((option) =>
+                    value={flatTestOptions.filter((option) =>
                       field.value?.includes(option.value)
                     )}
-                    isClearable
-                  />
+                    />
+
                 )}
               />
 
@@ -418,7 +469,7 @@ const RequestForm: React.FC<{
           </div>
         ): 
         null
-        };
+        }
 
         {/* ── CERTIFICATE fields ── */}
         {reqType === "CERTIFICATE" && (
@@ -518,6 +569,6 @@ const RequestForm: React.FC<{
       </form>
     </div >
   );
-};
+}
 
 export default RequestForm;
