@@ -10,7 +10,8 @@ type ButtonVariant =
   | "declineRequest"
   | "consult"
   | "prescription"
-  | "doneStatus";
+  | "doneStatus"
+  | "print";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -47,7 +48,9 @@ const variants: Record<ButtonVariant, string> = {
   prescription:
     "flex items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-semibold transition-all bg-[#0e287c] hover:bg-[#163cb8] shadow-lg shadow-[#0e7c7a]/30",
   doneStatus:
-    "flex items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-semibold transition-all bg-[#7c190e] hover:bg-[#ad2313] shadow-lg shadow-[#0e7c7a]/30"
+    "flex items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-semibold transition-all bg-[#7c190e] hover:bg-[#ad2313] shadow-lg shadow-[#0e7c7a]/30",
+  print:
+    "text-white bg-[#fc0335] hover:bg-[#e83a5d]",
 };
 
 

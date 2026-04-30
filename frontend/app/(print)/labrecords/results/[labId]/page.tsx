@@ -72,7 +72,7 @@ export default function LabResultPrintPage() {
 
       if (shouldCloseAfterPrint.current) {
         shouldCloseAfterPrint.current = false;
-        window.close();
+        // window.close();
       }
     };
 
@@ -230,3 +230,5 @@ export default function LabResultPrintPage() {
     </RoleGuard>
   );
 }
+
+

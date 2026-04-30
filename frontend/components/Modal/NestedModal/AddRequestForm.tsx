@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { z } from "zod";
 import Select from "react-select";
 import {
@@ -14,21 +14,40 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { requestSchema } from "@/schemas/request.schema";
-import { UsersProps, VitalSignProps } from "@/types/RequestTypes";
+import {
+  PrintableLabRequestPayload,
+  UsersProps,
+  VitalSignProps,
+} from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
-import { useLabTestCatalog } from "@/hooks/Lab/useLab";
 import { useRequest, useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Label from "@/components/ui/label";
-import { File, TestTubeDiagonal, SquareActivity } from "lucide-react";
+import {
+  File,
+  Plus,
+  Printer,
+  SquareActivity,
+  TestTubeDiagonal,
+  X,
+} from "lucide-react";
 import { todayPH } from "@/utils/Date";
+import SweetAlert from "@/utils/SweetAlert";
+import { openExternalLabRequestPrintPage } from "@/utils/lab-request-print";
 
 
 type RequestFormValues = z.infer<typeof requestSchema>;
 type Consultation = Extract<RequestFormValues, { req_type: "CONSULTATION" }>;
 type Laboratory = Extract<RequestFormValues, { req_type: "LABORATORY" }>;
 type Certificate = Extract<RequestFormValues, { req_type: "CERTIFICATE" }>;
+type TestOption = {
+  label: string;
+  value: string;
+};
+
+const normalizeLabTestLabel = (value: string) =>
+  value.trim().replace(/\s+/g, " ");
 
 const inputCls =
   "w-full bg-[#f0f3fa] border border-[1.5px] border-[#dce3ef] rounded-lg px-3 py-2.5 text-sm text-[#1a2a45] font-['DM_Sans'] outline-none transition focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white placeholder:text-[#b0bcd4]";
@@ -36,7 +55,6 @@ const inputCls =
 interface VitalKeyProps<T extends FieldValues> {
   prefix: string;
   register: UseFormRegister<T>;
-  errors: FieldErrors<T>;
   label: string;
   teal?: boolean;
   readonly: boolean;
@@ -100,19 +118,35 @@ function VitalsRow<T extends FieldValues>({
   );
 }
 
+const buildExternalLabRequestPayload = (
+  patient: PatientProps,
+  data: Laboratory,
+  tests: string[]
+): PrintableLabRequestPayload => ({
+  patientCode: data.patient_code,
+  patientName: data.name,
+  age: data.age,
+  sex: patient.sex ?? null,
+  address: data.address,
+  requestDate: data.req_date,
+  requestedBy: data.req_by,
+  tests,
+});
+
 const RequestForm: React.FC<{
   patient: PatientProps;
   vitals: VitalSignProps | undefined;
   onClose: () => void;
 }> = ({ patient, vitals, onClose }) => {
   const { mutateAsync: request, isPending } = useRequest(onClose);
-  const { data: labTests = [], isLoading: loadingLabTests } = useLabTestCatalog();
   const { data: UserList } = useGetAllUsers();
   const {
     register,
     handleSubmit,
     control,
-    watch,
+    clearErrors,
+    getValues,
+    trigger,
     formState: { errors },
   } = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
@@ -125,7 +159,7 @@ const RequestForm: React.FC<{
       prev_temp: vitals?.temp,
       prev_rr: vitals?.rr,
       prev_ht: vitals?.ht,
-      prev_wt: vitals?.ht,
+      prev_wt: vitals?.wt,
       created_at: '',
       patient_code: patient?.patient_code,
       address: patient?.address,
@@ -134,14 +168,110 @@ const RequestForm: React.FC<{
     },
   });
 
-  const reqType = watch("req_type") as RequestFormValues["req_type"];
+  const reqType = useWatch({
+    control,
+    name: "req_type",
+  }) as RequestFormValues["req_type"];
+  const selectedLabTests =
+    (useWatch({
+      control,
+      name: "test",
+    }) as Laboratory["test"] | undefined) ?? [];
   const consultErrors = errors as FieldErrors<Consultation>;
   const labErrors = errors as FieldErrors<Laboratory>;
   const certificateErrors = errors as FieldErrors<Certificate>;
   const lastConsultation = vitals?.created_at ? new Date(vitals?.created_at).toISOString().split("T")[0] : '';
+  const [additionalLabTestInput, setAdditionalLabTestInput] = useState("");
+  const [additionalLabTests, setAdditionalLabTests] = useState<string[]>([]);
+  const [printTestError, setPrintTestError] = useState("");
 
   const onSubmit = async (data: RequestFormValues) => {
     await request(data);
+  };
+
+  const addAdditionalLabTest = () => {
+    const normalizedTest = normalizeLabTestLabel(additionalLabTestInput);
+
+    if (!normalizedTest) {
+      return;
+    }
+
+    const isDuplicate = [...selectedLabTests, ...additionalLabTests].some(
+      (test) => test.toLowerCase() === normalizedTest.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      setAdditionalLabTestInput("");
+      setPrintTestError("");
+      clearErrors("test");
+      return;
+    }
+
+    setAdditionalLabTests((currentTests) => [...currentTests, normalizedTest]);
+    setAdditionalLabTestInput("");
+    setPrintTestError("");
+    clearErrors("test");
+  };
+
+  const removeAdditionalLabTest = (testToRemove: string) => {
+    setAdditionalLabTests((currentTests) =>
+      currentTests.filter((test) => test !== testToRemove)
+    );
+  };
+
+  const handleAdditionalLabTestKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    addAdditionalLabTest();
+  };
+
+  const handlePrintLabRequest = async () => {
+    const isValid = await trigger(
+      [
+        "patient_code",
+        "name",
+        "req_date",
+        "address",
+        "age",
+        "req_by",
+      ] as Path<RequestFormValues>[]
+    );
+
+    if (!isValid) {
+      return;
+    }
+
+    const values = getValues();
+
+    if (values.req_type !== "LABORATORY") {
+      return;
+    }
+
+    const printableTests = [...selectedLabTests, ...additionalLabTests];
+
+    if (!printableTests.length) {
+      setPrintTestError("Select a clinic test or add a print-only external test.");
+      return;
+    }
+
+    try {
+      setPrintTestError("");
+      clearErrors("test");
+      openExternalLabRequestPrintPage(
+        buildExternalLabRequestPayload(patient, values, printableTests),
+        { autoPrint: true }
+      );
+    } catch (error) {
+      SweetAlert.errorAlert(
+        "Print Failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to open the laboratory request print preview."
+      );
+    }
   };
   
   const testOptions = [
@@ -194,18 +324,6 @@ const RequestForm: React.FC<{
   },
   ];
 
-  type TestOption = {
-  label: string;
-  value: string;
-};
-
-type TestGroup = {
-  label: string;
-  options: TestOption[];
-};
-
-// const testOptions: TestGroup[] = [...];
-
 const flatTestOptions = testOptions.flatMap((group) => group.options);
 
 
@@ -227,6 +345,7 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
   };
 
   const options = userOptions(UserList ?? []);
+  const labTestErrorMessage = labErrors.test?.message ?? printTestError;
 
   type ReqType = "CONSULTATION" | "CERTIFICATE" | "LABORATORY";
 
@@ -273,7 +392,7 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
           {(["CONSULTATION", "LABORATORY", "CERTIFICATE"] as const).map((type) => (
             <label
               key={type}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${watch("req_type") === type
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${reqType === type
                 ? type === "CONSULTATION"
                   ? "bg-[#0f2244] text-white shadow-sm"
                   : type === "LABORATORY" ? "bg-[#0e7c7b] text-white shadow-sm"
@@ -363,7 +482,6 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
               label="Previous Record"
               teal={false}
               register={register}
-              errors={consultErrors}
               readonly={true}
             />
             <VitalsRow
@@ -371,7 +489,6 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
               label="Current Record"
               teal
               register={register}
-              errors={consultErrors}
               readonly={false}
             />
             <div className="w-[70%] z-10">
@@ -449,9 +566,16 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
                     {...field}
                     options={testOptions}
                     isMulti
-                    onChange={(selected) =>
-                      field.onChange(selected.map((option) => option.value))
-                    }
+                    onChange={(selected) => {
+                      const nextSelectedTests = selected.map((option) => option.value);
+
+                      field.onChange(nextSelectedTests);
+
+                      if (nextSelectedTests.length || additionalLabTests.length) {
+                        setPrintTestError("");
+                        clearErrors("test");
+                      }
+                    }}
                     value={flatTestOptions.filter((option) =>
                       field.value?.includes(option.value)
                     )}
@@ -459,6 +583,74 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
                 )}
               
               />
+              <div className="space-y-3 rounded-2xl border border-[#dce3ef] bg-[#f7f8fc] p-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7da0]">
+                    Additional Print-Only Tests
+                  </span>
+                  <span className="flex-1 h-px bg-[#dce3ef]" />
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={additionalLabTestInput}
+                    onChange={(event) => setAdditionalLabTestInput(event.target.value)}
+                    onKeyDown={handleAdditionalLabTestKeyDown}
+                    placeholder="Enter test not offered by the clinic"
+                    className={`${inputCls} flex-1`}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    icon={<Plus size={15} />}
+                    disabled={!normalizeLabTestLabel(additionalLabTestInput)}
+                    onClick={addAdditionalLabTest}
+                  >
+                    Add
+                  </Button>
+                </div>
+
+                <p className="text-[11px] text-[#6b7da0]">
+                  These entries appear on the printable request only and are not saved to the
+                  laboratory database.
+                </p>
+
+                {additionalLabTests.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {additionalLabTests.map((test) => (
+                      <button
+                        key={test}
+                        type="button"
+                        onClick={() => removeAdditionalLabTest(test)}
+                        className="flex items-center gap-1 rounded-full border border-[#b9c9e1] bg-white px-3 py-1 text-xs font-medium text-[#1a2a45] transition hover:border-[#0e7c7b] hover:text-[#0e7c7b]"
+                      >
+                        <span>{test}</span>
+                        <X size={12} />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-3 mt-3">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7da0]">
+                Print Laboratory Request Form for external use. This will not trigger any lab workflow or notifications.
+              </span>
+              <span className="flex-1 h-px bg-[#dce3ef]" />
+            </div>
+            <Button
+            className="mt-2"
+            type="button"
+            variant="print"
+            icon={<Printer size={15} />}
+            disabled={isPending}
+            onClick={() => {
+              void handlePrintLabRequest();
+            }}
+            >
+            Print Laboratory Request
+            </Button>
+
               {/* <Input
                 label="Add Other Test (if not in the list)"
                 type="text"
@@ -468,9 +660,9 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
               /> */}
 
 
-              {certificateErrors.purpose && (
+              {labTestErrorMessage && (
                 <p className="text-xs text-red-500 mt-1">
-                  {certificateErrors.purpose.message}
+                  {labTestErrorMessage}
                 </p>
               )}
             </div>
@@ -577,6 +769,7 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
       </form>
     </div >
   );
+  
 }
 
 export default RequestForm;
