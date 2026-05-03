@@ -642,13 +642,13 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
             className="mt-2"
             type="button"
             variant="print"
-            icon={<Printer size={15} />}
+            // icon={<Printer size={15} />}
             disabled={isPending}
             onClick={() => {
               void handlePrintLabRequest();
             }}
             >
-            Print Laboratory Request
+            🖨️ Print Laboratory Request
             </Button>
 
               {/* <Input
