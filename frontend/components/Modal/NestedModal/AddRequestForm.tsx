@@ -602,7 +602,7 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
                   />
                   <Button
                     type="button"
-                    variant="secondary"
+                    variant="add"
                     icon={<Plus size={15} />}
                     disabled={!normalizeLabTestLabel(additionalLabTestInput)}
                     onClick={addAdditionalLabTest}
@@ -612,8 +612,7 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
                 </div>
 
                 <p className="text-[11px] text-[#6b7da0]">
-                  These entries appear on the printable request only and are not saved to the
-                  laboratory database.
+                  Print Laboratory Request Form for external use. This will not trigger any lab workflow or notifications.
                 </p>
 
                 {additionalLabTests.length ? (
@@ -632,12 +631,6 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
                   </div>
                 ) : null}
               </div>
-              <div className="flex items-center gap-3 mt-3">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7da0]">
-                Print Laboratory Request Form for external use. This will not trigger any lab workflow or notifications.
-              </span>
-              <span className="flex-1 h-px bg-[#dce3ef]" />
-            </div>
             <Button
             className="mt-2"
             type="button"
