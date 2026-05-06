@@ -55,6 +55,8 @@ export const createLaboratoryRequestWithItems = async (
   tx: Prisma.TransactionClient,
   { reqId, requestedBy, tests }: CreateLaboratoryRequestWithItemsInput
 ) => {
+  // Keep request creation tolerant of UI input format differences first.
+  // The morphing logic later groups compatible items for a shared lab form.
   const normalizedTests = splitLabTests(tests.join(", "));
 
   if (!normalizedTests.length) {
@@ -85,6 +87,9 @@ export const createLaboratoryRequestWithItems = async (
   const resolvedTests = [];
 
   for (const testName of normalizedTests) {
+    // We intentionally create one request item per catalog test so billing,
+    // history, and structured result writers still know which underlying
+    // tests were ordered even when the lab UI morphs them into one form.
     const test = await resolveLaboratoryTest(tx, testName);
     resolvedTests.push(test);
   }

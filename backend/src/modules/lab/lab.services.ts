@@ -112,6 +112,14 @@ type LabRequestRecord = Prisma.LaboratoryRequestGetPayload<{
   include: typeof labRequestInclude;
 }>;
 
+type LabRequestRecordItem = LabRequestRecord["items"][number];
+
+type LabWorkflowItemGroup = {
+  family: ReturnType<typeof resolveCombinedLabResultFamily>;
+  items: LabRequestRecordItem[];
+  primaryItem: LabRequestRecordItem;
+};
+
 const normalizeRequestedBy = (value?: string | null) => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -160,10 +168,12 @@ const ensurePaidBilling = (isPaid: boolean, message: string) => {
 
 const toDisplayItem = (
   record: LabRequestRecord,
-  item: LabRequestRecord["items"][number]
+  workflowGroup: LabWorkflowItemGroup
 ) => {
+  const item = workflowGroup.primaryItem;
   const latestPayment = record.request.billing?.payments[0] ?? null;
   const isPaid = record.request.billing?.status === "DONE";
+  const workflowTestNames = workflowGroup.items.map((entry) => entry.test.name);
 
   const completedTests = record.items
     .filter((entry) => entry.status === "DONE")
@@ -174,6 +184,12 @@ const toDisplayItem = (
   const requestStatus = requestStatusFromItemStatuses(
     record.items.map((entry) => entry.status)
   );
+  const workflowStatus = requestStatusFromItemStatuses(
+    workflowGroup.items.map((entry) => entry.status)
+  );
+  const workflowPayload =
+    workflowGroup.items.find((entry) => entry.result_payload)?.result_payload ??
+    item.result_payload;
 
   return {
     labId: item.item_id,
@@ -192,7 +208,7 @@ const toDisplayItem = (
     requestedAt: record.request.req_date.toISOString(),
     requestedDate: record.request.req_date.toISOString(),
     requestStatus: toApiLabStatus(requestStatus),
-    status: toApiLabStatus(item.status),
+    status: toApiLabStatus(workflowStatus),
     billingCode: record.request.billing?.billing_code ?? null,
     billingStatus: isPaid ? "paid" : "unpaid",
     billingTotal: record.request.billing ? Number(record.request.billing.total_price) : 0,
@@ -210,14 +226,52 @@ const toDisplayItem = (
     }),
     schemaKey: item.test.schema_key,
     tests: record.items.map((entry) => entry.test.name),
-    testType: item.test.name,
+    // Combined chemistry families share one editor, so surface all covered tests
+    // in the representative item label instead of duplicating separate rows.
+    testType: workflowTestNames.length > 1 ? workflowTestNames.join(", ") : item.test.name,
     completedTests,
     pendingTests,
     totalTests: record.items.length,
     completedCount: completedTests.length,
     priority: "Routine" as const,
-    resultPayload: serializeLabResultPayload(item.result_payload),
+    resultPayload: serializeLabResultPayload(workflowPayload),
   };
+};
+
+const groupWorkflowItems = (record: LabRequestRecord) => {
+  const workflowGroups = new Map<string, LabWorkflowItemGroup>();
+
+  for (const item of record.items) {
+    const family = resolveCombinedLabResultFamily({
+      schemaKey: item.test.schema_key,
+      testName: item.test.name,
+    });
+    const workflowKey = family
+      ? `${record.id}:${family}`
+      : `${record.id}:item:${item.item_id}`;
+    const existingGroup = workflowGroups.get(workflowKey);
+
+    if (existingGroup) {
+      existingGroup.items.push(item);
+      continue;
+    }
+
+    workflowGroups.set(workflowKey, {
+      family,
+      items: [item],
+      primaryItem: item,
+    });
+  }
+
+  return Array.from(workflowGroups.values());
+};
+
+const getDisplayItemsForRecord = (record: LabRequestRecord) => {
+  // A single laboratory request can store many billed test items, but some of
+  // those items intentionally morph into one shared result form in the lab UI.
+  return groupWorkflowItems(record).map((workflowGroup) =>
+    toDisplayItem(record, workflowGroup)
+  );
 };
 
 const getUserName = async (tx: Prisma.TransactionClient, userId: number) => {
@@ -272,13 +326,15 @@ const getDisplayItemById = async (tx: Prisma.TransactionClient, labId: number) =
     throw new LabModuleError("Lab request not found.", 404);
   }
 
-  const item = record.items.find((entry) => entry.item_id === labId);
+  const workflowGroup = groupWorkflowItems(record).find((group) =>
+    group.items.some((entry) => entry.item_id === labId)
+  );
 
-  if (!item) {
+  if (!workflowGroup) {
     throw new LabModuleError("Lab request item not found.", 404);
   }
 
-  return toDisplayItem(record, item);
+  return toDisplayItem(record, workflowGroup);
 };
 
 const getRelatedCombinedLabResultItems = async (
@@ -570,7 +626,13 @@ export const createLabRequestService = async ({
       throw new Error("Unable to load the created laboratory request.");
     }
 
-    return toDisplayItem(createdRecord, createdRecord.items[0]);
+    const displayItems = getDisplayItemsForRecord(createdRecord);
+
+    if (!displayItems.length) {
+      throw new Error("Unable to shape the created laboratory request.");
+    }
+
+    return displayItems[0];
   });
 };
 
@@ -581,7 +643,7 @@ export const getLabRequestsService = async (status?: string) => {
 
     return records
       .filter((record) => record.items.length > 0)
-      .flatMap((record) => record.items.map((item) => toDisplayItem(record, item)))
+      .flatMap(getDisplayItemsForRecord)
       .filter((item) => !normalizedStatus || item.status === normalizedStatus)
       .sort((left, right) => {
         const timeDiff =
@@ -642,11 +704,8 @@ export const getPatientLabRecordsService = async (
 
     return records
       .filter((record) => record.items.length > 0)
-      .flatMap((record) =>
-        record.items
-          .filter((item) => item.result_payload)
-          .map((item) => toDisplayItem(record, item))
-      )
+      .flatMap(getDisplayItemsForRecord)
+      .filter((item) => Boolean(item.resultPayload))
       .filter(
         (item) => !filters.recordGroup || item.recordGroup === filters.recordGroup
       )
@@ -709,6 +768,8 @@ export const updateLabRequestStatusService = async (
       schemaKey: existingItem.test.schema_key,
       testName: existingItem.test.name,
     });
+    // Morphing families move as one workflow step: accepting or completing the
+    // representative item must keep every sibling test in the same family aligned.
     const relatedGroupItems = combinedResultFamily
       ? await getRelatedCombinedLabResultItems(
           tx,
@@ -832,6 +893,8 @@ export const saveLabResultService = async ({
       pathologistUserId,
       "Selected pathologist"
     );
+    // Saving a morphed form writes the same encoded payload back to every
+    // underlying request item so records, printing, and structured tables stay consistent.
     const relatedGroupItems = combinedResultFamily
       ? await getRelatedCombinedLabResultItems(
           tx,

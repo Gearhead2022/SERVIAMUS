@@ -336,7 +336,9 @@ export default function DashboardPage() {
         (item) => item.requestId === request.requestId && item.status === "queued"
       );
 
-      // Accept the whole queue card so a multi-test request does not leave sibling tests behind.
+      // Accept the whole patient request so every workflow entry under the same
+      // doctor order moves together. Combined chemistry families already arrive
+      // here as one consolidated entry from the backend response layer.
       for (const item of queuedItemsInRequest) {
         const updated = await updateRequestStatus({
           labId: item.labId,

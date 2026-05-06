@@ -35,7 +35,7 @@ function PrintPageSkeleton() {
         </div>
         <div className="space-y-3">
           <div className="h-3 w-32 rounded-full bg-slate-200" />
-          <div className="h-24 rounded-2xl border border-slate-200 bg-slate-50" />
+          <div className="h-24 rounded-2xl border border-slate-200 bg-slate-50 " />
         </div>
         <div className="space-y-3">
           <div className="h-3 w-40 rounded-full bg-slate-200" />
@@ -49,6 +49,7 @@ function PrintPageSkeleton() {
 const getPdfErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message.trim()) {
     return `${fallback} (${error.message})`;
+
   }
 
   return fallback;

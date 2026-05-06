@@ -114,6 +114,4 @@ export const MENU_ITEMS: MenuItem[] = [
     roles: ["CASHIER", "ADMIN"]
   },
 
-
-
 ];

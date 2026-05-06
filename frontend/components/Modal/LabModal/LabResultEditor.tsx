@@ -45,6 +45,8 @@ export default function LabResultEditor({ request, onSubmit, onCancel }: Props) 
     () => getSavedPathologistUserId(request.resultPayload) ?? ""
   );
   const { data: labUsers = [], isLoading: isLoadingLabUsers } = useLabUsers();
+  // The backend hands us one workflow entry, and the template resolver decides
+  // whether that entry opens a single-test form or a morphed consolidated panel.
   const template = resolveLabTemplate(request);
   const clinicalChemistryFieldNames = resolveClinicalChemistryFieldNames(request);
   const chemistryPanelFieldNames = resolveChemistryPanelFieldNames(request);

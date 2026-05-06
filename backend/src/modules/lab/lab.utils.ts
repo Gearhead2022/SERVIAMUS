@@ -285,6 +285,9 @@ Object.entries(knownLabSchemaDefinitions).forEach(([schemaKey, definition]) => {
 });
 
 export const splitLabTests = (rawValue: string) => {
+  // Every request entry point funnels through the same splitter so the doctor
+  // request form and the laboratory module both feed identical test labels
+  // into schema resolution and downstream morphing rules.
   return rawValue
     .split(/[\n,]+/)
     .map(normalizeTestLabel)
@@ -548,6 +551,9 @@ export const resolveCombinedLabResultFamily = ({
   schemaKey?: string | null;
   testName: string;
 }): CombinedLabResultFamily | null => {
+  // This is the backend source of truth for "morphing" behavior.
+  // If multiple ordered tests resolve to the same family, the lab workflow
+  // should treat them as one shared result form and keep their statuses in sync.
   const resolvedSchemaKey = resolveLabSchemaKey(testName, schemaKey);
 
   if (combinedClinicalChemistrySchemaKeys.has(resolvedSchemaKey)) {
