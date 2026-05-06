@@ -30,8 +30,19 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
       sex: "male",
       age: "",
       religion: "",
+      philhealth_id: patient?.philhealth_id ?? "",
     },
   });
+
+  const formatPhilHealthId = (value: string) => {
+  // Remove all non-digits
+  const digits = value.replace(/\D/g, '');
+  
+  // Format as XX-XXXXXXXX-X
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}-${digits.slice(2, 8)}-${digits.slice(8, 9)}`;
+};
 
   const mapToPrisma = (data: PatientFormValues) => ({
     ...data,
@@ -145,6 +156,21 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
             />
           </div>
         </div>
+        {/* PhilHealth ID */}
+          <div>
+            <Input
+              label="PhilHealth ID"
+              type="text"
+              placeholder="XX-XXXXXXXX-X"
+              maxLength={12}
+              {...register("philhealth_id", {
+                onChange: (e) => {
+                  e.target.value = formatPhilHealthId(e.target.value);
+                }
+              })}
+              error={errors.philhealth_id?.message}
+            />
+          </div>
 
         {/* Divider */}
         <div className="border-t border-[#dce3ef]" />

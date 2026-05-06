@@ -67,7 +67,7 @@ export default function Header() {
       </div>
 
       {/* ── Center: Search ── */}
-      <div className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.05] border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.08] transition-all cursor-pointer w-56 group">
+      {/* <div className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.05] border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.08] transition-all cursor-pointer w-56 group">
         <Search size={13} className="text-white/25 group-hover:text-white/50 transition-colors" />
         <span className="text-white/25 text-xs flex-1 group-hover:text-white/40 transition-colors">
           Quick search…
@@ -75,11 +75,11 @@ export default function Header() {
         <kbd className="text-[10px] font-mono text-white/20 bg-white/[0.06] border border-white/10 px-1.5 py-0.5 rounded-md">
           ⌘K
         </kbd>
-      </div>
+      </div> */}
 
       {/* ── Right ── */}
       <div className="flex items-center gap-1.5">
-        <span className="hidden lg:block w-px h-5 bg-white/10 mx-1" />
+        <span className="hidden lg:block w-px h-5 mx-1" />
 
         {/* Notifications */}
         <button
