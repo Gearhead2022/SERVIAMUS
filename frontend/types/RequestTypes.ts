@@ -65,3 +65,14 @@ export interface UsersProps {
   title: string;
   ptr_no: string;
 }
+
+export interface PrintableLabRequestPayload {
+  patientCode: string;
+  patientName: string;
+  age: string;
+  sex?: string | null;
+  address: string;
+  requestDate: string;
+  requestedBy: string;
+  tests: string[];
+}

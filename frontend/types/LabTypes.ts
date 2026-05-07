@@ -2,6 +2,23 @@ export type LabResultValue = string | number;
 export type LabResultPayload = Record<string, LabResultValue>;
 export type BillingStatus = "paid" | "unpaid";
 
+export type LabUserRole = {
+  roleId: number;
+  roleName: string;
+  roleDescription?: string | null;
+};
+
+export type LabUser = {
+  userId: number;
+  username: string;
+  name: string;
+  isActive: boolean;
+  licenseNo?: string | null;
+  title?: string | null;
+  ptrNo?: string | null;
+  roles: LabUserRole[];
+};
+
 export type LabCategory =
   | "clinical-chemistry"
   | "hematology"
@@ -144,6 +161,7 @@ export type SaveLabResultPayload = {
   labId: number;
   category: LabCategory;
   form: LabResultPayload;
+  medTechUserId?: number | null;
   pathologistUserId?: number | null;
 };
 

@@ -93,7 +93,7 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/labrecords",
     icon: <FileStack size={18} />,
     iconOnly: <FileStack size={30} />,
-    roles: ["LAB", "LABORATORY, DOCTOR"]
+    roles: ["LAB", "LABORATORY", "DOCTOR"]
   },
 
   // STAFF
@@ -120,7 +120,5 @@ export const MENU_ITEMS: MenuItem[] = [
     iconOnly: <Home size={30} />,
     roles: ["CASHIER", "ADMIN"]
   },
-
-
 
 ];

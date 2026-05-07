@@ -15,6 +15,7 @@ export type SaveLabResultInput = {
   labId: number;
   category: ApiLabCategory;
   form: LabResultPayload;
+  medTechUserId?: number | null;
   userId?: number;
   pathologistUserId?: number | null;
 };

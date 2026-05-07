@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchLabRequest,
   fetchLabTests,
+  fetchLabUsers,
   fetchLabRequests,
   fetchPatientLabRecords,
   fetchPatientRecords,
@@ -11,6 +12,7 @@ import {
 import {
   LabRequest,
   LabTestCatalogItem,
+  LabUser,
   PatientLabRecordFilters,
   PatientRecord,
   SaveLabResultPayload,
@@ -21,6 +23,7 @@ import SweetAlert from "@/utils/SweetAlert";
 
 const LAB_REQUESTS_QUERY_KEY = ["lab", "requests"] as const;
 const LAB_TESTS_QUERY_KEY = ["lab", "tests"] as const;
+const LAB_USERS_QUERY_KEY = ["lab", "users"] as const;
 const LAB_PATIENT_DIRECTORY_QUERY_KEY = ["lab", "patient-directory"] as const;
 const LAB_PATIENT_RECORDS_QUERY_KEY = ["lab", "patient-records"] as const;
 
@@ -89,6 +92,13 @@ export const useLabTestCatalog = () =>
   useQuery<LabTestCatalogItem[]>({
     queryKey: LAB_TESTS_QUERY_KEY,
     queryFn: fetchLabTests,
+    staleTime: 5 * 60 * 1000,
+  });
+
+export const useLabUsers = () =>
+  useQuery<LabUser[]>({
+    queryKey: LAB_USERS_QUERY_KEY,
+    queryFn: fetchLabUsers,
     staleTime: 5 * 60 * 1000,
   });
 

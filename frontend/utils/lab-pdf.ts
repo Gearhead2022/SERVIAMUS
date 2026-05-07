@@ -1,9 +1,5 @@
-import { jsPDF } from "jspdf";
 import type { LabRequest } from "@/types/LabTypes";
 
-const PDF_MARGIN_MM = 8;
-const PDF_PAGE_WIDTH_MM = 210;
-const PDF_CONTENT_WIDTH_MM = PDF_PAGE_WIDTH_MM - PDF_MARGIN_MM * 2;
 const COLOR_PROPERTIES = new Set([
   "background-color",
   "border-bottom-color",
@@ -89,6 +85,7 @@ const STYLE_PROPERTIES = [
   "word-break",
   "overflow-wrap",
 ] as const;
+const PDF_ENDPOINT = "/api/lab/results/pdf";
 
 const sanitizeFilePart = (value: string) =>
   value
@@ -220,7 +217,7 @@ const inlineComputedStyles = (source: HTMLElement, clone: HTMLElement) => {
   });
 };
 
-const createPdfRenderHost = (element: HTMLElement) => {
+const createPdfRenderSnapshot = async (element: HTMLElement) => {
   const source = getPrintableSource(element);
   const host = document.createElement("div");
   const clone = source.cloneNode(true) as HTMLElement;
@@ -246,91 +243,32 @@ const createPdfRenderHost = (element: HTMLElement) => {
   host.appendChild(clone);
   document.body.appendChild(host);
 
-  return {
-    clone,
-    dispose: () => {
-      if (host.parentNode) {
-        host.parentNode.removeChild(host);
-      }
-    },
-  };
-};
-
-const renderPdfFromElement = async ({
-  element,
-  fileName,
-}: {
-  element: HTMLElement;
-  fileName: string;
-}) => {
-  const pdf = new jsPDF({
-    compress: true,
-    format: "a4",
-    orientation: "portrait",
-    unit: "mm",
-  });
-
-  pdf.setProperties({
-    subject: "Laboratory Result",
-    title: fileName.replace(/\.pdf$/i, ""),
-  });
-
-  if (typeof pdf.html !== "function") {
-    throw new Error("HTML PDF rendering is unavailable.");
-  }
-
-  const { clone, dispose } = createPdfRenderHost(element);
-
   try {
     await waitForDocumentAssets(clone);
-
-    await new Promise<void>((resolve, reject) => {
-      let hasSettled = false;
-
-      try {
-        const worker = pdf.html(clone, {
-          autoPaging: "text",
-          html2canvas: {
-            backgroundColor: "#ffffff",
-            imageTimeout: 20000,
-            logging: false,
-            scale: 1.6,
-            useCORS: true,
-            windowHeight: clone.scrollHeight,
-            windowWidth: clone.scrollWidth,
-          },
-          margin: PDF_MARGIN_MM,
-          width: PDF_CONTENT_WIDTH_MM,
-          windowWidth: clone.scrollWidth,
-          callback: () => {
-            if (!hasSettled) {
-              hasSettled = true;
-              resolve();
-            }
-          },
-        });
-
-        Promise.resolve(worker).catch((error) => {
-          if (!hasSettled) {
-            hasSettled = true;
-            reject(error);
-          }
-        });
-      } catch (error) {
-        reject(error);
-      }
-    });
-
-    return pdf;
+    return clone.outerHTML;
   } finally {
-    dispose();
+    if (host.parentNode) {
+      host.parentNode.removeChild(host);
+    }
   }
 };
 
-const createPdfBlob = (pdf: jsPDF) =>
-  new Blob([pdf.output("arraybuffer")], {
-    type: "application/pdf",
-  });
+const getPdfRouteErrorMessage = async (response: Response) => {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    const payload = (await response.json().catch(() => null)) as
+      | { message?: string }
+      | null;
+
+    if (payload?.message?.trim()) {
+      return payload.message;
+    }
+  }
+
+  const text = await response.text();
+  return text.trim() || "Unable to create the laboratory PDF.";
+};
 
 const createDownloadLink = ({
   blob,
@@ -360,7 +298,26 @@ export const buildLabResultPdf = async ({
 }: {
   element: HTMLElement;
   fileName: string;
-}) => renderPdfFromElement({ element, fileName });
+}) => {
+  const html = await createPdfRenderSnapshot(element);
+  const response = await fetch(PDF_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      fileName,
+      html,
+    }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(await getPdfRouteErrorMessage(response));
+  }
+
+  return response.blob();
+};
 
 export const downloadLabResultPdf = async ({
   element,
@@ -369,43 +326,9 @@ export const downloadLabResultPdf = async ({
   element: HTMLElement;
   fileName: string;
 }) => {
-  const pdf = await renderPdfFromElement({ element, fileName });
-
-  try {
-    await pdf.save(fileName, { returnPromise: true });
-  } catch {
-    createDownloadLink({
-      blob: createPdfBlob(pdf),
-      fileName,
-    });
-  }
-};
-
-export const openLabResultPdfForPrint = async ({
-  element,
-  fileName,
-  targetWindow,
-}: {
-  element: HTMLElement;
-  fileName: string;
-  targetWindow?: Window | null;
-}) => {
-  const pdf = await renderPdfFromElement({ element, fileName });
-  const printablePdf = pdf as jsPDF & {
-    autoPrint?: (options?: { variant: "non-conform" | "javascript" }) => void;
-  };
-
-  printablePdf.autoPrint?.({ variant: "non-conform" });
-
-  const blobUrl = URL.createObjectURL(createPdfBlob(pdf));
-  const printWindow = targetWindow ?? window.open("", "_blank", "noopener,noreferrer");
-
-  if (!printWindow) {
-    window.open(blobUrl, "_blank", "noopener,noreferrer");
-    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-    return;
-  }
-
-  printWindow.location.replace(blobUrl);
-  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  const pdfBlob = await buildLabResultPdf({ element, fileName });
+  createDownloadLink({
+    blob: pdfBlob,
+    fileName,
+  });
 };

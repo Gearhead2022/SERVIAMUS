@@ -481,6 +481,8 @@ export const resolveClinicalChemistryFieldNames = (
 ) => {
   const normalizedTestType = normalizeTestType(request.testType);
   const schemaKey = toKnownSchemaKey(request.schemaKey);
+  // When a backend item represents a morphed workflow entry, `tests` contains
+  // the full ordered test list so the editor can light up every matching row.
   const sourceTests = request.tests?.length ? request.tests : [request.testType];
   const matchedRows = uniqueRows(
     sourceTests
@@ -508,6 +510,8 @@ export const resolveChemistryPanelFieldNames = (
 ) => {
   const normalizedTestType = normalizeTestType(request.testType);
   const schemaKey = toKnownSchemaKey(request.schemaKey);
+  // The chemistry panel follows the same morphing contract as clinical chemistry:
+  // one workflow item can fan out to several visible result rows.
   const sourceTests = request.tests?.length ? request.tests : [request.testType];
   const matchedRows = uniqueRows(
     sourceTests
@@ -545,6 +549,9 @@ const shouldUseCombinedClinicalChemistryTemplate = (request: LabTemplateRequestC
     tests: [request.testType],
   });
 
+  // We only morph into the combined template when the request contains more
+  // than the current item's own field set; otherwise single-test chemistry
+  // requests would incorrectly open the consolidated form.
   return currentItemFieldNames.length > 0 && allFieldNames.length > 1;
 };
 
@@ -556,12 +563,16 @@ const shouldUseChemistryPanelTemplate = (request: LabTemplateRequestContext) => 
     tests: [request.testType],
   });
 
+  // Electrolyte-style chemistry requests always use the shared panel once the
+  // request resolves to at least one known chemistry panel row.
   return currentItemFieldNames.length > 0 && allFieldNames.length > 0;
 };
 
 export const resolveLabTemplate = (request: LabTemplateRequestContext): LabTemplateDefinition => {
   const schemaKey = toKnownSchemaKey(request.schemaKey);
 
+  // Frontend morphing starts here: backend groups the workflow entry, then the
+  // template resolver decides which result form component should render for it.
   if (shouldUseChemistryPanelTemplate(request)) {
     return {
       apiCategory: "clinical-chemistry",

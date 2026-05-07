@@ -8,6 +8,10 @@ import {
   hasDisplayableLabResultValue,
 } from "@/utils/lab";
 import {
+  getLabResultPersonnelDisplay,
+  isLabResultMetaField,
+} from "@/utils/lab-personnel";
+import {
   getChemistryPanelRows,
   getClinicalChemistryRows,
   resolveChemistryPanelFieldNames,
@@ -20,6 +24,26 @@ type Props = {
   request: LabRequest;
   form: LabResultPayload;
 };
+
+function PersonnelFooterBlock({
+  label,
+  primaryLine,
+  secondaryLine,
+  textAlign = "left",
+}: {
+  label: string;
+  primaryLine: string;
+  secondaryLine?: string;
+  textAlign?: "left" | "right";
+}) {
+  return (
+    <div className={textAlign === "right" ? "text-right" : undefined}>
+      <p className="font-semibold text-slate-700">{label}</p>
+      <p className="mt-1 text-slate-500">{primaryLine}</p>
+      {secondaryLine ? <p className="mt-0.5 text-slate-400">{secondaryLine}</p> : null}
+    </div>
+  );
+}
 
 function getValue(
   form: LabResultPayload,
@@ -52,7 +76,17 @@ function PreviewField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PreviewShell({ title, children }: { title: string; children: ReactNode }) {
+function PreviewShell({
+  title,
+  children,
+  form,
+}: {
+  title: string;
+  children: ReactNode;
+  form: LabResultPayload;
+}) {
+  const personnelDisplay = getLabResultPersonnelDisplay(form);
+
   return (
     <div
       data-lab-result-document
@@ -90,14 +124,17 @@ function PreviewShell({ title, children }: { title: string; children: ReactNode 
       </header>
       {children}
       <footer className="result-footer mt-6 flex justify-between gap-6 border-t border-slate-200 pt-4 text-[10px]">
-        <div>
-          <p className="font-semibold text-slate-700">Pathologist</p>
-          <p className="mt-1 text-slate-500">Dr. Greg Ryan T. Gerongano</p>
-        </div>
-        <div className="text-right">
-          <p className="font-semibold text-slate-700">Medical Technologist</p>
-          <p className="mt-1 text-slate-500">Jhenny S. Alvarez, RMT</p>
-        </div>
+        <PersonnelFooterBlock
+          label="Pathologist"
+          primaryLine={personnelDisplay.pathologist.primaryLine}
+          secondaryLine={personnelDisplay.pathologist.secondaryLine}
+        />
+        <PersonnelFooterBlock
+          label="Medical Technologist"
+          primaryLine={personnelDisplay.medTech.primaryLine}
+          secondaryLine={personnelDisplay.medTech.secondaryLine}
+          textAlign="right"
+        />
       </footer>
     </div>
   );
@@ -153,7 +190,7 @@ function CompactFieldGrid({
 
 function CbcDocument({ request, form }: Props) {
   return (
-    <PreviewShell title="HEMATOLOGY">
+    <PreviewShell title="HEMATOLOGY" form={form}>
       <PatientBlock request={request} />
       <Section title="COMPLETE BLOOD COUNT">
         <CompactFieldGrid
@@ -193,7 +230,7 @@ function CbcDocument({ request, form }: Props) {
 
 function BloodTypingDocument({ request, form }: Props) {
   return (
-    <PreviewShell title="BLOOD TYPING">
+    <PreviewShell title="BLOOD TYPING" form={form}>
       <PatientBlock request={request} />
       <Section title="RESULT">
         <CompactFieldGrid
@@ -214,7 +251,7 @@ function BloodTypingDocument({ request, form }: Props) {
 
 function ParasitologyDocument({ request, form }: Props) {
   return (
-    <PreviewShell title="PARASITOLOGY">
+    <PreviewShell title="PARASITOLOGY" form={form}>
       <PatientBlock request={request} />
       <Section title="MACROSCOPIC">
         <CompactFieldGrid
@@ -289,7 +326,7 @@ function ParasitologyDocument({ request, form }: Props) {
 
 function UrinalysisDocument({ request, form }: Props) {
   return (
-    <PreviewShell title="URINALYSIS">
+    <PreviewShell title="URINALYSIS" form={form}>
       <PatientBlock request={request} />
       <Section title="PHYSICAL EXAMINATION">
         <CompactFieldGrid
@@ -342,7 +379,7 @@ function ClinicalChemistryDocument({ request, form }: Props) {
   const showMealFields = shouldShowClinicalChemistryMealFields(request);
 
   return (
-    <PreviewShell title="CLINICAL CHEMISTRY">
+    <PreviewShell title="CLINICAL CHEMISTRY" form={form}>
       <PatientBlock request={request} />
       <Section title="TEST RESULTS">
         <div className="result-table mt-3 overflow-hidden rounded-2xl border border-slate-200">
@@ -386,7 +423,7 @@ function SingleChemistryDocument({ request, form }: Props) {
   }
 
   return (
-    <PreviewShell title={template.label.toUpperCase()}>
+    <PreviewShell title={template.label.toUpperCase()} form={form}>
       <PatientBlock request={request} />
       <Section title="RESULT">
         <CompactFieldGrid
@@ -422,7 +459,7 @@ function SerologyDocument({ request, form }: Props) {
   const template = resolveLabTemplate(request);
 
   return (
-    <PreviewShell title={template.label.toUpperCase()}>
+    <PreviewShell title={template.label.toUpperCase()} form={form}>
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
         <CompactFieldGrid
@@ -447,7 +484,7 @@ function SerologyDocument({ request, form }: Props) {
 
 function FecalOccultBloodDocument({ request, form }: Props) {
   return (
-    <PreviewShell title="FECAL OCCULT BLOOD TEST">
+    <PreviewShell title="FECAL OCCULT BLOOD TEST" form={form}>
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
         <CompactFieldGrid
@@ -470,7 +507,7 @@ function FecalOccultBloodDocument({ request, form }: Props) {
 
 function Hba1cDocument({ request, form }: Props) {
   return (
-    <PreviewShell title="HBA1C">
+    <PreviewShell title="HBA1C" form={form}>
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
         <CompactFieldGrid
@@ -496,7 +533,7 @@ function ChemistryPanelDocument({ request, form }: Props) {
   const fieldNames = resolveChemistryPanelFieldNames(request);
 
   return (
-    <PreviewShell title="CHEMISTRY">
+    <PreviewShell title="CHEMISTRY" form={form}>
       <PatientBlock request={request} />
       <Section title="TEST RESULTS">
         <CompactFieldGrid
@@ -520,7 +557,7 @@ function OgttDocument({ request, form }: Props) {
   const phases = template.ogtt?.phases ?? [];
 
   return (
-    <PreviewShell title={template.label.toUpperCase()}>
+    <PreviewShell title={template.label.toUpperCase()} form={form}>
       <PatientBlock request={request} />
       <Section title="TEST RESULTS">
         <div className="result-table mt-3 overflow-hidden rounded-2xl border border-slate-200">
@@ -550,12 +587,12 @@ function GenericDocument({
   form,
   title,
 }: Props & { title: string }) {
-  const rows = Object.entries(form).filter(([, value]) =>
-    hasDisplayableLabResultValue(value)
+  const rows = Object.entries(form).filter(
+    ([key, value]) => !isLabResultMetaField(key) && hasDisplayableLabResultValue(value)
   );
 
   return (
-    <PreviewShell title={title}>
+    <PreviewShell title={title} form={form}>
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
         <div className="mt-3 grid gap-3 sm:grid-cols-2">

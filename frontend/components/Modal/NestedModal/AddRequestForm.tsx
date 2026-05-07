@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { z } from "zod";
 import Select from "react-select";
 import {
@@ -16,21 +16,40 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { requestSchema } from "@/schemas/request.schema";
-import { UsersProps, VitalSignProps } from "@/types/RequestTypes";
+import {
+  PrintableLabRequestPayload,
+  UsersProps,
+  VitalSignProps,
+} from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
-import { useLabTestCatalog } from "@/hooks/Lab/useLab";
 import { useRequest, useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Label from "@/components/ui/label";
-import { File, TestTubeDiagonal, SquareActivity } from "lucide-react";
+import {
+  File,
+  Plus,
+  Printer,
+  SquareActivity,
+  TestTubeDiagonal,
+  X,
+} from "lucide-react";
 import { todayPH } from "@/utils/Date";
+import SweetAlert from "@/utils/SweetAlert";
+import { openExternalLabRequestPrintPage } from "@/utils/lab-request-print";
 
 
 type RequestFormValues = z.infer<typeof requestSchema>;
 type Consultation = Extract<RequestFormValues, { req_type: "CONSULTATION" }>;
 type Laboratory = Extract<RequestFormValues, { req_type: "LABORATORY" }>;
 type Certificate = Extract<RequestFormValues, { req_type: "CERTIFICATE" }>;
+type TestOption = {
+  label: string;
+  value: string;
+};
+
+const normalizeLabTestLabel = (value: string) =>
+  value.trim().replace(/\s+/g, " ");
 
 const inputCls =
   "w-full bg-[#f0f3fa] border border-[1.5px] border-[#dce3ef] rounded-lg px-3 py-2.5 text-sm text-[#1a2a45] font-['DM_Sans'] outline-none transition focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white placeholder:text-[#b0bcd4]";
@@ -38,7 +57,6 @@ const inputCls =
 interface VitalKeyProps<T extends FieldValues> {
   prefix: string;
   register: UseFormRegister<T>;
-  errors: FieldErrors<T>;
   label: string;
   teal?: boolean;
   readonly: boolean;
@@ -86,7 +104,7 @@ function VitalsRow<T extends FieldValues>({
               {...register(
                 (prefix ? `${prefix}_${f.name}` : f.name) as Path<T>
               )}
-              placeholder={f.ph}
+              placeholder={f.placeholder}
               className={`w-full text-center text-sm rounded-md px-2 py-2 border outline-none transition ${teal
                 ? "bg-[#e0f4f4] border-[#b0dede] focus:border-[#0e7c7b] focus:shadow-[0_0_0_3px_rgba(14,124,123,0.1)] focus:bg-white"
                 : "bg-[#f0f3fa] border-[#dce3ef] focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white"
@@ -101,18 +119,35 @@ function VitalsRow<T extends FieldValues>({
   );
 }
 
+const buildExternalLabRequestPayload = (
+  patient: PatientProps,
+  data: Laboratory,
+  tests: string[]
+): PrintableLabRequestPayload => ({
+  patientCode: data.patient_code,
+  patientName: data.name,
+  age: data.age,
+  sex: patient.sex ?? null,
+  address: data.address,
+  requestDate: data.req_date,
+  requestedBy: data.req_by,
+  tests,
+});
+
 const RequestForm: React.FC<{
   patient: PatientProps;
   vitals: VitalSignProps | undefined;
   onClose: () => void;
 }> = ({ patient, vitals, onClose }) => {
   const { mutateAsync: request, isPending } = useRequest(onClose);
-  const { data: labTests = [], isLoading: loadingLabTests } = useLabTestCatalog();
   const { data: UserList } = useGetAllUsers();
   const {
     register,
     handleSubmit,
     control,
+    clearErrors,
+    getValues,
+    trigger,
     watch,
     formState: { errors },
   } = useForm<RequestFormValues>({
@@ -135,25 +170,164 @@ const RequestForm: React.FC<{
     },
   });
 
-  const reqType = watch("req_type") as RequestFormValues["req_type"];
+  const reqType = useWatch({
+    control,
+    name: "req_type",
+  }) as RequestFormValues["req_type"];
+  const selectedLabTests =
+    (useWatch({
+      control,
+      name: "test",
+    }) as Laboratory["test"] | undefined) ?? [];
   const consultErrors = errors as FieldErrors<Consultation>;
   const labErrors = errors as FieldErrors<Laboratory>;
   const certificateErrors = errors as FieldErrors<Certificate>;
   const lastConsultation = vitals?.created_at ? new Date(vitals?.created_at).toISOString().split("T")[0] : '';
+  const [additionalLabTestInput, setAdditionalLabTestInput] = useState("");
+  const [additionalLabTests, setAdditionalLabTests] = useState<string[]>([]);
+  const [printTestError, setPrintTestError] = useState("");
 
   const onSubmit = async (data: RequestFormValues) => {
     await request(data);
   };
 
+  const addAdditionalLabTest = () => {
+    const normalizedTest = normalizeLabTestLabel(additionalLabTestInput);
+
+    if (!normalizedTest) {
+      return;
+    }
+
+    const isDuplicate = [...selectedLabTests, ...additionalLabTests].some(
+      (test) => test.toLowerCase() === normalizedTest.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      setAdditionalLabTestInput("");
+      setPrintTestError("");
+      clearErrors("test");
+      return;
+    }
+
+    setAdditionalLabTests((currentTests) => [...currentTests, normalizedTest]);
+    setAdditionalLabTestInput("");
+    setPrintTestError("");
+    clearErrors("test");
+  };
+
+  const removeAdditionalLabTest = (testToRemove: string) => {
+    setAdditionalLabTests((currentTests) =>
+      currentTests.filter((test) => test !== testToRemove)
+    );
+  };
+
+  const handleAdditionalLabTestKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    addAdditionalLabTest();
+  };
+
+  const handlePrintLabRequest = async () => {
+    const isValid = await trigger(
+      [
+        "patient_code",
+        "name",
+        "req_date",
+        "address",
+        "age",
+        "req_by",
+      ] as Path<RequestFormValues>[]
+    );
+
+    if (!isValid) {
+      return;
+    }
+
+    const values = getValues();
+
+    if (values.req_type !== "LABORATORY") {
+      return;
+    }
+
+    const printableTests = [...selectedLabTests, ...additionalLabTests];
+
+    if (!printableTests.length) {
+      setPrintTestError("Select a clinic test or add a print-only external test.");
+      return;
+    }
+
+    try {
+      setPrintTestError("");
+      clearErrors("test");
+      openExternalLabRequestPrintPage(
+        buildExternalLabRequestPayload(patient, values, printableTests),
+        { autoPrint: true }
+      );
+    } catch (error) {
+      SweetAlert.errorAlert(
+        "Print Failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to open the laboratory request print preview."
+      );
+    }
+  };
+  
   const testOptions = [
-    { value: "CBC", label: "CBC (Complete Blood Count)" },
-    { value: "Urinalysis", label: "Urinalysis" },
-    { value: "X-Ray", label: "X-Ray" },
-    { value: "Blood Chemistry", label: "Blood Chemistry" },
-    { value: "Fecalysis", label: "Fecalysis" },
-    { value: "ECG", label: "ECG" },
-    { value: "Ultrasound", label: "Ultrasound" },
+     {
+    label: "Clinical Chemistry",
+    options: [
+      { label: "Fasting Blood Sugar", value: "FBS" },
+      { label: "Random Blood Sugar", value: "Random Blood Sugar" },
+      { label: "Urea (BUN)", value: "Urea (BUN)" },
+      { label: "Creatinine", value: "Creatinine" },
+      { label: "Uric Acid", value: "Uric Acid" },
+      { label: "Total Cholesterol", value: "Total Cholesterol" },
+      { label: "HDL-Cholesterol", value: "HDL-Cholesterol" },
+      { label: "LDL-Cholesterol", value: "LDL-Cholesterol" },
+      { label: "Triglycerides", value: "Triglycerides" },
+      { label: "50g OGGT", value: "1H-OGTT" },
+      { label: "75g OGGT", value: "2H-OGTT" },
+      { label: "100g OGGT", value: "OGTT" },
+      { label: "SGPT", value: "Serum Glutamic Pyruvic Transaminase" },
+      { label: "Sodium", value: "Sodium" },
+      { label: "Potassium", value: "Potassium" },
+      { label: "HbA1c", value: "HbA1c" }, 
+
+    ],
+  },
+  {
+    label: "Clinical Microscopy",
+    options: [
+      { label: "Urinalysis", value: "Urinalysis" },
+      { label: "Fecalysis", value: "Fecalysis" },
+      { label: "Fecal Occult Blood Test", value: "Fecal Occult Blood Test" },
+    ],
+  },
+  {
+    label: "Serology",
+    options: [
+      { label: "Pregnancy Test (Urine)", value: "Pregnancy Test (Urine)" },
+      { label: "Pregnancy Test (Serum)", value: "Pregnancy Test (Serum)" },
+      { label: "Dengue NS1", value: "Dengue NS1" },
+      { label: "Syphilis", value: "Syphilis" },
+      { label: "Hepatitis B Surface Antigen", value: "Hepatitis B Surface Antigen" },
+    ],
+  },
+   {
+    label: "Hematology  ",
+    options: [
+      { label: "Complete Blood Count with Platelet Count", value: "Complete Blood Count with Platelet Count" },
+      { label: "Blood Typing", value: "Blood Typing" },
+    ],
+  },
   ];
+
+const flatTestOptions = testOptions.flatMap((group) => group.options);
+
 
   const purposeOptions = [
     { value: "Fit To Work", label: "Fit to work" },
@@ -173,6 +347,7 @@ const RequestForm: React.FC<{
   };
 
   const options = userOptions(UserList ?? []);
+  const labTestErrorMessage = labErrors.test?.message ?? printTestError;
 
   type ReqType = "CONSULTATION" | "CERTIFICATE" | "LABORATORY";
 
@@ -219,7 +394,7 @@ const RequestForm: React.FC<{
           {(["CONSULTATION", "LABORATORY", "CERTIFICATE"] as const).map((type) => (
             <label
               key={type}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${watch("req_type") === type
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all ${reqType === type
                 ? type === "CONSULTATION"
                   ? "bg-[#0f2244] text-white shadow-sm"
                   : type === "LABORATORY" ? "bg-[#0e7c7b] text-white shadow-sm"
@@ -309,7 +484,6 @@ const RequestForm: React.FC<{
               label="Previous Record"
               teal={false}
               register={register}
-              errors={consultErrors}
               readonly={true}
             />
             <VitalsRow
@@ -317,7 +491,6 @@ const RequestForm: React.FC<{
               label="Current Record"
               teal
               register={register}
-              errors={consultErrors}
               readonly={false}
             />
             <div className="w-[70%] z-10">
@@ -365,7 +538,7 @@ const RequestForm: React.FC<{
           </div>
 
         )}
-
+{/* GG Laboratory section */}
         {reqType === "LABORATORY" ? (
           <div className="space-y-4">
             <div className="col-span-2">
@@ -391,34 +564,107 @@ const RequestForm: React.FC<{
                 control={control}
                 name="test"
                 render={({ field }) => (
-                  <Select
+                    <Select<TestOption, true>
                     {...field}
                     options={testOptions}
-                    placeholder={
-                      loadingLabTests ? "Loading laboratory tests..." : "Choose laboratory tests"
-                    }
                     isMulti
-                    className={`text-sm ${inputCls}`}
-                    classNamePrefix="react-select"
-                    onChange={(selected) =>
-                      field.onChange((selected ?? []).map((option) => option.value))
-                    }
-                    value={testOptions.filter((option) =>
+                    onChange={(selected) => {
+                      const nextSelectedTests = selected.map((option) => option.value);
+
+                      field.onChange(nextSelectedTests);
+
+                      if (nextSelectedTests.length || additionalLabTests.length) {
+                        setPrintTestError("");
+                        clearErrors("test");
+                      }
+                    }}
+                    value={flatTestOptions.filter((option) =>
                       field.value?.includes(option.value)
                     )}
-                    isClearable
-                  />
+                  className="mb-5 z-10"  />
                 )}
+              
               />
+              <div className="space-y-3 rounded-2xl border border-[#dce3ef] bg-[#f7f8fc] p-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7da0]">
+                    Additional Print-Only Tests
+                  </span>
+                  <span className="flex-1 h-px bg-[#dce3ef]" />
+                </div>
 
-              {labErrors.test && (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={additionalLabTestInput}
+                    onChange={(event) => setAdditionalLabTestInput(event.target.value)}
+                    onKeyDown={handleAdditionalLabTestKeyDown}
+                    placeholder="Enter test not offered by the clinic"
+                    className={`${inputCls} flex-1`}
+                  />
+                  <Button
+                    type="button"
+                    variant="add"
+                    icon={<Plus size={15} />}
+                    disabled={!normalizeLabTestLabel(additionalLabTestInput)}
+                    onClick={addAdditionalLabTest}
+                  >
+                    Add
+                  </Button>
+                </div>
+
+                <p className="text-[11px] text-[#6b7da0]">
+                  Print Laboratory Request Form for external use. This will not trigger any lab workflow or notifications.
+                </p>
+
+                {additionalLabTests.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {additionalLabTests.map((test) => (
+                      <button
+                        key={test}
+                        type="button"
+                        onClick={() => removeAdditionalLabTest(test)}
+                        className="flex items-center gap-1 rounded-full border border-[#b9c9e1] bg-white px-3 py-1 text-xs font-medium text-[#1a2a45] transition hover:border-[#0e7c7b] hover:text-[#0e7c7b]"
+                      >
+                        <span>{test}</span>
+                        <X size={12} />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            <Button
+            className="mt-2"
+            type="button"
+            variant="print"
+            // icon={<Printer size={15} />}
+            disabled={isPending}
+            onClick={() => {
+              void handlePrintLabRequest();
+            }}
+            >
+            🖨️ Print Laboratory Request
+            </Button>
+
+              {/* <Input
+                label="Add Other Test (if not in the list)"
+                type="text"
+                {...register("req_by" as const)}
+                className="bg-[#f7f8fc]"
+                placeholder="Enter Tests Here..."
+              /> */}
+
+
+              {labTestErrorMessage && (
                 <p className="text-xs text-red-500 mt-1">
-                  {labErrors.test.message}
+                  {labTestErrorMessage}
                 </p>
               )}
             </div>
           </div>
-        ) : null}
+        ): 
+        null
+        }
 
         {/* ── CERTIFICATE fields ── */}
         {reqType === "CERTIFICATE" && (
@@ -518,6 +764,7 @@ const RequestForm: React.FC<{
       </form>
     </div >
   );
-};
+  
+}
 
 export default RequestForm;
