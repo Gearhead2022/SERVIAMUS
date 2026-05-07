@@ -1,5 +1,5 @@
 /* =====================
-   TYPES
+  TYPES
 ===================== */
 
 export interface Role {
