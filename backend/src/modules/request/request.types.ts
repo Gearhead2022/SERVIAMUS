@@ -31,3 +31,12 @@ export interface CreateRequestProps {
   purpose: string;
   created_at: string;
 }
+
+export interface UsersProps {
+  user_id: number;
+  username: string;
+  name: string;
+  license_no: string;
+  title: string;
+  ptr_no: string;
+}

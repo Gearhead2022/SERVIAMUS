@@ -104,6 +104,13 @@ export const MENU_ITEMS: MenuItem[] = [
     iconOnly: <Home size={30} />,
     roles: ["STAFF"]
   },
+  {
+    label: "Queue",
+    path: "/queue",
+    icon: <Home size={18} />,
+    iconOnly: <Home size={30} />,
+    roles: ["STAFF"]
+  },
 
   // CASHIER
   {

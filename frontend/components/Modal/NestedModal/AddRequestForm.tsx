@@ -1,3 +1,5 @@
+// TODO:FIX MERGE CONFLICTS
+
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
@@ -71,23 +73,22 @@ function VitalsRow<T extends FieldValues>({
   label,
   teal,
   register,
+  errors,
   readonly,
 }: VitalKeyProps<T>) {
   const fields = [
-    { name: "bp", label: "BP (mmHg)", placeholder: "120/80" },
-    { name: "temp", label: "Temp (°C)", placeholder: "36.6" },
-    { name: "cr", label: "Pulse (bpm)", placeholder: "72" },
-    { name: "rr", label: "RR (/min)", placeholder: "16" },
-    { name: "wt", label: "Weight (kg)", placeholder: "60" },
-    { name: "ht", label: "Height (cm)", placeholder: "165" },
+    { name: "bp", label: "BP (mmHg)", ph: "120/80" },
+    { name: "temp", label: "Temp (°C)", ph: "36.6" },
+    { name: "cr", label: "Pulse (bpm)", ph: "72" },
+    { name: "rr", label: "RR (/min)", ph: "16" },
+    { name: "wt", label: "Weight (kg)", ph: "60" },
+    { name: "ht", label: "Height (cm)", ph: "165" },
   ];
-
   return (
     <div className="mb-5">
       <h4
-        className={`mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest ${
-          teal ? "text-[#0e7c7b]" : "text-[#6b7da0]"
-        }`}
+        className={`mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest ${teal ? "text-[#0e7c7b]" : "text-[#6b7da0]"
+          }`}
       >
         {label}
         <span className="flex-1 h-px bg-[#dce3ef]" />
@@ -147,6 +148,7 @@ const RequestForm: React.FC<{
     clearErrors,
     getValues,
     trigger,
+    watch,
     formState: { errors },
   } = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),

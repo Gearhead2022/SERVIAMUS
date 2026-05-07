@@ -23,7 +23,7 @@ router.get(
 );
 router.get(
   "/tests",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "STAFF"]),
   getLabTestsController
 );
 router.get(
@@ -40,7 +40,7 @@ router.post("/requests", authorize(["ADMIN", "DOCTOR"]), createLabRequestControl
 router.get("/requests", authorize(["ADMIN", "LAB", "LABORATORY"]), getLabRequestsController);
 router.get(
   "/requests/:labId",
-  authorize(["ADMIN", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "LAB", "LABORATORY", "STAFF"]),
   getLabRequestByIdController
 );
 router.patch(

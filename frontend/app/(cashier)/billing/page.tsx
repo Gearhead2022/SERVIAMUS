@@ -1,275 +1,368 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  BadgeDollarSign,
-  CheckCircle2,
-  Clock3,
-  CreditCard,
-} from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
 import RoleGuard from "@/guards/RoleGuard";
 import Button from "@/components/ui/Button";
-import { useBillings, usePayBilling } from "@/hooks/Billing/useBilling";
-import { BillingRecord } from "@/types/BillingTypes";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import ReceiptModal from "@/components/Modal/ReceiptModal";
+import SweetAlert from "@/utils/SweetAlert";
+import { useForm } from "react-hook-form";
+import { useProcessPayment } from "@/hooks/Billing/useBilling";
+import { PaymentProps, BillingProps } from "@/types/BillingTypes";
+import {
+  FileText, CheckCircle2, Clock,
+  Search, ChevronRight, TrendingUp, AlertCircle
+} from "lucide-react";
+import api from "@/services/axios";
 
-type BillingFilter = "all" | "paid" | "unpaid";
+interface BillingResponse {
+  billing_id: number;
+  billing_code: string;
+  total_price: number | string;
+  date: string | Date;
+  status: "PENDING" | "DONE";
+  request: {
+    patient: {
+      name: string;
+    };
+    req_type: "LABORATORY" | "CONSULTATION";
+  };
+}
 
-const pesoFormatter = new Intl.NumberFormat("en-PH", {
-  style: "currency",
-  currency: "PHP",
-});
+interface BillItem {
+  billing_id: number;
+  billing_code: string;
+  patient_name: string;
+  amount: number;
+  status: "PENDING" | "DONE";
+  date: string;
+  req_type: string;
+}
 
-const formatCurrency = (value: number) => pesoFormatter.format(value);
+const BillingDashboard = () => {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "DONE">("ALL");
+  const [selectedBilling, setSelectedBilling] = useState<BillingProps | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [bills, setBills] = useState<BillItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "Not yet paid";
+  useEffect(() => {
+    const fetchBills = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get("/api/billing");
+        const billsData = res.data.data.map((billing: BillingResponse) => ({
+          billing_id: billing.billing_id,
+          billing_code: billing.billing_code,
+          patient_name: billing.request?.patient?.name || "Unknown",
+          amount: Number(billing.total_price),
+          status: billing.status,
+          date: new Date(billing.date).toISOString().split("T")[0],
+          req_type: billing.request?.req_type || "LABORATORY",
+        }));
+        setBills(billsData);
+      } catch (error) {
+        console.error("Failed to fetch bills:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  return new Date(value).toLocaleString([], {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
+    fetchBills();
+  }, []);
+
+  const { mutateAsync: processPayment, isPending: paymentPending } = useProcessPayment(() => {});
+
+  const { register, handleSubmit, reset } = useForm<PaymentProps>({
+    defaultValues: { method: "CASH" },
   });
-};
 
-const getStatusClasses = (status: BillingRecord["status"]) =>
-  status === "paid"
-    ? "bg-[#e8f7ee] text-[#2f7d4b]"
-    : "bg-[#fff4df] text-[#9a6a18]";
+  const filteredBills = useMemo(() => {
+    return bills.filter((bill) => {
+      const matchesSearch =
+        search === "" ||
+        bill.patient_name.toLowerCase().includes(search.toLowerCase()) ||
+        bill.billing_code.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "ALL" || bill.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [search, statusFilter, bills]);
 
-export default function BillingPage() {
-  const [activeFilter, setActiveFilter] = useState<BillingFilter>("all");
-  const { data: billings = [], isLoading } = useBillings();
-  const { mutateAsync: markBillingPaid, isPending: postingPayment } = usePayBilling();
-  const [busyBillingId, setBusyBillingId] = useState<number | null>(null);
+  const stats = {
+    total: bills.length,
+    pending: bills.filter((b) => b.status === "PENDING").length,
+    completed: bills.filter((b) => b.status === "DONE").length,
+    totalRevenue: bills
+      .filter((b) => b.status === "DONE")
+      .reduce((sum, b) => sum + b.amount, 0),
+  };
 
-  const filteredBillings = useMemo(() => {
-    if (activeFilter === "all") {
-      return billings;
-    }
-
-    return billings.filter((billing) => billing.status === activeFilter);
-  }, [activeFilter, billings]);
-
-  const unpaidCount = useMemo(
-    () => billings.filter((billing) => billing.status === "unpaid").length,
-    [billings]
-  );
-  const paidCount = useMemo(
-    () => billings.filter((billing) => billing.status === "paid").length,
-    [billings]
-  );
-  const totalOutstanding = useMemo(
-    () =>
-      billings
-        .filter((billing) => billing.status === "unpaid")
-        .reduce((total, billing) => total + billing.totalPrice, 0),
-    [billings]
-  );
-
-  const handleMarkPaid = async (billingId: number) => {
+  const onSubmit = async (data: PaymentProps) => {
+    if (!selectedBilling) return;
+    setIsProcessing(true);
     try {
-      setBusyBillingId(billingId);
-      await markBillingPaid({ billingId, method: "CASH" });
+      await processPayment({
+        ...data,
+        billing_id: selectedBilling.billing_id,
+        amount: selectedBilling.total_price - selectedBilling.discount,
+      });
+      if (data.method === "CASH") {
+        setTimeout(() => setShowReceipt(true), 500);
+      } else {
+        SweetAlert.successAlert("Success", "Payment processed successfully");
+        reset();
+        setSelectedBilling(null);
+        setTimeout(() => window.location.reload(), 1500);
+      }
     } finally {
-      setBusyBillingId(null);
+      setIsProcessing(false);
     }
   };
 
   return (
-    <RoleGuard allowedRoles={["ADMIN", "CASHIER"]}>
-      <div className="min-h-full p-6 md:p-7">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <section className="rounded-3xl border border-[#d2ebe6] bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#5f8a83]">
-                  Cashier Billing
-                </p>
-                <h1 className="mt-2 text-3xl font-bold text-[#143a35]">
-                  Laboratory billing queue
-                </h1>
-                <p className="mt-2 max-w-3xl text-sm text-[#5f8a83]">
-                  Post payment here before the laboratory can accept a queued test request.
-                </p>
-              </div>
+    <RoleGuard allowedRoles={["CASHIER"]}>
+      <div
+        className="min-h-screen font-['DM_Sans']"
+        style={{ background: "linear-gradient(135deg, #0f2244 0%, #1a3560 55%, #0e3d5c 100%)" }}
+      >
+        <div className="border-b border-white/10 px-8 py-6">
+          <h1 className="font-['DM_Serif_Display'] text-3xl text-white tracking-wide mb-2">
+            Billing Management
+          </h1>
+          <p className="text-white/60 text-sm">Process payments and manage patient bills</p>
+        </div>
 
-              <div className="flex flex-wrap gap-2">
-                {(["all", "unpaid", "paid"] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    onClick={() => setActiveFilter(filter)}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                      activeFilter === filter
-                        ? "bg-[#143a35] text-white"
-                        : "bg-[#eef7f4] text-[#2f5e57] hover:bg-[#e2f1ec]"
-                    }`}
-                  >
-                    {filter === "all"
-                      ? "All bills"
-                      : filter === "unpaid"
-                        ? "Unpaid"
-                        : "Paid"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#2f5e57]">All Laboratory Bills</p>
-                <BadgeDollarSign size={18} className="text-[#2f9f90]" />
-              </div>
-              <p className="mt-3 text-3xl font-bold text-[#143a35]">{billings.length}</p>
-              <p className="mt-1 text-xs text-[#5f8a83]">Auto-refreshes every 10 seconds</p>
-            </div>
-
-            <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#2f5e57]">Unpaid Bills</p>
-                <Clock3 size={18} className="text-[#d18c1d]" />
-              </div>
-              <p className="mt-3 text-3xl font-bold text-[#143a35]">{unpaidCount}</p>
-              <p className="mt-1 text-xs text-[#5f8a83]">Still locked in the lab queue</p>
-            </div>
-
-            <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#2f5e57]">Paid Bills</p>
-                <CheckCircle2 size={18} className="text-[#2f9f90]" />
-              </div>
-              <p className="mt-3 text-3xl font-bold text-[#143a35]">{paidCount}</p>
-              <p className="mt-1 text-xs text-[#5f8a83]">Ready for lab acceptance</p>
-            </div>
-
-            <div className="rounded-2xl border border-[#d2ebe6] bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#2f5e57]">Outstanding Amount</p>
-                <CreditCard size={18} className="text-[#2f9f90]" />
-              </div>
-              <p className="mt-3 text-3xl font-bold text-[#143a35]">
-                {formatCurrency(totalOutstanding)}
-              </p>
-              <p className="mt-1 text-xs text-[#5f8a83]">Remaining cashier collection</p>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-[#c8e4de] bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-[#133d37]">Billing table</h2>
-                <p className="mt-1 text-sm text-[#5f8a83]">
-                  Use the payment action to unlock the accept button in the lab queue.
-                </p>
-              </div>
-              <div className="rounded-full bg-[#e3f6f2] px-3 py-1 text-xs font-medium text-[#2e6e64]">
-                {filteredBillings.length} visible
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {isLoading ? (
-                <div className="rounded-xl border border-dashed border-[#cbe6e1] bg-[#f5fbfa] px-4 py-6 text-center text-sm text-[#5c8b84]">
-                  Loading billing records...
+        <div className="px-8 py-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {[
+              { label: "Total Bills", value: stats.total, icon: FileText, color: "#0f2244", bg: "#eef1f9" },
+              { label: "Pending", value: stats.pending, icon: Clock, color: "#c8102e", bg: "#fdf0f2" },
+              { label: "Completed", value: stats.completed, icon: CheckCircle2, color: "#0e7c7b", bg: "#e0f4f4" },
+              { label: "Revenue", value: `₱${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, color: "#7c4dab", bg: "#f3eefb" },
+            ].map(({ label, value, icon: Icon, color, bg }) => (
+              <div key={label} className="bg-white rounded-2xl p-6">
+                <div className="h-[3px] -mx-6 mb-4" style={{ background: color }} />
+                <div className="flex items-start justify-between gap-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: bg }}>
+                    <Icon size={24} style={{ color }} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-gray-500 uppercase">{label}</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+                  </div>
                 </div>
-              ) : filteredBillings.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[#cbe6e1] bg-[#f5fbfa] px-4 py-6 text-center text-sm text-[#5c8b84]">
-                  No billing records matched the current filter.
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-3 gap-6">
+            <div className="col-span-2">
+              <div className="bg-white rounded-2xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-[#dce3ef] flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <h2 className="text-lg font-semibold text-[#0f2244]">Bills Queue</h2>
+                    <p className="text-xs text-[#6b7da0] mt-0.5">{filteredBills.length} bills found</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-shrink-0">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#b0bcd4]" />
+                      <input
+                        type="text"
+                        placeholder="Search..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-9 pr-3 py-2 text-xs rounded-lg outline-none border border-[#dce3ef] focus:border-[#0f2244] bg-[#f7f8fc]"
+                      />
+                    </div>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value as "ALL" | "PENDING" | "DONE")}
+                      className="px-3 py-2 text-xs rounded-lg outline-none border border-[#dce3ef] focus:border-[#0f2244] bg-white"
+                    >
+                      <option value="ALL">All Status</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="DONE">Completed</option>
+                    </select>
+                    <Button variant="primary" onClick={() => window.location.reload()} className="!text-xs !px-3">
+                      Refresh
+                    </Button>
+                  </div>
                 </div>
-              ) : (
-                filteredBillings.map((billing) => (
-                  <div
-                    key={billing.billingId}
-                    className="rounded-2xl border border-[#d5ebe6] bg-[#fbfefe] p-4"
-                  >
-                    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-md bg-[#e6f7f3] px-2 py-1 text-xs font-semibold text-[#2e7a6e]">
-                            {billing.billingCode}
-                          </span>
-                          <span
-                            className={`rounded-md px-2 py-1 text-xs font-semibold ${getStatusClasses(
-                              billing.status
-                            )}`}
-                          >
-                            {billing.status === "paid" ? "Paid" : "Unpaid"}
-                          </span>
-                        </div>
 
-                        <div>
-                          <p className="text-base font-semibold text-[#173f39]">
-                            {billing.patientName}
-                          </p>
-                          <p className="text-xs text-[#63867f]">
-                            {billing.patientCode} • Request #{billing.requestId}
-                          </p>
-                        </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#dce3ef]" style={{ background: "#f7f8fc" }}>
+                        <th className="text-left px-6 py-3 font-semibold text-[#6b7da0] text-xs uppercase">Bill Code</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#6b7da0] text-xs uppercase">Patient</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#6b7da0] text-xs uppercase">Amount</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#6b7da0] text-xs uppercase">Date</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#6b7da0] text-xs uppercase">Status</th>
+                        <th className="text-center px-6 py-3 font-semibold text-[#6b7da0] text-xs uppercase">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-8 text-center">
+                            <p className="text-[#6b7da0]">Loading bills...</p>
+                          </td>
+                        </tr>
+                      ) : filteredBills.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-8 text-center">
+                            <AlertCircle size={32} className="mx-auto mb-2 text-[#b0bcd4]" />
+                            <p className="text-[#6b7da0]">No bills found</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredBills.map((bill) => (
+                          <tr key={bill.billing_id} className="border-b border-[#f0f3fa] hover:bg-[#f7f8fc] transition">
+                            <td className="px-6 py-3">
+                              <span className="font-semibold text-[#0f2244]">{bill.billing_code}</span>
+                            </td>
+                            <td className="px-6 py-3 text-[#1a2a45]">{bill.patient_name}</td>
+                            <td className="px-6 py-3 font-semibold text-[#0f2244]">₱{bill.amount.toLocaleString()}</td>
+                            <td className="px-6 py-3 text-[#6b7da0]">{new Date(bill.date).toLocaleDateString()}</td>
+                            <td className="px-6 py-3">
+                              <span className={`inline-block px-3 py-1 rounded-lg text-xs font-semibold ${
+                                bill.status === "DONE" ? "bg-[#e0f2f1] text-[#0e7c7b]" : "bg-[#fff3e0] text-[#f57c00]"
+                              }`}>
+                                {bill.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-3 text-center">
+                              {bill.status === "PENDING" ? (
+                                <button
+                                  onClick={() => {
+                                    setSelectedBilling({
+                                      billing_id: bill.billing_id,
+                                      billing_code: bill.billing_code,
+                                      req_id: 0,
+                                      total_price: bill.amount,
+                                      discount: 0,
+                                      date: bill.date,
+                                      status: "PENDING",
+                                      services: [],
+                                      patient: { name: bill.patient_name, patient_code: "", patient_id: 0 },
+                                      request: { req_type: bill.req_type as "LABORATORY" | "CONSULTATION", req_date: bill.date },
+                                    });
+                                  }}
+                                  className="text-[#0f2244] hover:text-[#c8102e] font-semibold text-xs flex items-center gap-1 mx-auto"
+                                >
+                                  Process <ChevronRight size={12} />
+                                </button>
+                              ) : (
+                                <span className="text-[#6b7da0] text-xs">Completed</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
 
-                        <div className="text-sm text-[#5f8a83]">
-                          <p>
-                            <span className="font-semibold text-[#173f39]">Tests:</span>{" "}
-                            {billing.tests.join(", ") || "No test details"}
-                          </p>
-                          <p>
-                            <span className="font-semibold text-[#173f39]">Requested by:</span>{" "}
-                            {billing.requestedBy || "Doctor"}
-                          </p>
-                          <p>
-                            <span className="font-semibold text-[#173f39]">Requested at:</span>{" "}
-                            {formatDateTime(billing.requestedDate)}
-                          </p>
-                          <p>
-                            <span className="font-semibold text-[#173f39]">Paid at:</span>{" "}
-                            {formatDateTime(billing.paidAt)}
-                          </p>
-                        </div>
+            <div>
+              {selectedBilling ? (
+                <div className="bg-white rounded-2xl p-6 sticky top-8">
+                  <div className="h-[3px] -mx-6 mb-4" style={{ background: "#c8102e" }} />
+                  <h3 className="font-['DM_Serif_Display'] text-lg text-[#0f2244] mb-4">{selectedBilling.billing_code}</h3>
+                  <div className="space-y-3 mb-6 pb-6 border-b border-[#dce3ef]">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#6b7da0]">Patient</span>
+                      <span className="font-semibold text-[#1a2a45]">{selectedBilling.patient.name}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#6b7da0]">Subtotal</span>
+                      <span className="font-semibold text-[#1a2a45]">₱{selectedBilling.total_price.toFixed(2)}</span>
+                    </div>
+                    {selectedBilling.discount > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-[#6b7da0]">Discount</span>
+                        <span className="font-semibold text-[#c8102e]">-₱{selectedBilling.discount.toFixed(2)}</span>
                       </div>
-
-                      <div className="flex min-w-[220px] flex-col gap-3 rounded-2xl bg-[#f4faf8] p-4">
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#63867f]">
-                            Total bill
-                          </p>
-                          <p className="mt-1 text-2xl font-bold text-[#143a35]">
-                            {formatCurrency(billing.totalPrice)}
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#63867f]">
-                            Payment method
-                          </p>
-                          <p className="mt-1 text-sm font-medium text-[#173f39]">
-                            {billing.paymentMethod ?? "Pending cashier posting"}
-                          </p>
-                        </div>
-
-                        <Button
-                          type="button"
-                          onClick={() => handleMarkPaid(billing.billingId)}
-                          disabled={billing.isPaid || postingPayment}
-                          className="w-full"
-                        >
-                          {busyBillingId === billing.billingId
-                            ? "Posting payment..."
-                            : billing.isPaid
-                              ? "Payment Posted"
-                              : "Mark as Paid"}
-                        </Button>
-                      </div>
+                    )}
+                    <div className="flex justify-between text-base font-bold">
+                      <span>Total Due</span>
+                      <span className="text-[#0f2244]">₱{(selectedBilling.total_price - selectedBilling.discount).toFixed(2)}</span>
                     </div>
                   </div>
-                ))
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                    <Select label="Payment Method" {...register("method")}>
+                      <option value="CASH">Cash</option>
+                      <option value="GCASH">GCash</option>
+                      <option value="CARD">Card</option>
+                      <option value="BANK_TRANSFER">Bank Transfer</option>
+                    </Select>
+                    <Input
+                      label="Reference No. (Optional)"
+                      type="text"
+                      placeholder="GCash/Bank reference"
+                      {...register("reference_no")}
+                    />
+                    <div className="flex gap-2 pt-4">
+                      <Button variant="danger" type="button" onClick={() => setSelectedBilling(null)}>
+                        Cancel
+                      </Button>
+                      <Button variant="primary" type="submit" isLoading={paymentPending || isProcessing} className="flex-1">
+                        Process Payment
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl p-8 text-center sticky top-8">
+                  <FileText size={48} className="mx-auto mb-4 text-[#b0bcd4]" />
+                  <p className="text-[#6b7da0] font-semibold mb-1">No Bill Selected</p>
+                  <p className="text-sm text-[#b0bcd4]">Click &quot;Process&quot; on a pending bill to begin</p>
+                </div>
               )}
             </div>
-          </section>
+          </div>
+
+          {showReceipt && selectedBilling && (
+            <ReceiptModal
+              billingCode={selectedBilling.billing_code}
+              patientName={selectedBilling.patient.name}
+              amount={selectedBilling.total_price - selectedBilling.discount}
+              paymentMethod="CASH"
+              onClose={() => { setShowReceipt(false); window.location.reload(); }}
+              onPrint={() => window.print()}
+            />
+          )}
         </div>
       </div>
+
+      {showPaymentConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-8 text-center space-y-6">
+            <div className="w-16 h-16 rounded-full bg-[#e0f4f4] flex items-center justify-center mx-auto">
+              <CheckCircle2 size={32} className="text-[#0e7c7b]" />
+            </div>
+            <div>
+              <h2 className="font-['DM_Serif_Display'] text-xl text-[#0f2244] mb-2">Payment Successful</h2>
+              <p className="text-[#6b7da0] text-sm">
+                Amount: ₱{selectedBilling?.total_price.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="danger" onClick={() => setShowPaymentConfirm(false)} className="flex-1">Close</Button>
+              <Button variant="primary" onClick={() => { setShowPaymentConfirm(false); if (selectedBilling) setShowReceipt(true); }} className="flex-1">
+                Show Receipt
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </RoleGuard>
   );
-}
+};
+
+export default BillingDashboard;

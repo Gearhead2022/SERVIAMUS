@@ -2,6 +2,7 @@ import {
   LaboratoryCategory,
   LaboratoryRequestItemStatus,
   Prisma,
+  QueueStatus,
   RequestStatus,
 } from "@prisma/client";
 import type { LabResultPayload, LabResultValue } from "./lab.types";

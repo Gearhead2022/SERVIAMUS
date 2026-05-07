@@ -1,7 +1,9 @@
 import { request } from "express";
 import { prisma } from "../../config/prismaClient";
-import { MedicalCertificatePayload, PatientConsultationRecordsPayload, PrescriptionPayload } from "./consultation.types";
-import { RequestStatus } from "@prisma/client";
+import { MedicalCertificatePayload, PatientConsultationRecordsPayload, PrescriptionPayload, WeeklyTally } from "./consultation.types";
+import { QueueStatus, RequestStatus, RequestType } from "@prisma/client";
+import { mapRequestToQueueStatus } from "./consultation.helper";
+import { Prisma } from "@prisma/client";
 /**
  * CONSULTATION RECORDS
  */
@@ -131,7 +133,7 @@ export const createConsultationResult = async (
   });
 };
 
-export const getAllRequests = async (search?: string) => {
+export const getAllRequests = async (search?: string, req_types?: RequestType[]) => {
   const today = new Date();
   const startOfDay = new Date(today);
   startOfDay.setHours(0, 0, 0, 0);
@@ -146,15 +148,22 @@ export const getAllRequests = async (search?: string) => {
         lte: endOfDay,
       },
 
-      ...(search
-        ? {
-          patient: {
-            name: {
-              contains: search,
+      ...(search && {
+        OR: [
+          {
+            patient: {
+              name: {
+                contains: search,
+              },
             },
           },
-        }
-        : {}),
+        ],
+      }),
+      ...(req_types && req_types.length > 0 && {
+        req_type: {
+          in: req_types,
+        },
+      }),
     },
 
     select: {
@@ -215,11 +224,21 @@ export const requestAction = async (
       where: { req_id: requestId },
       data: {
         status,
-        // optional (recommended)
-        // processed_at: new Date(),
-        // processed_by: userId
       },
     });
+
+    const queueStatus = mapRequestToQueueStatus(status);
+
+    if (queueStatus) {
+      await tx.queue.update({
+        where: { req_id: requestId },
+        data: {
+          status: queueStatus,
+          ...(status === "SERVING" && { serving_at: new Date() }),
+          ...(status === "DONE" && { completed_at: new Date() }),
+        },
+      });
+    }
 
     return updated;
   });
@@ -883,7 +902,99 @@ export const medicalCertificateRecordHistory = async () => {
         status: c.med_cert_request.request.status,
       }
 
-
     }));
+  });
+};
+
+export const getRequestsPerWeekday = async (req_types?: RequestType[]) => {
+  const hasFilter = req_types && req_types.length > 0;
+
+  const data: WeeklyTally[] = await prisma.$queryRaw(
+    Prisma.sql`
+      SELECT 
+        DAYNAME(req_date) AS day,
+        COUNT(*) AS total
+      FROM request
+      WHERE YEARWEEK(req_date, 1) = YEARWEEK(CURDATE(), 1)
+      ${hasFilter
+        ? Prisma.sql`AND req_type IN (${Prisma.join(req_types!)})`
+        : Prisma.empty}
+      GROUP BY DAYOFWEEK(req_date), DAYNAME(req_date)
+      ORDER BY DAYOFWEEK(req_date)
+    `
+  );
+
+  // default object (ensures missing days = 0)
+  const result = {
+    Monday: 0,
+    Tuesday: 0,
+    Wednesday: 0,
+    Thursday: 0,
+    Friday: 0,
+    Saturday: 0,
+    Sunday: 0,
+  };
+
+  for (const row of data) {
+    if (result.hasOwnProperty(row.day)) {
+      result[row.day as keyof typeof result] = Number(row.total);
+    }
+  }
+
+  return result;
+};
+
+export const getLabRequestByName = async (name: string, patientId: number) => {
+  const data = await prisma.laboratoryRequestItem.findMany({
+    where: {
+      laboratoryRequest: {
+        req_by: name,
+        request: {
+          patient_id: patientId,
+        },
+      },
+    },
+    include: {
+      laboratoryRequest: {
+        include: {
+          request: {
+            include: {
+              patient: true,
+              billing: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      created_at: 'desc'
+    }
+  });
+
+  return data.map((c) => {
+    const req = c.laboratoryRequest.request;
+
+    return {
+      item_id: c.item_id,
+      laboratory_request_id: c.laboratory_request_id,
+      test_id: c.test_id,
+      status: c.status,
+      result_payload: c.result_payload,
+      processed_by: c.processed_by,
+      completed_at: c.completed_at,
+
+      request: {
+        req_id: req.req_id,
+        patient_id: req.patient_id,
+        req_type: req.req_type,
+        status: req.status,
+        req_date: req.req_date,
+      },
+
+      patient: req.patient,
+      billing: {
+        status: req.billing?.status ?? 'PENDING'
+      },
+    };
   });
 };

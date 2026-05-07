@@ -8,14 +8,12 @@ export interface Role {
   role_desc?: string;
 }
 
-export interface LoginResponse {
-  token: string;
-  user: {
-    user_id: number;
-    roles: string[];
-    username: string;
-    name: string;
-  };
+export interface AuthUser {
+  user_id: number;
+  roles: string[];
+  username: string;
+  name: string;
+  title: string;
 }
 
 export interface RegisterPayload {

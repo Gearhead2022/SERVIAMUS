@@ -5,6 +5,19 @@ import { useAuth } from "@/context/AuthContext";
 import { Menu, Bell, Search, ChevronDown, LogOut, Settings } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { MENU_ITEMS } from "@/app/(admin)/config/menu.config";
+import NotificationDropdown from "./NotificationDropdown";
+import { useNotifications } from "@/hooks/useNotification";
+
+type Notification = {
+  notif_id: number;
+  user_Id: number;
+  type: "NEW_REQUEST" | "APPROVED" | "REJECTED";
+  title: string;
+  message: string;
+  entity?: string;
+  entity_id?: number;
+  is_read: boolean;
+};
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -16,6 +29,11 @@ export default function Header() {
   const currentPage = MENU_ITEMS.find((item) => item.path === pathname);
   const pageTitle = currentPage?.label ?? pathname.replace("/", "").toUpperCase();
   const [mounted, setMounted] = useState(false);
+  const [openNotif, setOpenNotif] = useState(false);
+
+  const { data = [] } = useNotifications(user?.user_id ?? 0);
+
+  const unreadCount = data.filter((n: Notification) => !n.is_read).length;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -32,6 +50,8 @@ export default function Header() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // console.log('is open', openNotif)
 
   return (
     <header
@@ -65,31 +85,29 @@ export default function Header() {
           </span>
         </div>
       </div>
-
-      {/* ── Center: Search ── */}
-      {/* <div className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.05] border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.08] transition-all cursor-pointer w-56 group">
-        <Search size={13} className="text-white/25 group-hover:text-white/50 transition-colors" />
-        <span className="text-white/25 text-xs flex-1 group-hover:text-white/40 transition-colors">
-          Quick search…
-        </span>
-        <kbd className="text-[10px] font-mono text-white/20 bg-white/[0.06] border border-white/10 px-1.5 py-0.5 rounded-md">
-          ⌘K
-        </kbd>
-      </div> */}
-
       {/* ── Right ── */}
       <div className="flex items-center gap-1.5">
         <span className="hidden lg:block w-px h-5 mx-1" />
 
         {/* Notifications */}
-        <button
-          type="button"
-          className="relative w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white/80 hover:bg-white/10 transition-all"
-        >
-          <Bell size={15} />
-          {/* Notification dot */}
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#c8102e] shadow-[0_0_6px_rgba(200,16,46,0.8)]" />
-        </button>
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenNotif((prev) => !prev);
+            }}
+            className="relative w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white/80 hover:bg-white/10 transition-all"
+          >
+            <Bell size={15} />
+
+            {/* Notification dot */}
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#c8102e]" />
+            )}
+          </button>
+
+          <NotificationDropdown open={openNotif} setOpen={setOpenNotif} />
+        </div>
 
         {/* User Dropdown */}
         <div className="relative" ref={dropdownRef}>

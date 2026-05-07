@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createConsultationResultController, createMedCertResultController, createPrescriptionController, getAllPatientConsultationController, getAllPatientMedCertController, getAllPatientRequestController, getConsultationRecordByIdController, getConsultationRecordHistoryController, getMedicalCertificateRecordHistoryController, getPatientPrescriptionController, getPatientRecordController, getPrescriptionByRequestController, getPrescriptionRecordHistoryController, getStatisticsController, updateRequestStatusController } from "./consultation.controller";
+import { createConsultationResultController, createMedCertResultController, createPrescriptionController, getAllPatientConsultationController, getAllPatientMedCertController, getAllPatientRequestController, getConsultationRecordByIdController, getConsultationRecordHistoryController, getLabRequestByNameController, getMedicalCertificateRecordHistoryController, getPatientPrescriptionController, getPatientRecordController, getPrescriptionByRequestController, getPrescriptionRecordHistoryController, getStatisticsController, getWeeklyTallyController, updateRequestStatusController } from "./consultation.controller";
 
 const router = Router();
 
@@ -86,6 +86,20 @@ router.get(
   getConsultationRecordByIdController
 );
 
+// dashboard graph
+
+router.get(
+  "/getRequestPerWeek",
+  getWeeklyTallyController
+);
+
+
+// dashboard lab requests
+
+router.get(
+  "/:id/getLabRequestByName",
+  getLabRequestByNameController
+);
 
 
 

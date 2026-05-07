@@ -1,6 +1,7 @@
 /* =====================
    TYPES
 ===================== */
+import { RequestStatus } from "./LabTypes";
 import { PatientProps } from "./PatientTypes";
 import { UsersProps } from "./RequestTypes";
 
@@ -138,4 +139,31 @@ export interface ConsultationProps {
     follow_up_date?: string,
 }
 
+export type RequestTypes = 'CONSULTATION' | 'LABORATORY' | 'CERTIFICATE';
+
 export type Status = "WAITING" | "SERVING" | "DONE" | "CANCELED";
+
+export interface LabRequestProps {
+    id: number;
+    req_id: number;
+    req_by: string;
+}
+
+export interface LabBillingProp {
+    status: "PENDING" | "DONE";
+}
+
+export interface LabRequestItems {
+    item_id: number,
+    laboratory_request_id: number,
+    test_id: number,
+    status: RequestStatus,
+    result_payload: string,
+    processed_by: string,
+    completed_at: string,
+
+    request: LabRequestProps;
+    patient: PatientProps;
+    billing: LabBillingProp;
+
+}

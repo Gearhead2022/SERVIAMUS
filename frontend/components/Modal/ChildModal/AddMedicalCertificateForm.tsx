@@ -17,6 +17,24 @@ import Label from "@/components/ui/label";
 import Input from "@/components/ui/Input";
 import SweetAlert from "@/utils/SweetAlert";
 import { todayPH } from "@/utils/Date";
+import { useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
+import { UsersProps } from "@/types/RequestTypes";
+
+type Option = {
+    label: string;
+    value: number;
+};
+
+const userOptions = (UserList: UsersProps[]): Option[] => {
+    return UserList.map((user) => ({
+        label: user.name + " " + user.title,
+        value: user.user_id,
+    }));
+};
+
+const inputCls =
+    "w-full bg-[#f0f3fa] border border-[1.5px] border-[#dce3ef] rounded-lg px-3 py-2.5 text-sm text-[#1a2a45] font-['DM_Sans'] outline-none transition focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white placeholder:text-[#b0bcd4]";
+
 
 const medCertSchema = z.object({
     mcr_id: z.number(),
@@ -46,9 +64,7 @@ const MedicalCertificate: React.FC<MedCertProps> = ({
 
     const { mutateAsync: request } = useMedicalCertificateResult(onClose);
     const doctorAssigned = requestEntry?.doctor;
-
-    const initials = patient?.name
-        .split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+    const { data: UserList } = useGetAllUsers();
 
     const {
         register,
@@ -70,6 +86,9 @@ const MedicalCertificate: React.FC<MedCertProps> = ({
         { value: "Fit To Work", label: "Fit to work" },
         { value: "Medical Assistance", label: "Medical Assistance" }
     ]
+
+
+    const options = userOptions(UserList ?? []);
 
     // console.log('error', errors);
 
@@ -94,7 +113,7 @@ const MedicalCertificate: React.FC<MedCertProps> = ({
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white text-base flex-shrink-0"
                         style={{ background: "linear-gradient(135deg, #0f2244 0%, #1a3560 100%)", boxShadow: "0 4px 14px rgba(15,34,68,0.2)" }}>
-                        {initials}
+                        <User />
                     </div>
                     <div>
                         <h2 className="text-[#0f2244] text-xl leading-tight"
@@ -236,6 +255,48 @@ const MedicalCertificate: React.FC<MedCertProps> = ({
                                 <p className="text-[10.5px] mt-1" style={{ color: "#b0bcd4" }}>
                                     e.g. Fit to work. No restriction. Advised to follow-up on April 30, 2026.
                                 </p>
+                            </div>
+                            <div className="w-[70%]">
+                                <Label>Assigned Physician</Label>
+
+                                <Controller
+                                    control={control}
+                                    name="physician"
+                                    render={({ field }) => (
+                                        <Select
+                                            {...field}
+                                            options={options}
+                                            placeholder="— Select Physician —"
+                                            className={`text-sm ${inputCls}`}
+                                            classNamePrefix="react-select"
+                                            isClearable
+
+                                            onChange={(selected) =>
+                                                field.onChange(selected ? selected.value : null)
+                                            }
+
+                                            value={options.find(
+                                                (opt) => opt.value === field.value
+                                            ) || null}
+
+                                            menuPortalTarget={document.body}
+                                            styles={{
+                                                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                                                menuList: (base) => ({
+                                                    ...base,
+                                                    maxHeight: 200,
+                                                    overflowY: "auto",
+                                                    color: 'black',
+                                                }),
+                                            }}
+                                        />
+                                    )}
+                                />
+                                {errors.physician && (
+                                    <p className="text-xs text-red-500 mt-1">
+                                        {errors.physician.message}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

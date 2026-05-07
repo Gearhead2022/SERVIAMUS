@@ -6,39 +6,39 @@ const LAB_TEST_PRICING_RULES: Array<{
   pattern: RegExp;
   price: number;
 }> = [
-  {
-    pattern: /(cbc|blood count|hematology|blood typing)/i,
-    price: 250,
-  },
-  {
-    pattern: /urinalysis/i,
-    price: 180,
-  },
-  {
-    pattern: /(fecalysis|fecal|stool|parasit)/i,
-    price: 180,
-  },
-  {
-    pattern: /blood chemistry/i,
-    price: 550,
-  },
-  {
-    pattern: /(dengue|ns1|igg|igm|widal|serology)/i,
-    price: 420,
-  },
-  {
-    pattern: /(hba1c|hb a1c|glycated)/i,
-    price: 650,
-  },
-  {
-    pattern: /(ogtt|glucose load)/i,
-    price: 700,
-  },
-  {
-    pattern: /(sodium|potassium|chloride|ionized calcium)/i,
-    price: 480,
-  },
-];
+    {
+      pattern: /(cbc|blood count|hematology|blood typing)/i,
+      price: 250,
+    },
+    {
+      pattern: /urinalysis/i,
+      price: 180,
+    },
+    {
+      pattern: /(fecalysis|fecal|stool|parasit)/i,
+      price: 180,
+    },
+    {
+      pattern: /blood chemistry/i,
+      price: 550,
+    },
+    {
+      pattern: /(dengue|ns1|igg|igm|widal|serology)/i,
+      price: 420,
+    },
+    {
+      pattern: /(hba1c|hb a1c|glycated)/i,
+      price: 650,
+    },
+    {
+      pattern: /(ogtt|glucose load)/i,
+      price: 700,
+    },
+    {
+      pattern: /(sodium|potassium|chloride|ionized calcium)/i,
+      price: 480,
+    },
+  ];
 
 const toDecimal = (value: number) => new Prisma.Decimal(value.toFixed(2));
 

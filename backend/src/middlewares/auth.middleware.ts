@@ -1,36 +1,39 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { verifyToken } from "../utils/verifyToken";
 
 export const authenticate = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorized"
-    });
-  }
-
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET!
-    ) as {
-      user_id: number;
-      roles: string[];
-    };
+    // ✅ get token from cookie
+    const token = req.cookies?.access_token;
 
-    req.user = decoded;
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
+
+    const user = verifyToken(token);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token"
+      });
+    }
+
+    // attach user
+    req.user = user;
+
     next();
-  } catch {
+  } catch (err) {
     return res.status(401).json({
       success: false,
-      message: "Invalid token"
+      message: "Authentication failed"
     });
   }
 };

@@ -1,6 +1,7 @@
 import api from "./axios";
-import { ConsultationResultProps, MedicalCertificateProps, PrescriptionProps, Status } from "@/types/ConsultationTypes";
+import { ConsultationResultProps, MedicalCertificateProps, PrescriptionProps, Status, RequestTypes } from "@/types/ConsultationTypes";
 
+type ModifRequestTypes = Exclude<RequestTypes, 'LABORATORY'>;
 
 export const consultationResults = async (
   data: ConsultationResultProps
@@ -8,10 +9,12 @@ export const consultationResults = async (
   const res = await api.post("/api/consultation/results", data);
   return res.data.data;
 };
-export const fetchAllConsultationRequest = async (search: string) => {
+
+export const fetchAllConsultationRequest = async (search: string, req_types: ModifRequestTypes[]) => {
   const res = await api.get("/api/consultation/requestList", {
     params: {
-      search
+      search,
+      req_types: req_types.join(","),
     }
   }
   );
@@ -84,4 +87,23 @@ export const medicalCertificateResult = async (
 export const getConsultationById = async (cons_id: number) => {
   const res = await api.get(`/api/consultation/${cons_id}/getConsultationRecordById`);
   return res.data.data;
+}
+
+export const getRequestPerWeek = async (req_types: RequestTypes[]) => {
+  const res = await api.get(`/api/consultation/getRequestPerWeek`, {
+    params: {
+      req_types: req_types.join(","),
+    },
+  });
+
+  return res.data;
+};
+
+export const getLabRequestByName = async (name: string, patientId: number) => {
+  const res = await api.get(`/api/consultation/${patientId}/getLabRequestByName`, {
+    params: {
+      name
+    }
+  });
+  return res.data;
 }

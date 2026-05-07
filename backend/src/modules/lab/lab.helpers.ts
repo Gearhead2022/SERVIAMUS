@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { ensureLabBillingForRequest } from "../billing/billing.helpers";
-import { splitLabTests, toSchemaKey } from "./lab.utils";
+import { categorizeLabTest, splitLabTests, toSchemaKey } from "./lab.utils";
+import { prisma } from "../../config/prismaClient";
 
 type CreateLaboratoryRequestWithItemsInput = {
   reqId: number;
@@ -109,3 +110,4 @@ export const createLaboratoryRequestWithItems = async (
 
   return laboratoryRequest;
 };
+

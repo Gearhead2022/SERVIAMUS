@@ -6,85 +6,78 @@ import {
   useState
 } from "react";
 import { useRouter } from "next/navigation";
-
-interface AuthUser {
-  user_id: number;
-  roles: string[];
-  username: string;
-  name: string;
-}
+import { AuthUser } from "@/types/AuthTypes";
 
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isAuthReady: boolean;
-  login: (token: string, user: AuthUser) => void;
+  login: (user: AuthUser) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-
   const router = useRouter();
 
+  // Safe user parsing (FIXED ERROR HERE)
   const [user, setUser] = useState<AuthUser | null>(() => {
     if (typeof window === "undefined") return null;
+
     const storedUser = localStorage.getItem("user");
-    return storedUser ? JSON.parse(storedUser) : null;
+
+    try {
+      if (!storedUser || storedUser === "undefined") return null;
+      return JSON.parse(storedUser);
+    } catch {
+      return null;
+    }
   });
 
+  // Auth based on user existence
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
-    return !!localStorage.getItem("token");
+    return !!localStorage.getItem("user");
   });
 
   const [isAuthReady] = useState(true);
 
-  const login = (token: string, user: AuthUser) => {
-    localStorage.setItem("token", token);
+  // CLEAN login (NO TOKEN)
+  const login = (user: AuthUser) => {
     localStorage.setItem("user", JSON.stringify(user));
 
     setUser(user);
     setIsAuthenticated(true);
 
-    const admin_user = user.roles.includes('ADMIN');
-    const doctor_user = user.roles.includes('DOCTOR');
-    const laboratory_user = user.roles.includes('LAB') || user.roles.includes('LABORATORY');
-    const staff_user = user.roles.includes('STAFF');
-    const cashier_user = user.roles.includes('CASHIER');
+    // Clean role routing (no duplicates, first match wins)
+    if (user.roles.includes("ADMIN")) return router.replace("/dashboard");
+    if (user.roles.includes("DOCTOR")) return router.replace("/docDashboard");
+    if (user.roles.includes("LAB")) return router.replace("/labdashboard");
+    if (user.roles.includes("STAFF")) return router.replace("/registration");
+    if (user.roles.includes("CASHIER")) return router.replace("/billing");
 
-    if (admin_user) {
-      router.replace("/dashboard"); 
-    }
-
-    if (doctor_user) {
-      router.replace("/docDashboard");
-    }
-
-    if (laboratory_user) {
-      router.replace("/labdashboard");
-    }
-
-    if (staff_user) {
-      router.replace("/registration");
-    }
-
-    if (cashier_user) {
-      router.replace("/billing");
-    }
+    // fallback
+    router.replace("/");
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
+  const logout = async () => {
     localStorage.removeItem("user");
 
     setUser(null);
     setIsAuthenticated(false);
 
-    router.replace("/");
+    try {
+      //  Clear backend cookie
+      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_LAN_URL}/authentication/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
 
-    console.log('logout')
+    router.replace("/");
   };
 
   return (

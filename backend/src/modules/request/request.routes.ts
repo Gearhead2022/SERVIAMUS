@@ -19,7 +19,7 @@ router.post(
 router.get(
   "/getAllUsers",
   getAllRegisteredUsersController
-); getRequestDataController
+);
 
 router.get(
   "/:id/requestData",

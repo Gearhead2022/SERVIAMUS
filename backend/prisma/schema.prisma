@@ -42,6 +42,7 @@ model Users {
   ogtt_results_as_pathologist               OgttResult[]                @relation("OgttResultPathologist")
   medical_certificate_request_as_doctor     MedicalCertificateRequest[] @relation("MedicalCertificateRequestDoctor")
   consultation_request_as_doctor            ConsultationRequest[]       @relation("ConsultationRequestDoctor")
+  notification                              Notification[]
 
   @@map("users")
 }
@@ -64,7 +65,7 @@ model UserRole {
   user_id Int
   role_id Int
 
-  user Users     @relation(fields: [user_id], references: [user_id])
+  user Users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   role RoleTypes @relation(fields: [role_id], references: [role_id], onDelete: Cascade)
 
   @@id([user_id, role_id])
@@ -198,6 +199,7 @@ model Request {
   consult    ConsultationRequest?
   billing    Billing?
   cert       MedicalCertificateRequest?
+  queue      Queue?
 
   @@index([patient_id])
   @@map("request")
@@ -627,6 +629,29 @@ model OgttResult {
   @@map("ogtt_results")
 }
 
+model Queue {
+  queue_id     Int         @id @default(autoincrement())
+  patient_id   Int
+  req_id       Int         @unique
+  queue_type   QueueType
+  queue_number Int
+  status       QueueStatus @default(WAITING)
+  req_date     DateTime    @db.Date
+  serving_at   DateTime?
+  completed_at DateTime?
+  created_at   DateTime    @default(now())
+  updated_at   DateTime?   @updatedAt
+
+  patient Patients @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
+  request Request  @relation(fields: [req_id], references: [req_id])
+
+  @@index([patient_id])
+  @@index([queue_type])
+  @@index([req_id])
+  @@index([status])
+  @@map("queue")
+}
+
 enum LaboratoryCategory {
   Clinical_Chemistry
   Clinical_Microscopy
@@ -654,14 +679,16 @@ model Patients {
   sex Sex
   age Int?
 
+  philhealth_id String?
+
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  phr                       ConsultationRecords[]
-  request                   Request[]
-  vitals                    VitallSign[]
-  prescriptions             Prescription[]
-  consultations             Consultation[]
+  phr                         ConsultationRecords[]
+  request                     Request[]
+  vitals                      VitallSign[]
+  prescriptions               Prescription[]
+  consultations               Consultation[]
   hematology_results          HematologyResult[]
   serology_results            SerologyResult[]
   parasitology_results        ParasitologyResult[]
@@ -671,6 +698,7 @@ model Patients {
   chemistry_results           ChemistryResult[]
   ogtt_results                OgttResult[]
   medical_certificate_results MedicalCertificateResult[]
+  queue                       Queue[]
 
   @@map("patients")
 }
@@ -691,6 +719,7 @@ model ServiceClass {
 model Services {
   service_id   Int      @id @default(autoincrement())
   service_code String   @unique @db.VarChar(20)
+  reference_id Int //Test ID, Consult ID, Cert ID
   price        Decimal  @db.Decimal(12, 2)
   date         DateTime @db.Date
   is_active    Boolean  @default(true)
@@ -745,6 +774,18 @@ model BillingService {
   @@map("billing_services")
 }
 
+enum QueueType {
+  CONSULTATION
+  LABORATORY
+}
+
+enum QueueStatus {
+  WAITING
+  SERVING
+  COMPLETED
+  SKIPPED
+}
+
 model Payment {
   payment_id Int @id @default(autoincrement())
 
@@ -767,3 +808,27 @@ enum PaymentMethod {
   BANK_TRANSFER
 }
 
+model Notification {
+  notif_id   Int              @id @default(autoincrement())
+  user_id    Int
+  type       NotificationType
+  title      String
+  message    String
+  entity     String? // "request", "booking", etc.
+  entity_id  Int? // reference ID
+  is_read    Boolean          @default(false)
+  created_at DateTime         @default(now())
+  read_at    DateTime?
+
+  user Users @relation(fields: [user_id], references: [user_id])
+
+  @@index([user_id])
+  @@index([entity, entity_id])
+}
+
+enum NotificationType {
+  NEW_REQUEST
+  APPROVED
+  REJECTED
+  SYSTEM
+}

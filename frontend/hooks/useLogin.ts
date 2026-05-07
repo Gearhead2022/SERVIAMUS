@@ -15,8 +15,8 @@ export const useLogin = () => {
       password: string;
     }) => loginApi(username, password),
 
-    onSuccess: (data) => {
-      login(data.token, data.user);
+    onSuccess: (user) => {
+      login(user); // ✅ FIXED
       SweetAlert.successAlert(
         "Success",
         "Login successful"
