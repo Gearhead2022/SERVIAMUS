@@ -8,6 +8,7 @@ import RequestsRoutes from "../modules/request/request.routes";
 import PatientsRoutes from "../modules/patient/patient.routes";
 import ConsultationRoutes from "../modules/consultation/consultation.routes";
 import QueueRoutes from "../modules/queue/queue.routes";
+import NotificationRoutes from "../modules/notification/notification.route";
 
 const router = Router();
 
@@ -24,5 +25,9 @@ router.use("/patient", PatientsRoutes); // Patient record related routes
 router.use("/consultation", ConsultationRoutes); // Consultation related routes
 
 router.use("/queue", QueueRoutes);  // Queue management routes
+
+router.use("/lab", LabRoutes);  // Queue management routes
+
+router.use("/notification", NotificationRoutes);  // Notidication routes
 
 export default router;

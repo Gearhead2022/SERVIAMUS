@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createPatient, fetchAllPatient, updatePatient } from "@/services/patient.services";
 import SweetAlert from "@/utils/SweetAlert";
-import { VitalSignProps} from "@/types/RequestTypes";
+import { VitalSignProps } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
 import { getPrevVitalSigns, createRequest, getAllUsers as getAllRegisteredUsers } from "@/services/request.services";
 import { UsersProps } from "@/types/RequestTypes";
@@ -86,7 +86,7 @@ export const useRequest = (closeModal: () => void) => {
 
 export const useUpdatePatient = (closeModal: () => void) => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: ({ patientId, data }: { patientId: number; data: PatientProps }) =>
       updatePatient(patientId, data),

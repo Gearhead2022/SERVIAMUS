@@ -6,6 +6,8 @@ import { ReactNode } from "react";
 
 import ClientProviders from "@/providers/ReactQueryProvider";
 import { AuthProvider } from "@/context/AuthContext";
+import SocketProvider from "@/providers/SocketProvider";
+import { Toaster } from "react-hot-toast";
 
 const roboto = Roboto({ weight: "400", subsets: ["latin"] });
 
@@ -25,6 +27,9 @@ export default function RootLayout({
       <body className={roboto.className}>
         <ClientProviders>
           <AuthProvider>
+            <SocketProvider />
+
+            <Toaster position="top-right" toastOptions={{ duration: 5000, }} />
             {children}
           </AuthProvider>
         </ClientProviders>

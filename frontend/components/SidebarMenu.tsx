@@ -37,8 +37,8 @@ export default function SidebarMenu() {
 
   const allowedMenu = user
     ? MENU_ITEMS.filter(item =>
-        item.roles.some(role => user.roles.includes(role))
-      )
+      item.roles.some(role => user.roles.includes(role))
+    )
     : [];
 
   // Only show queue box for STAFF

@@ -1,5 +1,5 @@
 import api from "./axios";
-import { LoginResponse, RegisterPayload, Role } from "../types/AuthTypes";
+import { AuthUser, RegisterPayload, Role } from "../types/AuthTypes";
 
 /* =====================
    API CALLS
@@ -9,19 +9,21 @@ import { LoginResponse, RegisterPayload, Role } from "../types/AuthTypes";
 export const login = async (
   username: string,
   password: string
-): Promise<LoginResponse> => {
+): Promise<AuthUser> => {
   const res = await api.post("/authentication/login", {
     username,
     password
+  }, {
+    withCredentials: true // ✅ REQUIRED
   });
-  console.log('data after login', res.data.data)
-  const { token, user } = res.data.data;
-  localStorage.setItem("token", token);
+
+  const user = res.data.data;
+
+  // ✅ ONLY store user (optional)
   localStorage.setItem("user", JSON.stringify(user));
 
-  return res.data.data;
+  return user;
 };
-
 // REGISTER
 export const registerUser = async (
   data: RegisterPayload

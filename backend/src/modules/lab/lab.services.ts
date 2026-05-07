@@ -16,6 +16,7 @@ import {
   toDbLabStatus,
   toSchemaKey,
 } from "./lab.utils";
+import { mapRequestToQueueStatus } from "../consultation/consultation.helper";
 
 type LabCatalogItem = {
   test_id: number;
@@ -288,7 +289,7 @@ const getRelatedCombinedLabResultItems = async (
       schemaKey: item.test.schema_key,
       testName: item.test.name,
     })
-      === family
+    === family
   );
 };
 
@@ -312,14 +313,28 @@ const syncParentRequestStatus = async (
     throw new LabModuleError("Lab request not found.", 404);
   }
 
+  // modified
+
+  const itemStatuses = parentRequest.items.map((item) => item.status);
+
+  const reqStatus = requestStatusFromItemStatuses(itemStatuses);
+  const queueStatus = mapRequestToQueueStatus(reqStatus);
+
   await tx.request.update({
     where: { req_id: parentRequest.req_id },
-    data: {
-      status: requestStatusFromItemStatuses(
-        parentRequest.items.map((item) => item.status)
-      ),
-    },
+    data: { status: reqStatus },
   });
+
+  if (queueStatus) {
+    await tx.queue.update({
+      where: { req_id: parentRequest.req_id },
+      data: {
+        status: queueStatus,
+        ...(queueStatus === "SERVING" && { serving_at: new Date() }),
+        ...(queueStatus === "COMPLETED" && { completed_at: new Date() }),
+      },
+    });
+  }
 };
 
 export const getAllUsersService = async () => {
@@ -590,11 +605,11 @@ export const getPatientLabRecordsService = async (
             patient_id: patientId,
             ...(dateFrom || dateTo
               ? {
-                  req_date: {
-                    ...(dateFrom ? { gte: dateFrom } : {}),
-                    ...(dateTo ? { lte: dateTo } : {}),
-                  },
-                }
+                req_date: {
+                  ...(dateFrom ? { gte: dateFrom } : {}),
+                  ...(dateTo ? { lte: dateTo } : {}),
+                },
+              }
               : {}),
           },
         },
@@ -673,10 +688,10 @@ export const updateLabRequestStatusService = async (
     });
     const relatedGroupItems = combinedResultFamily
       ? await getRelatedCombinedLabResultItems(
-          tx,
-          existingItem.laboratory_request_id,
-          combinedResultFamily
-        )
+        tx,
+        existingItem.laboratory_request_id,
+        combinedResultFamily
+      )
       : [existingItem];
     const targetItemIds = relatedGroupItems.map((item) => item.item_id);
 
@@ -791,19 +806,19 @@ export const saveLabResultService = async ({
     });
     const relatedGroupItems = combinedResultFamily
       ? await getRelatedCombinedLabResultItems(
-          tx,
-          existingItem.laboratory_request_id,
-          combinedResultFamily
-        )
+        tx,
+        existingItem.laboratory_request_id,
+        combinedResultFamily
+      )
       : [
-          {
-            item_id: existingItem.item_id,
-            processed_by: existingItem.processed_by,
-            result_payload: null,
-            status: existingItem.status,
-            test: existingItem.test,
-          },
-        ];
+        {
+          item_id: existingItem.item_id,
+          processed_by: existingItem.processed_by,
+          result_payload: null,
+          status: existingItem.status,
+          test: existingItem.test,
+        },
+      ];
     const targetItemIds = relatedGroupItems.map((item) => item.item_id);
     const nextStatus = existingItem.status === "DONE" ? "DONE" : "PROCESSING";
 

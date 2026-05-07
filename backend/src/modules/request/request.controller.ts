@@ -1,7 +1,7 @@
-// TODO:FIX MERGE CONFLICTS
-
 import { Request, Response } from "express";
 import { getPrevVitalSigns, createRequest, getAllRegisteredUsers, getRequestData } from "./request.services";
+import { createNotification, resolveNotificationUsers } from "../notification/notification.services";
+import { getIO } from "../../socket";
 
 export const getPrevVitalSignsController = async (req: Request, res: Response) => {
   try {
@@ -30,19 +30,35 @@ export const getPrevVitalSignsController = async (req: Request, res: Response) =
 
 export const createRequestController = async (req: Request, res: Response) => {
   try {
-    const patient = await createRequest(req.body);
+    const request = await createRequest(req.body);
+    const userIds = await resolveNotificationUsers(request);
+
+    await createNotification({
+      userIds,
+      type: "NEW_REQUEST",
+      title: "New Request",
+      message: `New ${request.result.req_type} request created`,
+      entity: "request",
+      entity_id: request.result.req_id,
+    });
+
+    const io = getIO();
+
+    io.to("role_LAB").emit("request:updated");
+    io.to("role_DOCTOR").emit("request:updated");
 
     return res.status(201).json({
       success: true,
-      data: patient
+      data: request,
     });
   } catch (error: any) {
     return res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
+
 
 export const getAllRegisteredUsersController = async (req: Request, res: Response) => {
   try {

@@ -1,15 +1,31 @@
 import { Request, Response } from "express";
-import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getPatientPrescription, getStatistics, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
-import { RequestStatus } from "@prisma/client";
-
+import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getLabRequestByName, getPatientPrescription, getRequestsPerWeekday, getStatistics, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
+import { RequestStatus, RequestType } from "@prisma/client";
+import { prisma } from "../../config/prismaClient";
+import { getIO } from "../../socket";
+type NonLaboratoryRequestType = Exclude<RequestType, "LABORATORY">
 
 export const createConsultationResultController = async (req: Request, res: Response) => {
   try {
-    const patient = await createConsultationResult(req.body);
+    const consult = await createConsultationResult(req.body);
+
+    const users = await prisma.consultationRequest.findMany({
+      where: {
+        cons_id: consult.cons_id
+      },
+      select: { physician: true },
+    });
+
+    const userIds = users.map(u => u.physician);
+    const io = getIO();
+
+    io.to(`user_${userIds}`).emit("consultation:created", {
+      id: consult.cons_id,
+    });
 
     return res.status(201).json({
       success: true,
-      data: patient
+      data: consult
     });
   } catch (error: any) {
     return res.status(400).json({
@@ -26,16 +42,34 @@ export const getAllPatientRequestController = async (req: Request, res: Response
         ? req.query.search.trim()
         : undefined;
 
-    const request = await getAllRequests(search);
+    let req_types: RequestType[] | undefined;
+
+    if (req.query.req_types) {
+      let rawTypes: string[] = [];
+
+      if (Array.isArray(req.query.req_types)) {
+        rawTypes = req.query.req_types as string[];
+      } else if (typeof req.query.req_types === "string") {
+        rawTypes = req.query.req_types.split(",");
+      }
+
+      const validTypes = Object.values(RequestType);
+
+      req_types = rawTypes.filter((type): type is RequestType =>
+        validTypes.includes(type as RequestType)
+      );
+    }
+
+    const request = await getAllRequests(search, req_types);
 
     return res.status(200).json({
       success: true,
-      data: request
+      data: request,
     });
   } catch (error: any) {
     return res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -326,6 +360,58 @@ export const getMedicalCertificateRecordHistoryController = async (req: Request,
     return res.status(500).json({
       success: false,
       message: error.message || "Something went wrong",
+    });
+  }
+};
+
+export const getWeeklyTallyController = async (req: Request, res: Response) => {
+  let req_types: RequestType[] | undefined;
+
+  if (req.query.req_types) {
+    const raw = Array.isArray(req.query.req_types)
+      ? req.query.req_types
+      : (req.query.req_types as string).split(",");
+
+    const valid = Object.values(RequestType);
+
+    req_types = raw.filter(
+      (t): t is RequestType => valid.includes(t as RequestType)
+    );
+  }
+
+  try {
+    const data = await getRequestsPerWeekday(req_types);
+    res.json(data);
+  } catch (err: any) {
+    // console.error("CONTROLLER ERROR:", err);
+    res.status(500).json({
+      message: err.message,
+      code: err.code,
+      meta: err.meta
+    });
+  }
+};
+
+// all lab request by name
+
+export const getLabRequestByNameController = async (req: Request, res: Response) => {
+
+  const patientId = Number(req.params.id);
+
+  const name =
+    typeof req.query.name === "string" && req.query.name.trim() !== ""
+      ? req.query.name.trim()
+      : "";
+
+  try {
+    const data = await getLabRequestByName(name, patientId);
+    res.json(data);
+  } catch (err: any) {
+    console.error("CONTROLLER ERROR:", err);
+    res.status(500).json({
+      message: err.message,
+      code: err.code,
+      meta: err.meta
     });
   }
 };

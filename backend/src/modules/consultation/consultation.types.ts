@@ -95,3 +95,8 @@ export interface MedicalCertificatePayload {
     med_tech_user_id: number;
     result_date: string;
 }
+
+export interface WeeklyTally {
+    day: string;
+    total: number;
+};

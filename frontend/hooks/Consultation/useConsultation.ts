@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { consultationResults, createPrescription, fetchAllConsultationRequest, getAllPatientConsultationList, getAllPatientMedCertList, getConsultationById, getConsultationRecord, getConsultationRecordhistory, getMedicalCertificateRecordhistory, getPatientPrescription, getPrescriptionRecordhistory, getStatisticsRecord, medicalCertificateResult, updateStatus } from "@/services/consultation.services";
+import { consultationResults, createPrescription, fetchAllConsultationRequest, getAllPatientConsultationList, getAllPatientMedCertList, getConsultationById, getConsultationRecord, getConsultationRecordhistory, getLabRequestByName, getMedicalCertificateRecordhistory, getPatientPrescription, getPrescriptionRecordhistory, getRequestPerWeek, getStatisticsRecord, medicalCertificateResult, updateStatus } from "@/services/consultation.services";
 import SweetAlert from "@/utils/SweetAlert";
-import { ConsultationResultProps, Status, RequestProps, PrescriptionProps, ConsultationProps, MedicalCertificateProps } from "@/types/ConsultationTypes";
+import { ConsultationResultProps, Status, RequestProps, PrescriptionProps, ConsultationProps, MedicalCertificateProps, RequestTypes, LabRequestItems } from "@/types/ConsultationTypes";
 import { PatientProps } from "@/types/PatientTypes";
 import { getRequestData } from "@/services/request.services";
 
@@ -23,6 +23,8 @@ interface MedicalCertificateHistoryItem {
   patient: PatientProps;
   request: RequestProps;
 }
+
+type ModifRequestTypes = Exclude<RequestTypes, 'LABORATORY'>;
 
 export const consultationKeys = {
   all: ["consultation"] as const,
@@ -62,12 +64,15 @@ export const useConsultaion = (onClose: () => void) => {
   });
 };
 
-export const useGetAllRequest = (search: string) => {
+export const useGetAllRequest = (
+  search: string,
+  req_types: ModifRequestTypes[]
+) => {
   return useQuery<RequestProps[]>({
-    queryKey: [...consultationKeys.lists(), search],
-    queryFn: () => fetchAllConsultationRequest(search),
+    queryKey: [...consultationKeys.lists(), search, req_types],
+    queryFn: () => fetchAllConsultationRequest(search, req_types),
   });
-}
+};
 
 export const useRequestAction = () => {
   const queryClient = useQueryClient();
@@ -236,5 +241,20 @@ export const useConsultationById = (cons_id: number) => {
   return useQuery<ConsultationProps>({
     queryKey: consultationKeys.records(cons_id),
     queryFn: () => getConsultationById(cons_id),
+  });
+};
+
+export const useRequestPerWeek = (req_types: RequestTypes[]) => {
+  return useQuery({
+    queryKey: ["request", req_types],
+    queryFn: () => getRequestPerWeek(req_types),
+  });
+};
+
+export const useGetLabRequestByName = (name: string, patient_id: number) => {
+  return useQuery<LabRequestItems[]>({
+    queryKey: ["labRequests", name, patient_id],
+    queryFn: () => getLabRequestByName(name, patient_id),
+    enabled: !!name && !!patient_id
   });
 };

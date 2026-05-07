@@ -18,7 +18,7 @@ export default function QueueManagementBox() {
   const [selectedPatient, setSelectedPatient] = useState<number | null>(null);
   const [searchPatient, setSearchPatient] = useState("");
   const [isResetting, setIsResetting] = useState(false);
-  
+
   const { mutateAsync: addToQueue, isPending } = useAddToQueue();
   const { data: queues = [], refetch } = useGetAllQueues();
   const { data: patients = [], isLoading: patientsLoading } = useGetAllpatient(searchPatient);
@@ -42,19 +42,19 @@ export default function QueueManagementBox() {
     setSearchPatient("");
   };
 
-const handleStartQueue = () => {
-  const params = new URLSearchParams();
-  window.open(`/queue?${params.toString()}`, "QueueDisplay", "width=1920,height=1080,resizable=yes");
-};
+  const handleStartQueue = () => {
+    const params = new URLSearchParams();
+    window.open(`/queue?${params.toString()}`, "QueueDisplay", "width=1920,height=1080,resizable=yes");
+  };
 
-const { mutateAsync: moveToNext, isPending: movePending } = useMoveToNextQueue();
+  const { mutateAsync: moveToNext, isPending: movePending } = useMoveToNextQueue();
 
-const handleNextQueue = async (type: "CONSULTATION" | "LABORATORY") => {
-  await moveToNext(type);
-  refetch();
-};
+  const handleNextQueue = async (type: "CONSULTATION" | "LABORATORY") => {
+    await moveToNext(type);
+    refetch();
+  };
 
-const handleResetQueue = async () => {
+  const handleResetQueue = async () => {
     // Show confirmation dialog
     const result = await Swal.fire({
       title: "Reset Queue?",
@@ -71,13 +71,13 @@ const handleResetQueue = async () => {
     try {
       // Call backend to reset all queues
       await api.delete("/api/queue/reset");
-      
+
       Swal.fire({
         title: "Success",
         text: "All queues have been reset",
         icon: "success"
       });
-      
+
       refetch();
     } catch (error: unknown) {
       SweetAlert.errorAlert(
@@ -133,7 +133,7 @@ const handleResetQueue = async () => {
             </div>
 
             {/* Patient Selection */}
-            <div>
+            {/* <div>
               <label className="block text-xs font-semibold text-[#0f2244] mb-1.5">
                 Select Patient
               </label>
@@ -163,10 +163,10 @@ const handleResetQueue = async () => {
                   ))}
                 </select>
               )}
-            </div>
+            </div> */}
 
             {/* Consultation Queue */}
-            <div>
+            {/* <div>
               <p className="text-xs font-semibold text-[#6b7da0] uppercase mb-1.5 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#0f2244]"></span>
                 Consultation
@@ -179,10 +179,10 @@ const handleResetQueue = async () => {
               >
                 Add Queue
               </Button>
-            </div>
+            </div> */}
 
             {/* Laboratory Queue */}
-            <div>
+            {/* <div>
               <p className="text-xs font-semibold text-[#6b7da0] uppercase mb-1.5 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#0e7c7b]"></span>
                 Laboratory
@@ -195,12 +195,12 @@ const handleResetQueue = async () => {
               >
                 Add Queue
               </Button>
-            </div>
+            </div> */}
           </div>
         )}
         {/* Control Buttons*/}
         <div className="border-t border-[#dce3ef] p-4 space-y-2 bg-white">
-          <Button
+          {/* <Button
             variant="primary"
             onClick={() => handleNextQueue("CONSULTATION")}
             isLoading={movePending}
@@ -215,10 +215,10 @@ const handleResetQueue = async () => {
             className="w-full !text-xs !bg-[#0e7c7b]"
           >
             Next Laboratory
-          </Button>
+          </Button> */}
 
           {/* Reset Queue Button */}
-          <Button
+          {/* <Button
             variant="danger"
             onClick={handleResetQueue}
             isLoading={isResetting}
@@ -226,7 +226,7 @@ const handleResetQueue = async () => {
             className="w-full !text-xs"
           >
             Reset All Queues
-          </Button>
+          </Button> */}
         </div>
       </div>
     </div>

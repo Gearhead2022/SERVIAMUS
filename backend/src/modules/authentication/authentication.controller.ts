@@ -24,12 +24,24 @@ export const authLoginController = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
 
-    const result = await loginUser(username, password);
+    // ✅ FIXED
+    const { token, user } = await loginUser(username, password);
 
+    const isProd = process.env.NODE_ENV === "production";
+
+    // ✅ set cookie
+    res.cookie("access_token", token, {
+      httpOnly: true,
+      sameSite: isProd ? "none" : "lax",
+      secure: isProd,
+    });
+
+    // ✅ send only user (no token)
     return res.status(200).json({
       success: true,
-      data: result
+      data: user
     });
+
   } catch (error: any) {
     return res.status(401).json({
       success: false,

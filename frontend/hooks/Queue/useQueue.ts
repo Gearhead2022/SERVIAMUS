@@ -58,7 +58,7 @@ export const useMoveToNextQueue = () => {
     onSuccess: (data, queue_type) => {
       queryClient.invalidateQueries({ queryKey: ["queue", queue_type] });
       queryClient.invalidateQueries({ queryKey: ["serving", queue_type] });
-      
+
       if (data) {
         SweetAlert.successAlert(
           "Success",

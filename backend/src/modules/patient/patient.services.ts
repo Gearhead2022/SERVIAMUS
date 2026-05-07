@@ -5,24 +5,24 @@ import { PatientPayload } from "../patient/patient.types";
  * GET ALL PATIENT
  */
 
-export const getAllPatients = async (search? :string) => {
+export const getAllPatients = async (search?: string) => {
 
   const patients = await prisma.patients.findMany({
     where: search
       ? {
-          OR: [
-            {
-              patient_code: {
-                contains: search,
-              },
+        OR: [
+          {
+            patient_code: {
+              contains: search,
             },
-            {
-              name: {
-                contains: search,
-              },
+          },
+          {
+            name: {
+              contains: search,
             },
-          ],
-        }
+          },
+        ],
+      }
       : undefined,
   });
 
@@ -42,7 +42,7 @@ export const addPatient = async (payload: PatientPayload) => {
         sex: payload.sex as "male" | "female",
         age: payload.age,
         religion: payload.religion,
-        philhealth_id: payload.philhealth_id,
+        philhealth_id: payload.philhealth_id ?? null,
       },
     });
 
