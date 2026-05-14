@@ -5,18 +5,19 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import {
-  Users, FlaskConical, UserPlus, CalendarCheck,
+  Users, UserPlus, CalendarCheck,
   ChevronRight, Clock, CheckCircle2, AlertCircle,
-  Search, ArrowRight, Activity,
-  Stethoscope, TestTube2, UserSearch,
-  Calendar, TrendingUp,
+  Search, ArrowRight,
+  Stethoscope, TestTube2,
+  Calendar,
   User, Hourglass, Ban, Plus, FileX
 } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import {
   useGetAllRequest, useRequestAction, useConsultationRecords,
-  useStatisticsRecords, useRequestPerWeek, useGetLabRequestByName
+  useStatisticsRecords, useRequestPerWeek
 } from "@/hooks/Consultation/useConsultation";
+import { usePatientLabRequests } from "@/hooks/Lab/useLab";
 import SweetAlert from "@/utils/SweetAlert";
 import ModalHeader from "@/components/Modal/ModalHeader";
 import PatientConsultationForm from "@/components/Modal/NestedModal/PatientConsultationForm";
@@ -50,15 +51,9 @@ type CertificateCardProps = {
 
 type ModifRequestTypes = Exclude<RequestTypes, "LABORATORY">;
 
-const MOCK_LAB_REQUESTS = [
-  { id: 1, patient: "Jose Reyes", code: "P00031", test: "CBC", status: "released", requested: "Today 08:00" },
-  { id: 2, patient: "Ana Cruz", code: "P00018", test: "Urinalysis", status: "pending", requested: "Today 08:30" },
-  { id: 3, patient: "Liza Aquino", code: "P00062", test: "Blood Sugar", status: "pending", requested: "Today 09:30" },
-  { id: 4, patient: "Carlos Mendoza", code: "P00009", test: "Lipid Profile", status: "released", requested: "Yesterday" },
-];
-
 const LAB_STATUS: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   QUEUED: { label: "Queued", icon: CheckCircle2, color: "#f59e0b", bg: "#fffbeb" },
+  PENDING: { label: "Processing", icon: Hourglass, color: "#d97706", bg: "#fffbeb" },
   DONE: { label: "Done", icon: CheckCircle2, color: "#0e7c7b", bg: "#e0f4f4" },
   PROCESSING: { label: "Processing", icon: Hourglass, color: "#d97706", bg: "#fffbeb" },
   CANCELLED: { label: "Cancelled", icon: Ban, color: "#94a3b8", bg: "#f1f5f9" },
@@ -259,7 +254,7 @@ const Dashboard = () => {
   const { data: consultationRecords } = useConsultationRecords(currentPatient?.patient_id);
   const { data: statisticsRecords } = useStatisticsRecords();
   const { data: WeeklyData } = useRequestPerWeek(['CONSULTATION', 'CERTIFICATE']);
-  const { data: labRequest } = useGetLabRequestByName("abdon sugrarartr", currentPatient?.patient_id ?? 0);
+  const { data: patientLabRequests = [] } = usePatientLabRequests(currentPatient?.patient_id);
 
   const dayCounts = [
     WeeklyData?.Monday ?? 0,
@@ -337,7 +332,9 @@ const Dashboard = () => {
     handleRequestAction(info.req_id, type as Status, info, relatedId);
   };
 
-  const pendingLabCount = MOCK_LAB_REQUESTS.filter((l) => l.status === "pending").length;
+  const pendingLabCount = patientLabRequests.filter(
+    (lab) => lab.status === "queued" || lab.status === "pending"
+  ).length;
   const todayIndex = new Date().getDay() === 0 ? -1 : new Date().getDay() - 1;
   const weeklyTotal = dayCounts.reduce((a, b) => a + b, 0);
   const maxCount = Math.max(...dayCounts, 1);
@@ -710,24 +707,20 @@ const Dashboard = () => {
                     <CardLabel>Lab Request Status</CardLabel>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="font-semibold text-sm" style={{ color: "#0f2244" }}>
-                        {labRequest?.length} requests
+                        {patientLabRequests.length} requests
                       </p>
                       {pendingLabCount > 0 && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#fffbeb", color: "#92400e" }}>
                           {pendingLabCount} pending
                         </span>
                       )}
-                      {/* {labRequest && labRequest.filter((l) => l.items.status.toUpperCase() === "DONE").length > 0 && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#e0f4f4", color: "#065050" }}>
-                          {labRequest?.filter((l) => l.items.status.toUpperCase() === "DONE").length} released
-                        </span>
-                      )} */}
                     </div>
                   </div>
                   <button
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-colors"
                     style={{ background: "#f3eefb", color: "#7c4dab", border: "1.5px solid #e0d4f5" }}
                     onClick={() => [setSelectedPatient(currentRequest?.patient ?? null), setAddLaboratoryOpen(true)]}
+                    disabled={!currentPatient}
                   >
                     <Plus size={11} /> New Request
                   </button>
@@ -738,19 +731,17 @@ const Dashboard = () => {
                   className="flex gap-3 overflow-x-auto pb-2"
                   style={{ scrollbarWidth: "thin", scrollbarColor: "#dce3ef transparent" }}
                 >
-                  {labRequest && labRequest.length > 0 ? (
-                    labRequest.map((lab) => {
-                      const s = LAB_STATUS[lab.status.toUpperCase()];
-                      const totalTests = 1;
-                      // Math.floor(Math.random() * 3) + 1;
-                      const completedTests = lab.status.toUpperCase() === "DONE" ? totalTests : 0;
-                      // const completedTests = 0;
+                  {patientLabRequests.length > 0 ? (
+                    patientLabRequests.map((lab) => {
+                      const s = LAB_STATUS[lab.status.toUpperCase()] ?? LAB_STATUS.QUEUED;
+                      const totalTests = lab.totalTests;
+                      const completedTests = lab.completedCount;
                       const pct = totalTests > 0 ? (completedTests / totalTests) * 100 : 0;
-                      const billStatus = lab.billing.status;
+                      const billStatus = lab.billingStatus === "paid" ? "PAID" : "UNPAID";
 
                       return (
                         <div
-                          key={lab.item_id}
+                          key={lab.labId}
                           className="flex-shrink-0 rounded-2xl p-4 cursor-pointer group transition-all hover:shadow-md"
                           style={{
                             width: "220px",
@@ -764,7 +755,7 @@ const Dashboard = () => {
                               className="rounded-md px-2 py-0.5 text-[10px] font-semibold"
                               style={{ background: "#e6f7f3", color: "#2e7a6e" }}
                             >
-                              {lab.patient.patient_code}
+                              {lab.patientId}
                             </span>
                             <span
                               className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold"
@@ -777,13 +768,16 @@ const Dashboard = () => {
 
                           {/* Patient name */}
                           <p className="font-semibold text-[13px] truncate mt-1" style={{ color: "#173f39" }}>
-                            {lab.patient.name}
+                            {lab.patientName}
+                          </p>
+                          <p className="text-[11px] mt-0.5" style={{ color: "#63867f" }}>
+                            {lab.testType}
                           </p>
                           <p className="text-[11px] mt-0.5" style={{ color: "#63867f" }}>
                             {billStatus} PAYMENT
                           </p>
                           <p className="text-[10px] mt-0.5" style={{ color: "#9bb5b0" }}>
-                            {lab.request.req_by}
+                            {lab.requestedBy}
                           </p>
 
                           {/* Progress bar */}
@@ -812,7 +806,7 @@ const Dashboard = () => {
                             <span
                               className="flex items-center gap-1 text-[10.5px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
                               style={{ color: "#0f2244" }}
-                              hidden={lab.status.toUpperCase() != 'DONE'}
+                              hidden={lab.status.toUpperCase() !== "DONE"}
                             >
                               View <ChevronRight size={11} />
                             </span>

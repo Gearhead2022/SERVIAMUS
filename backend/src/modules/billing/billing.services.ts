@@ -1,7 +1,28 @@
 // backend/src/modules/billing/billing.services.ts
 
-import { prisma } from "../../config/prismaClient";
 import { Prisma } from "@prisma/client";
+import { prisma } from "../../config/prismaClient";
+
+const billingPatientSelect = {
+  patient_id: true,
+  patient_code: true,
+  name: true,
+  address: true,
+  contact_number: true,
+  birth_date: true,
+  religion: true,
+  sex: true,
+  age: true,
+} as const;
+
+const billingRequestSelect = {
+  req_id: true,
+  req_type: true,
+  req_date: true,
+  patient: {
+    select: billingPatientSelect,
+  },
+} as const;
 
 export const getAllBillings = async () => {
   return prisma.billing.findMany({
@@ -12,11 +33,7 @@ export const getAllBillings = async () => {
         },
       },
       request: {
-        include: {
-          patient: true,
-          laboratory: true,
-          consult: true,
-        },
+        select: billingRequestSelect,
       },
       payments: true,
     },
@@ -90,9 +107,7 @@ export const createBilling = async (req_id: number, serviceIds: number[]) => {
           },
         },
         request: {
-          include: {
-            patient: true,
-          },
+          select: billingRequestSelect,
         },
       },
     });
@@ -111,11 +126,7 @@ export const getBillingByRequestId = async (req_id: number) => {
         },
       },
       request: {
-        include: {
-          patient: true,
-          laboratory: true,
-          consult: true,
-        },
+        select: billingRequestSelect,
       },
       payments: true,
     },
@@ -138,11 +149,7 @@ export const getBillingById = async (billing_id: number) => {
         },
       },
       request: {
-        include: {
-          patient: true,
-          laboratory: true,
-          consult: true,
-        },
+        select: billingRequestSelect,
       },
       payments: true,
     },
@@ -173,7 +180,7 @@ export const createPayment = async (
     const totalDue = Number(billing.total_price) - Number(billing.discount);
 
     if (amount < totalDue) {
-      throw new Error(`Insufficient payment. Amount due: ₱${totalDue.toFixed(2)}`);
+      throw new Error(`Insufficient payment. Amount due: â‚±${totalDue.toFixed(2)}`);
     }
 
     const payment = await tx.payment.create({
@@ -195,9 +202,7 @@ export const createPayment = async (
           },
         },
         request: {
-          include: {
-            patient: true,
-          },
+          select: billingRequestSelect,
         },
       },
     });
@@ -220,13 +225,12 @@ export const updateBillingStatus = async (
         },
       },
       request: {
-        include: {
-          patient: true,
-        },
+        select: billingRequestSelect,
       },
     },
   });
 };
+
 export const payBilling = async (billing_id: number) => {
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const billing = await tx.billing.findUnique({
@@ -242,7 +246,9 @@ export const payBilling = async (billing_id: number) => {
       data: { status: "DONE" },
       include: {
         services: { include: { service: true } },
-        request: { include: { patient: true } },
+        request: {
+          select: billingRequestSelect,
+        },
         payments: true,
       },
     });

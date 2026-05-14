@@ -3,6 +3,8 @@ import { getPrevVitalSigns, createRequest, getAllRegisteredUsers, getRequestData
 import { createNotification, resolveNotificationUsers } from "../notification/notification.services";
 import { getIO } from "../../socket";
 
+const labUpdateRooms = ["role_ADMIN", "role_DOCTOR", "role_LAB", "role_LABORATORY"] as const;
+
 export const getPrevVitalSignsController = async (req: Request, res: Response) => {
   try {
     const patient_id = Number(req.query.patient_id);
@@ -44,8 +46,15 @@ export const createRequestController = async (req: Request, res: Response) => {
 
     const io = getIO();
 
-    io.to("role_LAB").emit("request:updated");
-    io.to("role_DOCTOR").emit("request:updated");
+    io.to([...labUpdateRooms]).emit("request:updated");
+
+    if (request.result.req_type === "LABORATORY") {
+      io.to([...labUpdateRooms]).emit("lab:updated", {
+        patientId: request.result.patient_id,
+        reason: "request-created",
+        requestId: request.result.req_id,
+      });
+    }
 
     return res.status(201).json({
       success: true,

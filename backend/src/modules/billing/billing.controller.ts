@@ -10,6 +10,23 @@ import {
   getAllBillings,
   payBilling,       
 } from "./billing.services";
+import { getIO } from "../../socket";
+
+const billingUpdateRooms = [
+  "role_ADMIN",
+  "role_CASHIER",
+  "role_LAB",
+  "role_LABORATORY",
+] as const;
+
+const emitBillingUpdated = (payload: {
+  billingId?: number;
+  patientId?: number;
+  reason: string;
+  requestId?: number;
+}) => {
+  getIO().to([...billingUpdateRooms]).emit("billing:updated", payload);
+};
 
 export const createBillingController = async (req: Request, res: Response) => {
   try {
@@ -23,6 +40,13 @@ export const createBillingController = async (req: Request, res: Response) => {
     }
 
     const billing = await createBilling(req_id, service_ids);
+
+    emitBillingUpdated({
+      billingId: billing?.billing_id,
+      patientId: billing?.request?.patient?.patient_id,
+      reason: "billing-created",
+      requestId: billing?.req_id,
+    });
 
     return res.status(201).json({
       success: true,
@@ -106,6 +130,13 @@ export const createPaymentController = async (req: Request, res: Response) => {
       reference_no
     );
 
+    emitBillingUpdated({
+      billingId: result.billing.billing_id,
+      patientId: result.billing.request?.patient?.patient_id,
+      reason: "payment-posted",
+      requestId: result.billing.req_id,
+    });
+
     return res.status(201).json({
       success: true,
       data: result,
@@ -139,6 +170,13 @@ export const updateBillingStatusController = async (req: Request, res: Response)
     }
 
     const billing = await updateBillingStatus(billingId, status);
+
+    emitBillingUpdated({
+      billingId: billing.billing_id,
+      patientId: billing.request?.patient?.patient_id,
+      reason: "billing-status-updated",
+      requestId: billing.req_id,
+    });
 
     return res.status(200).json({
       success: true,
@@ -179,6 +217,14 @@ export const payBillingController = async (req: Request, res: Response) => {
     }
 
     const billing = await payBilling(id);
+
+    emitBillingUpdated({
+      billingId: billing.billing_id,
+      patientId: billing.request?.patient?.patient_id,
+      reason: "billing-paid",
+      requestId: billing.req_id,
+    });
+
     return res.status(200).json({
       success: true,
       data: billing,

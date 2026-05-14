@@ -5,8 +5,32 @@ import { prisma } from "../../config/prismaClient";
 import { Prisma } from "@prisma/client";
 
 type NonCertificateRequestType = Exclude<RequestType, "CERTIFICATE">
+type QueueClient = Prisma.TransactionClient | typeof prisma;
+
+let hasQueueTablePromise: Promise<boolean> | null = null;
+
+export const hasQueueTable = async (client: QueueClient = prisma) => {
+  if (!hasQueueTablePromise) {
+    hasQueueTablePromise = client
+      .$queryRaw<Array<{ table_exists: number }>>(Prisma.sql`
+        SELECT EXISTS(
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_schema = DATABASE()
+            AND table_name = 'queue'
+        ) AS table_exists
+      `)
+      .then((rows) => Boolean(Number(rows[0]?.table_exists ?? 0)))
+      .catch(() => false);
+  }
+
+  return hasQueueTablePromise;
+};
 
 export const addToQueue = async (tx: Prisma.TransactionClient, patient_id: number, req_id: number, req_date: string, queue_type: NonCertificateRequestType) => {
+  if (!(await hasQueueTable(tx))) {
+    return null;
+  }
 
   const lastQueue = await tx.queue.findFirst({
     where: { queue_type, status: { in: ["WAITING", "SERVING"] } },
@@ -33,6 +57,10 @@ export const addToQueue = async (tx: Prisma.TransactionClient, patient_id: numbe
 };
 
 export const getQueueByType = async (queue_type: "CONSULTATION" | "LABORATORY") => {
+  if (!(await hasQueueTable())) {
+    return [];
+  }
+
   const queues = await prisma.queue.findMany({
     where: {
       queue_type,
@@ -48,6 +76,10 @@ export const getQueueByType = async (queue_type: "CONSULTATION" | "LABORATORY") 
 };
 
 export const getServingPatient = async (queue_type: "CONSULTATION" | "LABORATORY") => {
+  if (!(await hasQueueTable())) {
+    return null;
+  }
+
   const serving = await prisma.queue.findFirst({
     where: {
       queue_type,
@@ -62,6 +94,10 @@ export const getServingPatient = async (queue_type: "CONSULTATION" | "LABORATORY
 };
 
 export const moveToNextQueue = async (queue_type: "CONSULTATION" | "LABORATORY") => {
+  if (!(await hasQueueTable())) {
+    return null;
+  }
+
   // Mark current serving as completed
   await prisma.queue.updateMany({
     where: {
@@ -104,6 +140,10 @@ export const moveToNextQueue = async (queue_type: "CONSULTATION" | "LABORATORY")
 };
 
 export const skipQueue = async (queue_id: number) => {
+  if (!(await hasQueueTable())) {
+    return null;
+  }
+
   return prisma.queue.update({
     where: { queue_id },
     data: { status: "SKIPPED" },
@@ -114,6 +154,10 @@ export const skipQueue = async (queue_id: number) => {
 };
 
 export const getAllQueues = async () => {
+  if (!(await hasQueueTable())) {
+    return [];
+  }
+
   const today = new Date();
   const startOfDay = new Date(today);
   startOfDay.setHours(0, 0, 0, 0);

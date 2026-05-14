@@ -1,11 +1,13 @@
 import { BillingStatus } from "./LabTypes";
 
 export type PaymentMethod = "CASH" | "GCASH" | "CARD" | "BANK_TRANSFER";
+export type BillingRequestType = "LABORATORY" | "CONSULTATION" | "CERTIFICATE";
 
 export type BillingRecord = {
   billingId: number;
   billingCode: string;
   requestId: number;
+  requestType: BillingRequestType;
   patientId: number;
   patientCode: string;
   patientName: string;

@@ -51,6 +51,8 @@ type PatientLabRecordsFilters = {
   recordGroup?: string;
 };
 
+let hasQueueTablePromise: Promise<boolean> | null = null;
+
 const labRequestInclude = Prisma.validator<Prisma.LaboratoryRequestInclude>()({
   request: {
     select: {
@@ -159,6 +161,24 @@ const parseRecordFilterDate = (
   }
 
   return parsedDate;
+};
+
+const hasQueueTable = async (tx: Prisma.TransactionClient) => {
+  if (!hasQueueTablePromise) {
+    hasQueueTablePromise = tx
+      .$queryRaw<Array<{ table_exists: number }>>(Prisma.sql`
+        SELECT EXISTS(
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_schema = DATABASE()
+            AND table_name = 'queue'
+        ) AS table_exists
+      `)
+      .then((rows) => Boolean(Number(rows[0]?.table_exists ?? 0)))
+      .catch(() => false);
+  }
+
+  return hasQueueTablePromise;
 };
 
 const ensurePaidBilling = (isPaid: boolean, message: string) => {
@@ -402,8 +422,8 @@ const syncParentRequestStatus = async (
     data: { status: reqStatus },
   });
 
-  if (queueStatus) {
-    await tx.queue.update({
+  if (queueStatus && await hasQueueTable(tx)) {
+    await tx.queue.updateMany({
       where: { req_id: parentRequest.req_id },
       data: {
         status: queueStatus,
@@ -675,6 +695,44 @@ export const getLabRequestsService = async (status?: string) => {
 
 export const getLabRequestByIdService = async (labId: number) => {
   return prisma.$transaction(async (tx) => getDisplayItemById(tx, labId));
+};
+
+export const getPatientLabRequestsService = async (patientId: number) => {
+  return prisma.$transaction(async (tx) => {
+    const patient = await tx.patients.findUnique({
+      where: { patient_id: patientId },
+      select: { patient_id: true },
+    });
+
+    if (!patient) {
+      throw new LabModuleError("Patient not found.", 404);
+    }
+
+    const records = await tx.laboratoryRequest.findMany({
+      where: {
+        request: {
+          is: {
+            patient_id: patientId,
+          },
+        },
+      },
+      include: labRequestInclude,
+    });
+
+    return records
+      .filter((record) => record.items.length > 0)
+      .flatMap(getDisplayItemsForRecord)
+      .sort((left, right) => {
+        const timeDiff =
+          new Date(right.requestedDate).getTime() - new Date(left.requestedDate).getTime();
+
+        if (timeDiff !== 0) {
+          return timeDiff;
+        }
+
+        return right.labId - left.labId;
+      });
+  });
 };
 
 export const getPatientLabRecordsService = async (

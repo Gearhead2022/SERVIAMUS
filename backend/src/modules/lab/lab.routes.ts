@@ -5,6 +5,7 @@ import {
   getAllUsersController,
   getLabRequestByIdController,
   getLabRequestsController,
+  getPatientLabRequestsController,
   getLabTestsController,
   getPatientLabRecordsController,
   getPatientRecordsController,
@@ -32,8 +33,13 @@ router.get(
   getPatientRecordsController
 );
 router.get(
+  "/patients/:patientId/requests",
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  getPatientLabRequestsController
+);
+router.get(
   "/patients/:patientId/records",
-  authorize(["ADMIN", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
   getPatientLabRecordsController
 );
 router.post("/requests", authorize(["ADMIN", "DOCTOR"]), createLabRequestController);

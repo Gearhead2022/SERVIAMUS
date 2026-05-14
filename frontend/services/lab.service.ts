@@ -137,3 +137,9 @@ export const fetchPatientLabRecords = async (
   const items = (res.data.data ?? []) as LabRequestApiResponse[];
   return items.map(toFrontendRequest);
 };
+
+export const fetchPatientLabRequests = async (patientId: number) => {
+  const res = await api.get(`/api/lab/patients/${patientId}/requests`);
+  const items = (res.data.data ?? []) as LabRequestApiResponse[];
+  return items.map(toFrontendRequest);
+};

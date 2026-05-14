@@ -1,9 +1,15 @@
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_BACKEND_LAN_URL;
+let socket: Socket | null = null;
 
 export const createSocket = () => {
-    return io(SOCKET_URL!, {
-        withCredentials: true, // use cookies instead
-    });
+    if (!socket) {
+        socket = io(SOCKET_URL!, {
+            autoConnect: false,
+            withCredentials: true,
+        });
+    }
+
+    return socket;
 };

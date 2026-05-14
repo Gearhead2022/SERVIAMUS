@@ -3,6 +3,7 @@ import {
   fetchLabRequest,
   fetchLabTests,
   fetchLabUsers,
+  fetchPatientLabRequests,
   fetchLabRequests,
   fetchPatientLabRecords,
   fetchPatientRecords,
@@ -25,6 +26,7 @@ const LAB_REQUESTS_QUERY_KEY = ["lab", "requests"] as const;
 const LAB_TESTS_QUERY_KEY = ["lab", "tests"] as const;
 const LAB_USERS_QUERY_KEY = ["lab", "users"] as const;
 const LAB_PATIENT_DIRECTORY_QUERY_KEY = ["lab", "patient-directory"] as const;
+const LAB_PATIENT_REQUESTS_QUERY_KEY = ["lab", "patient-requests"] as const;
 const LAB_PATIENT_RECORDS_QUERY_KEY = ["lab", "patient-records"] as const;
 
 const getLabRequestQueryKey = (labId: number) => ["lab", "request", labId] as const;
@@ -40,6 +42,9 @@ const getPatientLabRecordsQueryKey = (
     filters.dateTo ?? "",
     filters.recordGroup ?? "all",
   ] as const;
+
+const getPatientLabRequestsQueryKey = (patientId: number) =>
+  [...LAB_PATIENT_REQUESTS_QUERY_KEY, patientId] as const;
 
 const mergeUpdatedLabRequest = (
   requests: LabRequest[] | undefined,
@@ -83,8 +88,6 @@ export const useLabRequests = () =>
   useQuery<LabRequest[]>({
     queryKey: LAB_REQUESTS_QUERY_KEY,
     queryFn: fetchLabRequests,
-    refetchInterval: 10000,
-    refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
   });
 
@@ -125,6 +128,15 @@ export const usePatientLabRecords = (
       ? getPatientLabRecordsQueryKey(patientId, filters)
       : [...LAB_PATIENT_RECORDS_QUERY_KEY, "unknown"],
     queryFn: () => fetchPatientLabRecords(patientId as number, filters),
+    enabled: typeof patientId === "number" && Number.isFinite(patientId) && patientId > 0,
+  });
+
+export const usePatientLabRequests = (patientId?: number) =>
+  useQuery<LabRequest[]>({
+    queryKey: patientId
+      ? getPatientLabRequestsQueryKey(patientId)
+      : [...LAB_PATIENT_REQUESTS_QUERY_KEY, "unknown"],
+    queryFn: () => fetchPatientLabRequests(patientId as number),
     enabled: typeof patientId === "number" && Number.isFinite(patientId) && patientId > 0,
   });
 

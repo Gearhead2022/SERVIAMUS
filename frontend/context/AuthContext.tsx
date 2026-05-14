@@ -50,12 +50,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(user);
     setIsAuthenticated(true);
 
+    const normalizedRoles = user.roles.map((role) => role.trim().toUpperCase());
+
     // Clean role routing (no duplicates, first match wins)
-    if (user.roles.includes("ADMIN")) return router.replace("/dashboard");
-    if (user.roles.includes("DOCTOR")) return router.replace("/docDashboard");
-    if (user.roles.includes("LAB")) return router.replace("/labdashboard");
-    if (user.roles.includes("STAFF")) return router.replace("/registration");
-    if (user.roles.includes("CASHIER")) return router.replace("/billing");
+    if (normalizedRoles.includes("ADMIN")) return router.replace("/dashboard");
+    if (normalizedRoles.includes("DOCTOR")) return router.replace("/docDashboard");
+    if (normalizedRoles.includes("LAB") || normalizedRoles.includes("LABORATORY")) {
+      return router.replace("/labdashboard");
+    }
+    if (normalizedRoles.includes("STAFF")) return router.replace("/registration");
+    if (normalizedRoles.includes("CASHIER")) return router.replace("/billing");
 
     // fallback
     router.replace("/");
