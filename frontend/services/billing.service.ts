@@ -1,24 +1,33 @@
 import api from "./axios";
 import {
+  BillingBreakdownItem,
   BillingRecord,
   BillingRequestType,
   PaymentMethod,
 } from "@/types/BillingTypes";
 
-type BillingApiResponse = {
+type BillingBreakdownApiItem = {
+  line_id: string;
+  label: string;
+  quantity: number;
+  unit_price: number | string;
+  total_price: number | string;
+  source: "service" | "lab-test";
+};
+
+export type BillingApiResponse = {
   billing_code: string;
   billing_id: number;
+  breakdown?: BillingBreakdownApiItem[];
   date: string | Date;
   discount?: number | string | null;
   payments?: Array<{
     method?: PaymentMethod | null;
     payment_date?: string | Date | null;
   }>;
+  requested_by?: string | null;
   req_id: number;
   request?: {
-    laboratory?: {
-      req_by?: string | null;
-    } | null;
     patient?: {
       name?: string | null;
       patient_code?: string | null;
@@ -31,7 +40,15 @@ type BillingApiResponse = {
   total_price: number | string;
 };
 
-const toFrontendBilling = (billing: BillingApiResponse): BillingRecord => {
+export const toFrontendBilling = (billing: BillingApiResponse): BillingRecord => {
+  const breakdown: BillingBreakdownItem[] = (billing.breakdown ?? []).map((item) => ({
+    lineId: item.line_id,
+    label: item.label,
+    quantity: Number(item.quantity ?? 1),
+    unitPrice: Number(item.unit_price ?? 0),
+    totalPrice: Number(item.total_price ?? 0),
+    source: item.source,
+  }));
   const latestPayment = billing.payments?.[0] ?? null;
   const requestedDate = new Date(
     billing.request?.req_date ?? billing.date
@@ -47,11 +64,12 @@ const toFrontendBilling = (billing: BillingApiResponse): BillingRecord => {
       billing.request?.patient?.patient_code ??
       `PT-${String(billing.request?.patient?.patient_id ?? 0).padStart(4, "0")}`,
     patientName: billing.request?.patient?.name ?? "Unknown",
-    requestedBy: billing.request?.laboratory?.req_by ?? null,
+    requestedBy: billing.requested_by ?? null,
     requestedDate,
-    tests: [],
+    tests: breakdown.map((item) => item.label),
     totalPrice: Number(billing.total_price ?? 0),
     discount: Number(billing.discount ?? 0),
+    breakdown,
     status: billing.status === "DONE" ? "paid" : "unpaid",
     isPaid: billing.status === "DONE",
     paymentMethod: latestPayment?.method ?? null,

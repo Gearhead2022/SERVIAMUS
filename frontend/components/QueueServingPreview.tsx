@@ -37,7 +37,7 @@ const QueueServingPreview = ({ allQueues }: VideoPreviewProps) => {
     <div className="flex-1 flex flex-col bg-[#0f172a] overflow-hidden">
 
       <div className="flex flex-1 max-h-[5vh] justify-center bg-green-900/30">
-        <p className="text-[30px] tracking-widest" style={{ fontFamily: "'DM Serif Display', serif" }}>NOW SERVING...</p>
+        <p className="text-[30px] tracking-widest text-white" style={{ fontFamily: "'DM Serif Display', serif" }}>NOW SERVING...</p>
       </div>
       <div className="flex flex-1 min-h-0 divide-x divide-white/8">
         {/* Consultation column */}

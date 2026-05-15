@@ -587,7 +587,7 @@ export const getPatientRecordsService = async (search?: string) => {
           INNER JOIN laboratory_request lr ON lr.req_id = r.req_id
           WHERE r.patient_id = p.patient_id
         ) AS lab_requests_count,
-        (SELECT COUNT(*) FROM medical_records mr WHERE mr.patient_id = p.patient_id) AS medical_records_count,
+        0 AS medical_records_count,
         (SELECT COUNT(*) FROM consultation_records cr WHERE cr.patient_id = p.patient_id) AS history_count,
         (SELECT COUNT(*) FROM vital_signs vs WHERE vs.patient_id = p.patient_id) AS vital_signs_count
       FROM patients p

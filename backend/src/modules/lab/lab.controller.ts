@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
 import { getIO } from "../../socket";
+import {
+  createNotification,
+  resolveUsersByRoleNames,
+} from "../notification/notification.services";
 import { handleLabModuleError } from "./lab.errors";
 import {
   createLabRequestService,
@@ -38,6 +42,12 @@ const labUpdateRooms = [
   "role_LABORATORY",
   "role_CASHIER",
 ] as const;
+const billingUpdateRooms = [
+  "role_ADMIN",
+  "role_CASHIER",
+  "role_LAB",
+  "role_LABORATORY",
+] as const;
 
 const emitLabUpdated = (payload: {
   labId?: number;
@@ -46,6 +56,14 @@ const emitLabUpdated = (payload: {
   requestId?: number;
 }) => {
   getIO().to([...labUpdateRooms]).emit("lab:updated", payload);
+};
+
+const emitBillingUpdated = (payload: {
+  patientId?: number;
+  reason: string;
+  requestId?: number;
+}) => {
+  getIO().to([...billingUpdateRooms]).emit("billing:updated", payload);
 };
 
 export const getAllUsersController = async (_req: Request, res: Response) => {
@@ -207,6 +225,20 @@ export const createLabRequestController = async (req: Request, res: Response) =>
       patientId: request.rawPatientId,
       reason: "request-created",
       requestId: request.requestId,
+    });
+    emitBillingUpdated({
+      patientId: request.rawPatientId,
+      reason: "billing-created",
+      requestId: request.requestId,
+    });
+
+    const cashierUserIds = await resolveUsersByRoleNames(["CASHIER"]);
+    await createNotification({
+      userIds: cashierUserIds,
+      type: "NEW_REQUEST",
+      title: "New Laboratory Billing",
+      message: "A laboratory billing record is ready for cashier processing.",
+      entity: "billing",
     });
 
     return res.status(201).json({

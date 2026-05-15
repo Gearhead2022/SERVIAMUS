@@ -11,6 +11,7 @@ import {
   payBilling,       
 } from "./billing.services";
 import { getIO } from "../../socket";
+import { createNotification, resolveUsersByRoleNames } from "../notification/notification.services";
 
 const billingUpdateRooms = [
   "role_ADMIN",
@@ -26,6 +27,29 @@ const emitBillingUpdated = (payload: {
   requestId?: number;
 }) => {
   getIO().to([...billingUpdateRooms]).emit("billing:updated", payload);
+};
+
+const notifyLaboratoryPaymentReady = async (billing: {
+  billing_code: string;
+  req_id: number;
+  request?: {
+    req_type?: string;
+  } | null;
+}) => {
+  if (billing.request?.req_type !== "LABORATORY") {
+    return;
+  }
+
+  const laboratoryUserIds = await resolveUsersByRoleNames(["LAB", "LABORATORY"]);
+
+  await createNotification({
+    userIds: laboratoryUserIds,
+    type: "SYSTEM",
+    title: "Laboratory Billing Paid",
+    message: `Billing ${billing.billing_code} has been paid and is ready for laboratory processing.`,
+    entity: "lab",
+    entity_id: billing.req_id,
+  });
 };
 
 export const createBillingController = async (req: Request, res: Response) => {
@@ -137,6 +161,8 @@ export const createPaymentController = async (req: Request, res: Response) => {
       requestId: result.billing.req_id,
     });
 
+    await notifyLaboratoryPaymentReady(result.billing);
+
     return res.status(201).json({
       success: true,
       data: result,
@@ -224,6 +250,8 @@ export const payBillingController = async (req: Request, res: Response) => {
       reason: "billing-paid",
       requestId: billing.req_id,
     });
+
+    await notifyLaboratoryPaymentReady(billing);
 
     return res.status(200).json({
       success: true,

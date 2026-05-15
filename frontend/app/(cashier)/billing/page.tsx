@@ -9,8 +9,13 @@ import ReceiptModal from "@/components/Modal/ReceiptModal";
 import SweetAlert from "@/utils/SweetAlert";
 import { useForm } from "react-hook-form";
 import { useBillings, useProcessPayment } from "@/hooks/Billing/useBilling";
-import { BillingRecord, PaymentProps } from "@/types/BillingTypes";
+import {
+  BillingRecord,
+  PaymentProps,
+  PrintableBillingReceiptPayload,
+} from "@/types/BillingTypes";
 import { getApiErrorMessage } from "@/utils/api-error";
+import { openBillingReceiptPrintPage } from "@/utils/billing-receipt-print";
 import {
   FileText,
   CheckCircle2,
@@ -22,9 +27,34 @@ import {
 } from "lucide-react";
 
 type BillingFilter = "ALL" | "PENDING" | "DONE";
+type ReceiptPreview = {
+  amountPaid: number;
+  paidAt: string;
+  paymentMethod: PaymentProps["method"];
+  referenceNo?: string | null;
+};
 
 const getBillingDisplayStatus = (billing: BillingRecord) =>
   billing.isPaid ? "DONE" : "PENDING";
+
+const buildReceiptPayload = (
+  billing: BillingRecord,
+  receiptPreview: ReceiptPreview
+): PrintableBillingReceiptPayload => ({
+  billingCode: billing.billingCode,
+  patientName: billing.patientName,
+  patientCode: billing.patientCode,
+  requestType: billing.requestType,
+  requestedBy: billing.requestedBy,
+  requestedDate: billing.requestedDate,
+  breakdown: billing.breakdown,
+  subtotal: billing.totalPrice,
+  discount: billing.discount,
+  amountPaid: receiptPreview.amountPaid,
+  paymentMethod: receiptPreview.paymentMethod,
+  referenceNo: receiptPreview.referenceNo ?? null,
+  paidAt: receiptPreview.paidAt,
+});
 
 const BillingDashboard = () => {
   const [search, setSearch] = useState("");
@@ -33,6 +63,7 @@ const BillingDashboard = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
+  const [receiptPreview, setReceiptPreview] = useState<ReceiptPreview | null>(null);
 
   const {
     data: bills = [],
@@ -50,6 +81,7 @@ const BillingDashboard = () => {
     setSelectedBilling(null);
     setShowReceipt(false);
     setShowPaymentConfirm(false);
+    setReceiptPreview(null);
     reset({ method: "CASH", reference_no: "" });
   };
 
@@ -57,6 +89,7 @@ const BillingDashboard = () => {
     setSelectedBilling(billing);
     setShowReceipt(false);
     setShowPaymentConfirm(false);
+    setReceiptPreview(null);
     reset({ method: "CASH", reference_no: "" });
   };
 
@@ -95,23 +128,43 @@ const BillingDashboard = () => {
     setIsProcessing(true);
 
     try {
-      await processPayment({
+      const paymentResult = await processPayment({
         ...data,
         billing_id: selectedBilling.billingId,
         amount: amountDue,
       });
-
-      if (data.method === "CASH") {
-        setShowPaymentConfirm(true);
-        return;
-      }
-
-      SweetAlert.successAlert("Success", "Payment processed successfully");
-      resetPaymentFlow();
+      setReceiptPreview({
+        amountPaid: paymentResult.payment.amount || amountDue,
+        paidAt: paymentResult.payment.payment_date ?? new Date().toISOString(),
+        paymentMethod: paymentResult.payment.method,
+        referenceNo: paymentResult.payment.reference_no ?? null,
+      });
+      setShowPaymentConfirm(true);
+      return;
     } catch {
       return;
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handlePrintReceipt = () => {
+    if (!selectedBilling || !receiptPreview) {
+      return;
+    }
+
+    try {
+      openBillingReceiptPrintPage(
+        buildReceiptPayload(selectedBilling, receiptPreview),
+        { autoPrint: true }
+      );
+    } catch (error) {
+      SweetAlert.errorAlert(
+        "Print Failed",
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : "Unable to open the billing receipt print preview."
+      );
     }
   };
 
@@ -310,6 +363,39 @@ const BillingDashboard = () => {
                         {selectedBilling.requestedBy || "Clinic"}
                       </span>
                     </div>
+                    <div className="space-y-2 rounded-xl bg-[#f7f8fc] p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-[#0f2244]">Bill Breakdown</span>
+                        <span className="text-[11px] uppercase tracking-wide text-[#6b7da0]">
+                          {selectedBilling.breakdown.length} item
+                          {selectedBilling.breakdown.length === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      {selectedBilling.breakdown.length > 0 ? (
+                        <div className="space-y-2">
+                          {selectedBilling.breakdown.map((lineItem) => (
+                            <div
+                              key={lineItem.lineId}
+                              className="flex items-start justify-between gap-3 text-sm"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-medium text-[#1a2a45]">{lineItem.label}</p>
+                                <p className="text-[11px] text-[#6b7da0]">
+                                  Qty {lineItem.quantity} x P{lineItem.unitPrice.toFixed(2)}
+                                </p>
+                              </div>
+                              <span className="font-semibold text-[#0f2244]">
+                                P{lineItem.totalPrice.toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[#6b7da0]">
+                          No detailed billing line items are available for this record yet.
+                        </p>
+                      )}
+                    </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-[#6b7da0]">Subtotal</span>
                       <span className="font-semibold text-[#1a2a45]">
@@ -367,14 +453,23 @@ const BillingDashboard = () => {
             </div>
           </div>
 
-          {showReceipt && selectedBilling ? (
+          {showReceipt && selectedBilling && receiptPreview ? (
             <ReceiptModal
               billingCode={selectedBilling.billingCode}
               patientName={selectedBilling.patientName}
-              amount={amountDue}
-              paymentMethod="CASH"
+              patientCode={selectedBilling.patientCode}
+              requestType={selectedBilling.requestType}
+              requestedBy={selectedBilling.requestedBy}
+              requestedDate={selectedBilling.requestedDate}
+              breakdown={selectedBilling.breakdown}
+              subtotal={selectedBilling.totalPrice}
+              discount={selectedBilling.discount}
+              amountPaid={receiptPreview.amountPaid}
+              paymentMethod={receiptPreview.paymentMethod}
+              referenceNo={receiptPreview.referenceNo}
+              paidAt={receiptPreview.paidAt}
               onClose={resetPaymentFlow}
-              onPrint={() => window.print()}
+              onPrint={handlePrintReceipt}
             />
           ) : null}
         </div>
@@ -391,6 +486,11 @@ const BillingDashboard = () => {
               <p className="text-[#6b7da0] text-sm">
                 Amount: P{amountDue.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
               </p>
+              {receiptPreview ? (
+                <p className="mt-1 text-xs text-[#8a9ab6]">
+                  Method: {receiptPreview.paymentMethod.replaceAll("_", " ")}
+                </p>
+              ) : null}
             </div>
             <div className="flex gap-3">
               <Button
