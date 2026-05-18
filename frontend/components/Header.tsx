@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Menu, Bell, Search, ChevronDown, LogOut, Settings } from "lucide-react";
+import { Menu, Bell, ChevronDown, LogOut, Settings } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { MENU_ITEMS } from "@/app/(admin)/config/menu.config";
 import NotificationDropdown from "./NotificationDropdown";
@@ -11,7 +11,7 @@ import { useNotifications } from "@/hooks/useNotification";
 type Notification = {
   notif_id: number;
   user_Id: number;
-  type: "NEW_REQUEST" | "APPROVED" | "REJECTED";
+  type: "NEW_REQUEST" | "APPROVED" | "REJECTED" | "SYSTEM";
   title: string;
   message: string;
   entity?: string;

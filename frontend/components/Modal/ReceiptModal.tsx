@@ -1,119 +1,99 @@
 import Button from "@/components/ui/Button";
-import { CheckCircle2, Printer, X } from "lucide-react";
+import BillingReceiptDocument from "@/components/Modal/BillingReceiptDocument";
+import {
+  BillingReceiptPreviewPayload,
+  BillingBreakdownItem,
+  BillingRequestType,
+  PaymentMethod,
+} from "@/types/BillingTypes";
+import { X } from "lucide-react";
 
 interface ReceiptModalProps {
   billingCode: string;
   patientName: string;
-  amount: number;
-  paymentMethod: string;
+  patientCode: string;
+  requestType: BillingRequestType;
+  requestedBy?: string | null;
+  requestedDate: string;
+  breakdown: BillingBreakdownItem[];
+  subtotal: number;
+  discount: number;
+  amountPaid: number;
+  paymentMethod: PaymentMethod;
+  referenceNo?: string | null;
+  paidAt?: string | null;
   onClose: () => void;
-  onPrint?: () => void;
 }
 
 export default function ReceiptModal({
   billingCode,
   patientName,
-  amount,
+  patientCode,
+  requestType,
+  requestedBy,
+  requestedDate,
+  breakdown,
+  subtotal,
+  discount,
+  amountPaid,
   paymentMethod,
+  referenceNo,
+  paidAt,
   onClose,
-  onPrint,
 }: ReceiptModalProps) {
+  const receipt: BillingReceiptPreviewPayload = {
+    billingCode,
+    patientName,
+    patientCode,
+    requestType,
+    requestedBy,
+    requestedDate,
+    breakdown,
+    subtotal,
+    discount,
+    amountPaid,
+    paymentMethod,
+    referenceNo,
+    paidAt,
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-[#0e7c7b] to-[#0d6b6a] px-6 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 size={32} className="text-white" />
-            <div>
-              <h2 className="text-white font-['DM_Serif_Display'] text-xl">Payment Successful</h2>
-              <p className="text-white/80 text-xs">Cash Payment</p>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 print:hidden">
+      <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-[#eff4f3] shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-[#dce7e4] bg-white px-6 py-5">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5b7c76]">
+              Billing Breakdown Preview
+            </p>
+            <h2 className="font-['DM_Serif_Display'] text-2xl text-[#0f2244]">
+              Billing Breakdown
+            </h2>
+            <p className="text-sm text-[#6b7da0]">
+              Cleaner billing preview using the same structured document style as nearby modules.
+            </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-white/60 hover:text-white transition"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="rounded-full border border-[#cfe2dc] bg-[#e8f5f1] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0e7c7b]">
+              Paid
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-slate-400 transition hover:text-slate-700"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
-        {/* Receipt Content */}
-        <div className="p-8 space-y-6">
-          {/* Receipt Box */}
-          <div className="bg-[#f7f8fc] border-2 border-dashed border-[#dce3ef] rounded-xl p-6 space-y-4">
-            {/* Logo/Title */}
-            <div className="text-center border-b border-[#dce3ef] pb-4">
-              <p className="font-['DM_Serif_Display'] text-[#0f2244] text-lg">SERVIAMUS</p>
-              <p className="text-[10px] text-[#6b7da0] uppercase tracking-wider">Medical Clinic & Laboratory</p>
-            </div>
+        <div className="overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+          <BillingReceiptDocument receipt={receipt} />
+        </div>
 
-            {/* Bill Details */}
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-[#6b7da0]">Bill Code:</span>
-                <span className="font-semibold text-[#0f2244]">{billingCode}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#6b7da0]">Patient:</span>
-                <span className="font-semibold text-[#0f2244]">{patientName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#6b7da0]">Payment Method:</span>
-                <span className="font-semibold text-[#0f2244]">{paymentMethod}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#6b7da0]">Date:</span>
-                <span className="font-semibold text-[#0f2244]">{new Date().toLocaleDateString()}</span>
-              </div>
-            </div>
-
-            {/* Amount */}
-            <div className="border-t border-[#dce3ef] pt-4">
-              <div className="flex justify-between items-center">
-                <span className="text-[#6b7da0]">Amount Due:</span>
-                <span className="text-2xl font-bold text-[#0f2244]">₱{amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-
-            {/* Footer Message */}
-            <div className="border-t border-[#dce3ef] pt-4 text-center">
-              <p className="text-[11px] text-[#6b7da0] font-semibold uppercase">Please proceed to counter for payment processing</p>
-            </div>
-          </div>
-
-          {/* Instructions */}
-          <div className="bg-[#fff3e0] border-l-4 border-[#f57c00] p-4 rounded-lg">
-            <p className="text-[13px] font-semibold text-[#e65100] mb-2">Next Steps:</p>
-            <ul className="text-[12px] text-[#ef6c00] space-y-1">
-              <li>✓ Proceed to the cashier counter</li>
-              <li>✓ Present this receipt</li>
-              <li>✓ Pay the amount shown</li>
-              <li>✓ Collect official receipt</li>
-            </ul>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <Button
-              variant="danger"
-              onClick={onClose}
-              className="flex-1"
-            >
-              Close
-            </Button>
-            {onPrint && (
-              <Button
-                variant="primary"
-                onClick={onPrint}
-                icon={<Printer size={16} />}
-                iconPosition="left"
-                className="flex-1"
-              >
-                Print
-              </Button>
-            )}
-          </div>
+        <div className="flex gap-3 border-t border-[#dce7e4] bg-white px-6 py-5">
+          <Button variant="danger" onClick={onClose} className="flex-1">
+            Close
+          </Button>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import { Router } from "express";
 import { authorize } from "../../middlewares/authorize.middleware";
+import { prisma } from "../../config/prismaClient";
 import {
   addToQueueController,
   getQueueByTypeController,
@@ -10,6 +11,7 @@ import {
   skipQueueController,
   getAllQueuesController,
 } from "./queue.controller";
+import { hasQueueTable } from "./queue.services";
 
 const router = Router();
 
@@ -33,7 +35,13 @@ router.get("/", getAllQueuesController);
 // Reset all queues (STAFF only)
 router.delete("/reset", authorize(["STAFF"]), async (req: Request, res: Response) => {
   try {
-    const { prisma } = require("../../config/prismaClient");
+    if (!(await hasQueueTable())) {
+      return res.status(200).json({
+        success: true,
+        message: "Queue table is unavailable in this environment.",
+      });
+    }
+
     await prisma.queue.deleteMany({});
     
     return res.status(200).json({

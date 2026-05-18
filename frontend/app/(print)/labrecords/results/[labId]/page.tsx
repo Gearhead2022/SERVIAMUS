@@ -219,7 +219,11 @@ export default function LabResultPrintPage() {
             </div>
           ) : request?.resultPayload ? (
             <div ref={documentRef}>
-              <LabResultDocument request={request} form={request.resultPayload} />
+              <LabResultDocument
+                request={request}
+                form={request.resultPayload}
+                displayMode="print"
+              />
             </div>
           ) : (
             <div className="rounded-3xl border border-[#c8e4de] bg-white px-6 py-10 text-center text-sm text-[#5f8a83]">

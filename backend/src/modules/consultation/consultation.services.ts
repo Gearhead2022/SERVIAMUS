@@ -4,6 +4,7 @@ import { MedicalCertificatePayload, PatientConsultationRecordsPayload, Prescript
 import { QueueStatus, RequestStatus, RequestType } from "@prisma/client";
 import { mapRequestToQueueStatus } from "./consultation.helper";
 import { Prisma } from "@prisma/client";
+import { hasQueueTable } from "../queue/queue.services";
 /**
  * CONSULTATION RECORDS
  */
@@ -229,8 +230,8 @@ export const requestAction = async (
 
     const queueStatus = mapRequestToQueueStatus(status);
 
-    if (queueStatus) {
-      await tx.queue.update({
+    if (queueStatus && await hasQueueTable(tx)) {
+      await tx.queue.updateMany({
         where: { req_id: requestId },
         data: {
           status: queueStatus,

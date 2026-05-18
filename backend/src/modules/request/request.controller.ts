@@ -1,7 +1,19 @@
 import { Request, Response } from "express";
 import { getPrevVitalSigns, createRequest, getAllRegisteredUsers, getRequestData } from "./request.services";
-import { createNotification, resolveNotificationUsers } from "../notification/notification.services";
+import {
+  createNotification,
+  resolveNotificationUsers,
+  resolveUsersByRoleNames,
+} from "../notification/notification.services";
 import { getIO } from "../../socket";
+
+const labUpdateRooms = ["role_ADMIN", "role_DOCTOR", "role_LAB", "role_LABORATORY"] as const;
+const billingUpdateRooms = [
+  "role_ADMIN",
+  "role_CASHIER",
+  "role_LAB",
+  "role_LABORATORY",
+] as const;
 
 export const getPrevVitalSignsController = async (req: Request, res: Response) => {
   try {
@@ -46,8 +58,30 @@ export const createRequestController = async (req: Request, res: Response) => {
 
     const io = getIO();
 
-    io.to("role_LAB").emit("request:updated");
-    io.to("role_DOCTOR").emit("request:updated");
+    io.to([...labUpdateRooms]).emit("request:updated");
+
+    if (request.result.req_type === "LABORATORY") {
+      io.to([...labUpdateRooms]).emit("lab:updated", {
+        patientId: request.result.patient_id,
+        reason: "request-created",
+        requestId: request.result.req_id,
+      });
+
+      io.to([...billingUpdateRooms]).emit("billing:updated", {
+        patientId: request.result.patient_id,
+        reason: "billing-created",
+        requestId: request.result.req_id,
+      });
+
+      const cashierUserIds = await resolveUsersByRoleNames(["CASHIER"]);
+      await createNotification({
+        userIds: cashierUserIds,
+        type: "NEW_REQUEST",
+        title: "New Laboratory Billing",
+        message: "A laboratory billing record is ready for cashier processing.",
+        entity: "billing",
+      });
+    }
 
     return res.status(201).json({
       success: true,

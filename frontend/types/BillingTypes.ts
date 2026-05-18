@@ -1,11 +1,33 @@
 import { BillingStatus } from "./LabTypes";
 
 export type PaymentMethod = "CASH" | "GCASH" | "CARD" | "BANK_TRANSFER";
+export type BillingRequestType = "LABORATORY" | "CONSULTATION" | "CERTIFICATE";
+
+export type BillingBreakdownItem = {
+  lineId: string;
+  label: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  source: "service" | "lab-test";
+};
+
+export type ProcessedPaymentResult = {
+  payment: {
+    payment_id?: number;
+    amount: number;
+    method: PaymentMethod;
+    reference_no?: string | null;
+    payment_date?: string | null;
+  };
+  billing: BillingRecord;
+};
 
 export type BillingRecord = {
   billingId: number;
   billingCode: string;
   requestId: number;
+  requestType: BillingRequestType;
   patientId: number;
   patientCode: string;
   patientName: string;
@@ -14,9 +36,26 @@ export type BillingRecord = {
   tests: string[];
   totalPrice: number;
   discount: number;
+  breakdown: BillingBreakdownItem[];
   status: BillingStatus;
   isPaid: boolean;
   paymentMethod?: PaymentMethod | null;
+  paidAt?: string | null;
+};
+
+export type BillingReceiptPreviewPayload = {
+  billingCode: string;
+  patientName: string;
+  patientCode: string;
+  requestType: BillingRequestType;
+  requestedBy?: string | null;
+  requestedDate: string;
+  breakdown: BillingBreakdownItem[];
+  subtotal: number;
+  discount: number;
+  amountPaid: number;
+  paymentMethod: PaymentMethod;
+  referenceNo?: string | null;
   paidAt?: string | null;
 };
 export interface BillingItemProps {
@@ -52,7 +91,7 @@ export interface PaymentProps {
   payment_id?: number;
   billing_id: number;
   amount: number;
-  method: "CASH" | "GCASH" | "CARD" | "BANK_TRANSFER";
+  method: PaymentMethod;
   reference_no?: string;
   payment_date?: string;
 }

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createPatient, fetchAllPatient, fetchPatientById, updatePatient } from "@/services/patient.services";
 import SweetAlert from "@/utils/SweetAlert";
+import { getApiErrorMessage } from "@/utils/api-error";
 import { VitalSignProps } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
 import { getPrevVitalSigns, createRequest, getAllUsers as getAllRegisteredUsers } from "@/services/request.services";
@@ -31,7 +32,7 @@ export const usePatient = (closeModal: () => void) => {
     onError: (error: unknown) => {
       SweetAlert.errorAlert(
         "Registration Failed",
-        error instanceof Error ? error.message : "Something went wrong"
+        getApiErrorMessage(error, "Unable to register the patient.")
       );
     }
   });
@@ -78,7 +79,7 @@ export const useRequest = (closeModal: () => void) => {
     onError: (error: unknown) => {
       SweetAlert.errorAlert(
         "Registration Failed",
-        error instanceof Error ? error.message : "Something went wrong"
+        getApiErrorMessage(error, "Unable to create the request.")
       );
     }
   });
@@ -103,7 +104,7 @@ export const useUpdatePatient = (closeModal: () => void) => {
     onError: (error: unknown) => {
       SweetAlert.errorAlert(
         "Update Failed",
-        error instanceof Error ? error.message : "Something went wrong"
+        getApiErrorMessage(error, "Unable to update the patient.")
       );
     }
   });

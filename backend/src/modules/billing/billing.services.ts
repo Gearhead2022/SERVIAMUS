@@ -1,27 +1,139 @@
 // backend/src/modules/billing/billing.services.ts
 
-import { prisma } from "../../config/prismaClient";
 import { Prisma } from "@prisma/client";
+import { prisma } from "../../config/prismaClient";
+import { getLabTestPrice } from "./billing.helpers";
+
+const billingPatientSelect = {
+  patient_id: true,
+  patient_code: true,
+  name: true,
+  address: true,
+  contact_number: true,
+  birth_date: true,
+  religion: true,
+  sex: true,
+  age: true,
+} as const;
+
+const billingInclude = {
+  services: {
+    include: {
+      service: true,
+    },
+  },
+  request: {
+    select: {
+      req_id: true,
+      req_type: true,
+      req_date: true,
+      patient: {
+        select: billingPatientSelect,
+      },
+      laboratory: {
+        select: {
+          req_by: true,
+          items: {
+            select: {
+              item_id: true,
+              test: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+            orderBy: [{ item_id: "asc" as const }],
+          },
+        },
+      },
+    },
+  },
+  payments: {
+    orderBy: [{ payment_date: "desc" as const }],
+  },
+} satisfies Prisma.BillingInclude;
+
+type BillingRecord = Prisma.BillingGetPayload<{
+  include: {
+    services: {
+      include: {
+        service: true;
+      };
+    };
+    request: {
+      select: {
+        req_id: true;
+        req_type: true;
+        req_date: true;
+        patient: {
+          select: typeof billingPatientSelect;
+        };
+        laboratory: {
+          select: {
+            req_by: true;
+            items: {
+              select: {
+                item_id: true;
+                test: {
+                  select: {
+                    name: true;
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+    payments: true;
+  };
+}>;
+
+const buildBillingBreakdown = (billing: BillingRecord) => {
+  if (billing.services.length > 0) {
+    return billing.services.map((serviceLine) => {
+      const linePrice = Number(serviceLine.price ?? serviceLine.service.price ?? 0);
+
+      return {
+        line_id: `service-${serviceLine.service_list_id}`,
+        label: serviceLine.service.service_code,
+        quantity: 1,
+        unit_price: linePrice,
+        total_price: linePrice,
+        source: "service" as const,
+      };
+    });
+  }
+
+  const labItems = billing.request.laboratory?.items ?? [];
+
+  return labItems.map((item) => {
+    const unitPrice = getLabTestPrice(item.test.name);
+
+    return {
+      line_id: `lab-${item.item_id}`,
+      label: item.test.name,
+      quantity: 1,
+      unit_price: unitPrice,
+      total_price: unitPrice,
+      source: "lab-test" as const,
+    };
+  });
+};
+
+const serializeBilling = (billing: BillingRecord) => ({
+  ...billing,
+  requested_by: billing.request.laboratory?.req_by ?? null,
+  breakdown: buildBillingBreakdown(billing),
+});
 
 export const getAllBillings = async () => {
-  return prisma.billing.findMany({
-    include: {
-      services: {
-        include: {
-          service: true,
-        },
-      },
-      request: {
-        include: {
-          patient: true,
-          laboratory: true,
-          consult: true,
-        },
-      },
-      payments: true,
-    },
+  const billings = await prisma.billing.findMany({
+    include: billingInclude,
     orderBy: { created_at: "desc" },
   });
+
+  return billings.map(serializeBilling);
 };
 
 export const createBilling = async (req_id: number, serviceIds: number[]) => {
@@ -83,19 +195,12 @@ export const createBilling = async (req_id: number, serviceIds: number[]) => {
 
     const completeBilling = await tx.billing.findUnique({
       where: { billing_id: billing.billing_id },
-      include: {
-        services: {
-          include: {
-            service: true,
-          },
-        },
-        request: {
-          include: {
-            patient: true,
-          },
-        },
-      },
+      include: billingInclude,
     });
+
+    if (!completeBilling) {
+      throw new Error("Billing was created but could not be reloaded.");
+    }
 
     return completeBilling;
   });
@@ -104,55 +209,27 @@ export const createBilling = async (req_id: number, serviceIds: number[]) => {
 export const getBillingByRequestId = async (req_id: number) => {
   const billing = await prisma.billing.findUnique({
     where: { req_id },
-    include: {
-      services: {
-        include: {
-          service: true,
-        },
-      },
-      request: {
-        include: {
-          patient: true,
-          laboratory: true,
-          consult: true,
-        },
-      },
-      payments: true,
-    },
+    include: billingInclude,
   });
 
   if (!billing) {
     throw new Error("Billing not found");
   }
 
-  return billing;
+  return serializeBilling(billing);
 };
 
 export const getBillingById = async (billing_id: number) => {
   const billing = await prisma.billing.findUnique({
     where: { billing_id },
-    include: {
-      services: {
-        include: {
-          service: true,
-        },
-      },
-      request: {
-        include: {
-          patient: true,
-          laboratory: true,
-          consult: true,
-        },
-      },
-      payments: true,
-    },
+    include: billingInclude,
   });
 
   if (!billing) {
     throw new Error("Billing not found");
   }
 
-  return billing;
+  return serializeBilling(billing);
 };
 
 export const createPayment = async (
@@ -173,7 +250,7 @@ export const createPayment = async (
     const totalDue = Number(billing.total_price) - Number(billing.discount);
 
     if (amount < totalDue) {
-      throw new Error(`Insufficient payment. Amount due: ₱${totalDue.toFixed(2)}`);
+      throw new Error(`Insufficient payment. Amount due: â‚±${totalDue.toFixed(2)}`);
     }
 
     const payment = await tx.payment.create({
@@ -188,18 +265,7 @@ export const createPayment = async (
     const updatedBilling = await tx.billing.update({
       where: { billing_id },
       data: { status: "DONE" },
-      include: {
-        services: {
-          include: {
-            service: true,
-          },
-        },
-        request: {
-          include: {
-            patient: true,
-          },
-        },
-      },
+      include: billingInclude,
     });
 
     return { payment, billing: updatedBilling };
@@ -213,20 +279,10 @@ export const updateBillingStatus = async (
   return prisma.billing.update({
     where: { billing_id },
     data: { status },
-    include: {
-      services: {
-        include: {
-          service: true,
-        },
-      },
-      request: {
-        include: {
-          patient: true,
-        },
-      },
-    },
+    include: billingInclude,
   });
 };
+
 export const payBilling = async (billing_id: number) => {
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const billing = await tx.billing.findUnique({
@@ -240,11 +296,7 @@ export const payBilling = async (billing_id: number) => {
     return tx.billing.update({
       where: { billing_id },
       data: { status: "DONE" },
-      include: {
-        services: { include: { service: true } },
-        request: { include: { patient: true } },
-        payments: true,
-      },
+      include: billingInclude,
     });
   });
 };

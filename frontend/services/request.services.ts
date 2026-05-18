@@ -12,6 +12,7 @@ export const createRequest = async (
   data: CreateRequestProps
 ) => {
   const res = await api.post("/api/request/requestAdd", data);
+  console.log(data);
   return res.data.data;
 };
 

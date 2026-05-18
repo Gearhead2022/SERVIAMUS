@@ -1,7 +1,7 @@
 // backend/src/modules/queue/queue.controller.ts
 
 import { Request, Response } from "express";
-import { authorize } from "../../middlewares/authorize.middleware";
+import { prisma } from "../../config/prismaClient";
 import {
   addToQueue,
   getQueueByType,
@@ -13,12 +13,12 @@ import {
 
 export const addToQueueController = async (req: Request, res: Response) => {
   try {
-    const { patient_id, queue_type } = req.body;
+    const { patient_id, req_id, req_date, queue_type } = req.body;
 
-    if (!patient_id || !queue_type) {
+    if (!patient_id || !req_id || !req_date || !queue_type) {
       return res.status(400).json({
         success: false,
-        message: "patient_id and queue_type are required",
+        message: "patient_id, req_id, req_date, and queue_type are required",
       });
     }
 
@@ -29,7 +29,15 @@ export const addToQueueController = async (req: Request, res: Response) => {
       });
     }
 
-    const queue = await addToQueue(patient_id, queue_type);
+    const queue = await prisma.$transaction((tx) =>
+      addToQueue(
+        tx,
+        Number(patient_id),
+        Number(req_id),
+        String(req_date),
+        queue_type as "CONSULTATION" | "LABORATORY"
+      )
+    );
 
     return res.status(201).json({
       success: true,

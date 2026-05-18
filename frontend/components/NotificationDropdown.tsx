@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useNotifications, useMarkAsRead } from "@/hooks/useNotification";
+import {
+    useNotifications,
+    useMarkAllAsRead,
+    useMarkAsRead,
+} from "@/hooks/useNotification";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { FileText, CheckCircle, XCircle, Bell } from "lucide-react";
+import { FileText, CheckCircle, XCircle, Bell, Info } from "lucide-react";
 
 type Notification = {
     notif_id: number;
     user_Id: number;
-    type: "NEW_REQUEST" | "APPROVED" | "REJECTED";
+    type: "NEW_REQUEST" | "APPROVED" | "REJECTED" | "SYSTEM";
     title: string;
     message: string;
     entity?: string;
@@ -58,6 +62,14 @@ const typeConfig: Record<
         badgeBg: "bg-orange-50",
         badgeText: "text-orange-700",
     },
+    SYSTEM: {
+        label: "System",
+        icon: <Info size={13} />,
+        iconBg: "bg-slate-100",
+        iconColor: "text-slate-700",
+        badgeBg: "bg-slate-100",
+        badgeText: "text-slate-700",
+    },
 };
 
 function timeAgo(dateStr?: string): string {
@@ -73,27 +85,73 @@ function timeAgo(dateStr?: string): string {
     return `${days} days ago`;
 }
 
+function resolveNotificationPath(
+    notification: Notification,
+    roles: string[] = []
+) {
+    if (notification.entity === "billing") {
+        return "/billing";
+    }
+
+    if (notification.entity === "lab") {
+        return "/labdashboard";
+    }
+
+    if (notification.entity === "consultation") {
+        return "/docDashboard";
+    }
+
+    if (notification.entity === "request") {
+        if (roles.includes("LAB") || roles.includes("LABORATORY")) {
+            return "/labdashboard";
+        }
+
+        if (roles.includes("DOCTOR")) {
+            return "/docDashboard";
+        }
+
+        if (roles.includes("CASHIER")) {
+            return "/billing";
+        }
+
+        if (roles.includes("STAFF")) {
+            return "/registration";
+        }
+
+        return "/dashboard";
+    }
+
+    return null;
+}
+
 export default function NotificationDropdown({ open, setOpen }: Props) {
     const router = useRouter();
     const { user } = useAuth();
 
     const { data = [], isLoading } = useNotifications(user?.user_id ?? 0);
-    const { mutate: markAsRead, mutateAsync: markAllAsRead } = useMarkAsRead();
+    const { mutate: markAsRead } = useMarkAsRead();
+    const { mutateAsync: markAllAsRead } = useMarkAllAsRead();
 
     const unreadCount = data.filter((n: Notification) => !n.is_read).length;
 
     const handleClick = (n: Notification) => {
         markAsRead(n.notif_id);
-        if (n.entity === "request" && n.entity_id) {
-            router.push(`/requests/${n.entity_id}`);
+
+        const targetPath = resolveNotificationPath(n, user?.roles ?? []);
+
+        if (targetPath) {
+            router.push(targetPath);
         }
+
         setOpen(false);
     };
 
-    const handleMarkAllRead = () => {
-        data
-            .filter((n: Notification) => !n.is_read)
-            .forEach((n: Notification) => markAllAsRead(n.notif_id));
+    const handleMarkAllRead = async () => {
+        if (!user?.user_id || unreadCount === 0) {
+            return;
+        }
+
+        await markAllAsRead({ user_id: user.user_id });
     };
 
     const ref = useRef<HTMLDivElement>(null);
@@ -128,7 +186,9 @@ export default function NotificationDropdown({ open, setOpen }: Props) {
                 </div>
                 {unreadCount > 0 && (
                     <button
-                        onClick={handleMarkAllRead}
+                        onClick={() => {
+                            void handleMarkAllRead();
+                        }}
                         className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                     >
                         Mark all read

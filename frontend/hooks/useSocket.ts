@@ -1,27 +1,29 @@
 "use client";
 
 import { useEffect } from "react";
-import { createSocket } from "@/lib/socket";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
+import { createSocket } from "@/lib/socket";
 import AppToast from "../components/CustomToast";
 
-type EntityType = "request" | "consultation" | "lab";
+type EntityType = "request" | "consultation" | "lab" | "billing";
 
 type NotificationData = {
-    type: "NEW_REQUEST" | "APPROVED" | "REJECTED";
-    title: string;
-    message: string;
-    entity?: EntityType;
-    entity_id?: number;
-    is_read?: boolean;
+  type: "NEW_REQUEST" | "APPROVED" | "REJECTED" | "SYSTEM";
+  title: string;
+  message: string;
+  entity?: EntityType;
+  entity_id?: number;
+  is_read?: boolean;
 };
 
 type NotificationHandler = (data: NotificationData) => void;
 
-const ENTITY_QUERY_MAP: Record<EntityType, string[]> = {
-    request: ["requests"],
-    consultation: ["consultation"],
-    lab: ["lab"],
+const ENTITY_QUERY_MAP: Record<EntityType, ReadonlyArray<readonly string[]>> = {
+  request: [["request"], ["lab"], ["queue"], ["billing"], ["labRequests"]],
+  consultation: [["consultation"]],
+  lab: [["lab"]],
+  billing: [["billing"], ["lab"]],
 };
 
 export default function useSocket(onNotification?: NotificationHandler) {

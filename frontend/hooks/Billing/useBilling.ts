@@ -6,6 +6,10 @@ import {
   processPayment,
   updateBillingStatus,
 } from "@/services/billing.services";
+import {
+  fetchBillings,
+  payBilling as payBillingDirect,
+} from "@/services/billing.service";
 import { BillingRecord, PaymentMethod, PaymentProps } from "@/types/BillingTypes";
 import { getApiErrorMessage } from "@/utils/api-error";
 import SweetAlert from "@/utils/SweetAlert";
@@ -28,14 +32,7 @@ const mergeUpdatedBilling = (
 export const useBillings = () =>
   useQuery<BillingRecord[]>({
     queryKey: BILLINGS_QUERY_KEY,
-    queryFn: async () => {
-      // Fetch from your API endpoint
-      const response = await fetch("/api/billing");
-      const data = await response.json();
-      return data.data;
-    },
-    refetchInterval: 10000,
-    refetchIntervalInBackground: true,
+    queryFn: fetchBillings,
     refetchOnWindowFocus: true,
   });
 
@@ -49,7 +46,7 @@ export const usePayBilling = () => {
     }: {
       billingId: number;
       method?: PaymentMethod;
-    }) => processPayment({ billing_id: billingId, amount: 0, method: method || "CASH" }),
+    }) => payBillingDirect(billingId, method || "CASH"),
     onSuccess: (updatedBilling) => {
       queryClient.setQueryData<BillingRecord[]>(
         BILLINGS_QUERY_KEY,

@@ -1,4 +1,9 @@
 import { Request, Response } from "express";
+import { getIO } from "../../socket";
+import {
+  createNotification,
+  resolveUsersByRoleNames,
+} from "../notification/notification.services";
 import { handleLabModuleError } from "./lab.errors";
 import {
   createLabRequestService,
@@ -6,6 +11,7 @@ import {
   getLabRequestByIdService,
   getLabRequestsService,
   getLabTestsService,
+  getPatientLabRequestsService,
   getPatientLabRecordsService,
   getPatientRecordsService,
   saveLabResultService,
@@ -28,6 +34,37 @@ const labRecordGroupValues = [
   "other",
   "serology",
 ] as const;
+
+const labUpdateRooms = [
+  "role_ADMIN",
+  "role_DOCTOR",
+  "role_LAB",
+  "role_LABORATORY",
+  "role_CASHIER",
+] as const;
+const billingUpdateRooms = [
+  "role_ADMIN",
+  "role_CASHIER",
+  "role_LAB",
+  "role_LABORATORY",
+] as const;
+
+const emitLabUpdated = (payload: {
+  labId?: number;
+  patientId?: number;
+  reason: string;
+  requestId?: number;
+}) => {
+  getIO().to([...labUpdateRooms]).emit("lab:updated", payload);
+};
+
+const emitBillingUpdated = (payload: {
+  patientId?: number;
+  reason: string;
+  requestId?: number;
+}) => {
+  getIO().to([...billingUpdateRooms]).emit("billing:updated", payload);
+};
 
 export const getAllUsersController = async (_req: Request, res: Response) => {
   try {
@@ -130,6 +167,32 @@ export const getPatientLabRecordsController = async (req: Request, res: Response
   }
 };
 
+export const getPatientLabRequestsController = async (req: Request, res: Response) => {
+  try {
+    const patientId = Number(req.params.patientId);
+
+    if (!Number.isInteger(patientId) || patientId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid patient request.",
+      });
+    }
+
+    const requests = await getPatientLabRequestsService(patientId);
+
+    return res.status(200).json({
+      success: true,
+      data: requests,
+    });
+  } catch (error) {
+    return handleLabModuleError(
+      res,
+      error,
+      "Failed to fetch patient laboratory requests."
+    );
+  }
+};
+
 export const createLabRequestController = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.user_id;
@@ -155,6 +218,27 @@ export const createLabRequestController = async (req: Request, res: Response) =>
       requestedBy: typeof requestedBy === "string" ? requestedBy : undefined,
       requestedDate: typeof requestedDate === "string" ? requestedDate : undefined,
       tests,
+    });
+
+    emitLabUpdated({
+      labId: request.labId,
+      patientId: request.rawPatientId,
+      reason: "request-created",
+      requestId: request.requestId,
+    });
+    emitBillingUpdated({
+      patientId: request.rawPatientId,
+      reason: "billing-created",
+      requestId: request.requestId,
+    });
+
+    const cashierUserIds = await resolveUsersByRoleNames(["CASHIER"]);
+    await createNotification({
+      userIds: cashierUserIds,
+      type: "NEW_REQUEST",
+      title: "New Laboratory Billing",
+      message: "A laboratory billing record is ready for cashier processing.",
+      entity: "billing",
     });
 
     return res.status(201).json({
@@ -217,6 +301,13 @@ export const updateLabRequestStatusController = async (req: Request, res: Respon
 
     const request = await updateLabRequestStatusService(labId, status, userId);
 
+    emitLabUpdated({
+      labId: request.labId,
+      patientId: request.rawPatientId,
+      reason: "status-updated",
+      requestId: request.requestId,
+    });
+
     return res.status(200).json({
       success: true,
       data: request,
@@ -251,6 +342,13 @@ export const saveLabResultController = async (req: Request, res: Response) => {
       userId,
       pathologistUserId:
         typeof pathologistUserId === "number" ? pathologistUserId : null,
+    });
+
+    emitLabUpdated({
+      labId: result.labId,
+      patientId: result.rawPatientId,
+      reason: "result-saved",
+      requestId: result.requestId,
     });
 
     return res.status(201).json({

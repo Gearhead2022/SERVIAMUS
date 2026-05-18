@@ -17,17 +17,17 @@ import ViewPrescriptionModal from "@/components/Modal/NestedModal/ViewPrescripti
 import ViewConsultationModal from "@/components/Modal/NestedModal/ViewConsultationModal";
 import { ConsultationResultProps } from "@/types/ConsultationTypes";
 import EditPatientForm from "@/components/Modal/ChildModal/EditPatientForm";
+import { getApiErrorMessage } from "@/utils/api-error";
 import ViewPatientProfile from "@/components/Modal/ChildModal/ViewPatientProfile";
 
 const RegistrationPage = () => {
-
   const [selectedPatient, setSelectedPatient] = useState<PatientProps | null>(null);
   const [activeAction, setActiveAction] = useState<
     "consultation" | "laboratory" | "profile" | "edit" | "history" | "action" | "prescription" | "view_consultation" | null
   >(null);
 
   const [addPatientOpen, setAddPatientOpen] = useState<boolean>(false);
-  const [modalTitle, setModalTitle] = useState<string>('')
+  const [modalTitle, setModalTitle] = useState<string>("");
 
   const patientId =
     selectedPatient && typeof selectedPatient.patient_id === "number"
@@ -37,11 +37,16 @@ const RegistrationPage = () => {
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { data: patientList, isLoading: patientListLoading } = useGetAllpatient(debouncedSearch);
+  const {
+    data: patientList,
+    error: patientListError,
+    isLoading: patientListLoading,
+  } = useGetAllpatient(debouncedSearch);
   const { data: prevVitalSigns, isLoading: vitalsLoading } = useGetPrevVitalSigns(patientId);
 
   const [selectedConsultationId, setSelectedConsultationId] = useState<number | null>(null);
   const [selectedConsultationRecord, setSelectedConsultationRecord] = useState<ConsultationResultProps | null>(null);
+  const patientCount = patientList?.length ?? 0;
 
   const closeAll = () => {
     setSelectedPatient(null);
@@ -54,40 +59,40 @@ const RegistrationPage = () => {
 
   return (
     <>
-      <RoleGuard allowedRoles={['STAFF']}>
-        {/* ── Add Patient Modal ── */}
+      <RoleGuard allowedRoles={["STAFF", "DOCTOR"]}>
+        {/* â”€â”€ Add Patient Modal â”€â”€ */}
         {addPatientOpen && (
           <ModalHeader showModal={true} title="Register New Patient" subtitle="Fill in the details below to register a patient" sizeModal="medium" onClose={() => setAddPatientOpen(false)}>
             <AddPatientForm patient={null} onClose={() => setAddPatientOpen(false)} />
           </ModalHeader>
         )}
 
-        {selectedPatient && activeAction === 'consultation' && (
+        {selectedPatient && activeAction === "consultation" && (
           <ModalHeader showModal={true} title={modalTitle} subtitle="Fill in details below to create request" sizeModal="2xlarge" onClose={closeNested}>
             <AddRequestForm patient={selectedPatient} vitals={prevVitalSigns ?? undefined} onClose={closeAll} />
           </ModalHeader>
         )}
 
-        {selectedPatient && activeAction == 'history' && (
+        {selectedPatient && activeAction == "history" && (
           <ModalHeader showModal={true} title={modalTitle} subtitle="asd" sizeModal="2xlarge" onClose={closeNested}>
-            <ViewPatientHistoryModal patient={selectedPatient} onViewPrescription={(id) => { setActiveAction('prescription'); setSelectedConsultationId(id); }} onViewConsultation={(c) => { setActiveAction('view_consultation'); setSelectedConsultationRecord(c); }} />
+            <ViewPatientHistoryModal patient={selectedPatient} onViewPrescription={(id) => { setActiveAction("prescription"); setSelectedConsultationId(id); }} onViewConsultation={(c) => { setActiveAction("view_consultation"); setSelectedConsultationRecord(c); }} />
           </ModalHeader>
         )}
 
-        {selectedPatient && activeAction == 'prescription' && (
+        {selectedPatient && activeAction == "prescription" && (
           <ModalHeader showModal={true} title={modalTitle} subtitle="" sizeModal="2xlarge" onClose={closeNested}>
             <ViewPrescriptionModal patient={selectedPatient} prescription={selectedConsultationId}></ViewPrescriptionModal>
           </ModalHeader>
         )}
 
-        {selectedPatient && activeAction == 'view_consultation' && (
+        {selectedPatient && activeAction == "view_consultation" && (
           <ModalHeader showModal={true} title={modalTitle} subtitle="" sizeModal="2xlarge" onClose={closeNested}>
             <ViewConsultationModal patient={selectedPatient} record={selectedConsultationRecord}></ViewConsultationModal>
           </ModalHeader>
         )}
 
-        {/* ── Patient Action Modal ── */}
-        {selectedPatient && activeAction === 'action' && !vitalsLoading && (
+        {/* â”€â”€ Patient Action Modal â”€â”€ */}
+        {selectedPatient && activeAction === "action" && !vitalsLoading && (
           <ModalHeader showModal={true} title={"Patient Action manager"} subtitle="Select an action below to a patient" sizeModal="small" onClose={closeNested}>
             <PatientActionModal
               patient={selectedPatient}
@@ -96,11 +101,12 @@ const RegistrationPage = () => {
               onRequestAction={() => { setActiveAction("consultation"); }}
               onViewProfile={() => { setActiveAction("profile"); }}
               onEditPatient={() => { setActiveAction("edit"); }}
-              onViewHistory={() => { setActiveAction("history") }}
+              onViewHistory={() => { setActiveAction("history"); }}
             />
           </ModalHeader>
         )}
 
+        {/* â”€â”€ Page â”€â”€ */}
 
         {selectedPatient && activeAction == 'profile' && (
           <ModalHeader showModal={true} title={`${modalTitle}  — ${selectedPatient?.name}`} subtitle="" sizeModal="large" onClose={closeNested}>
@@ -123,8 +129,10 @@ const RegistrationPage = () => {
               </h1>
               <p className="text-black/40 text-xs mt-0.5">
                 {patientListLoading
-                  ? "Loading patients…"
-                  : `${patientList?.length} patient${patientList?.length !== 1 ? "s" : ""} found`}
+                  ? "Loading patientsâ€¦"
+                  : patientListError
+                    ? getApiErrorMessage(patientListError, "Unable to load patients.")
+                    : `${patientCount} patient${patientCount !== 1 ? "s" : ""} found`}
               </p>
             </div>
             <Button icon={<Plus />} iconPosition="left" variant="addPatient" type="button" onClick={() => setAddPatientOpen(true)}>Add Patient</Button>
@@ -136,7 +144,7 @@ const RegistrationPage = () => {
               <Search className="text-black/40 absolute mt-2 ml-2" />
               <input
                 type="text"
-                placeholder="Search patients…"
+                placeholder="Search patients"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-black/10 border border-black/15 rounded-xl pl-10 pr-4 py-2.5 text-sm text-black placeholder-black/30 outline-none focus:bg-black/15 focus:border-black/30 transition"
@@ -147,7 +155,6 @@ const RegistrationPage = () => {
           {/* Patient grid */}
           <div className="px-8 pb-12">
             {patientListLoading ? (
-              /* Skeleton */
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div
@@ -157,8 +164,23 @@ const RegistrationPage = () => {
                   />
                 ))}
               </div>
-            ) : patientList?.length === 0 ? (
-              /* Empty state */
+            ) : patientListError ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-[#c8102e]/10 flex items-center justify-center mb-4 text-[#c8102e]">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round"
+                      d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zM12 16.5h.008v.008H12V16.5z" />
+                  </svg>
+                </div>
+                <p className="text-[#0f2244] font-semibold text-sm">Unable to load patients</p>
+                <p className="text-[#0f2244]/60 text-xs mt-1 max-w-md">
+                  {getApiErrorMessage(
+                    patientListError,
+                    "The patient registry could not be loaded right now."
+                  )}
+                </p>
+              </div>
+            ) : patientCount === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
                   <svg className="w-8 h-8 text-white/30" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
@@ -181,12 +203,13 @@ const RegistrationPage = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {patientList && patientList?.map((patient: PatientProps) => (
+                {patientList?.map((patient: PatientProps) => (
                   <PatientCard
                     key={patient.patient_id}
                     patient={patient}
                     onClick={() => {
-                      setSelectedPatient(patient); setActiveAction('action');
+                      setSelectedPatient(patient);
+                      setActiveAction("action");
                     }}
                   />
                 ))}
@@ -194,6 +217,81 @@ const RegistrationPage = () => {
             )}
           </div>
         </div>
+        {/* â”€â”€ View Profile Modal â”€â”€ */}
+        {selectedPatient && activeAction === "profile" && (
+          <ModalHeader
+            showModal={true}
+            title="Patient Profile"
+            subtitle={selectedPatient.name}
+            sizeModal="medium"
+            onClose={closeNested}
+          >
+            <div className="p-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Full Name</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Patient ID</p>
+                    <p className="text-sm font-semibold text-gray-900">#{selectedPatient.patient_code}</p>
+                  </div>
+                  {selectedPatient.philhealth_id && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase">PhilHealth ID</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedPatient.philhealth_id}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Age</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.age} years</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Sex</p>
+                    <p className="text-sm font-semibold text-gray-900 capitalize">{selectedPatient.sex}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Address</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.address}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Contact Number</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.contact_number}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Birth Date</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {selectedPatient.birth_date
+                        ? new Date(selectedPatient.birth_date).toLocaleDateString()
+                        : "â€”"}
+                    </p>
+                  </div>
+                  {selectedPatient.religion && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase">Religion</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedPatient.religion}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </ModalHeader>
+        )}
+
+        {/* â”€â”€ Edit Patient Modal â”€â”€ */}
+        {selectedPatient && activeAction === "edit" && (
+          <ModalHeader
+            showModal={true}
+            title="Edit Patient"
+            subtitle="Update patient information"
+            sizeModal="medium"
+            onClose={closeNested}
+          >
+            <EditPatientForm patient={selectedPatient} onClose={closeAll} />
+          </ModalHeader>
+        )}
+      </RoleGuard>
 
 
         {/* ── Edit Patient Modal ── */}

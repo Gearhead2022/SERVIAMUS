@@ -2,6 +2,33 @@ import { prisma } from "../../config/prismaClient";
 import { getIO } from "../../socket";
 import { CreateNotificationParams } from "./notification.types";
 
+export const resolveUsersByRoleNames = async (roleNames: string[]) => {
+    const uniqueRoleNames = Array.from(
+        new Set(roleNames.map((roleName) => roleName.trim()).filter(Boolean))
+    );
+
+    if (!uniqueRoleNames.length) {
+        return [];
+    }
+
+    const users = await prisma.users.findMany({
+        where: {
+            roles: {
+                some: {
+                    role: {
+                        role_name: {
+                            in: uniqueRoleNames,
+                        },
+                    },
+                },
+            },
+        },
+        select: { user_id: true },
+    });
+
+    return users.map((user) => user.user_id);
+};
+
 // CREATE
 export const createNotification = async ({
     userIds,
@@ -16,6 +43,10 @@ export const createNotification = async ({
     const normalizedUserIds = Array.isArray(userIds)
         ? userIds
         : [userIds];
+
+    if (!normalizedUserIds.length) {
+        return;
+    }
 
     await prisma.notification.createMany({
         data: normalizedUserIds.map((user_id) => ({
@@ -86,17 +117,6 @@ export const resolveNotificationUsers = async (request: any): Promise<number | n
             return request.med?.physician;
 
         default:
-            const users = await prisma.users.findMany({
-                where: {
-                    roles: {
-                        some: {
-                            role: { role_name: "LAB" },
-                        },
-                    },
-                },
-                select: { user_id: true },
-            });
-
-            return users.map(u => u.user_id);
+            return resolveUsersByRoleNames(["LAB", "LABORATORY"]);
     }
 };

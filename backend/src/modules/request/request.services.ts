@@ -83,6 +83,9 @@ export const createRequest = async (payload: CreateRequestProps) => {
     return { result, vitals, consult };
   }
 
+  // Doctor-side request creation only normalizes the selected tests and
+  // hands them off to the lab module. The lab module owns the later
+  // morphing/consolidation rules so the workflow stays centralized.
   if (payload.req_type === "LABORATORY") {
     const normalizedTests = splitLabTests(payload.test.join(", "));
 
