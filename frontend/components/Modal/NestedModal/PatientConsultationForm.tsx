@@ -10,6 +10,8 @@ import { PatientProps } from "@/types/PatientTypes";
 import Button from "@/components/ui/Button";
 import { VitalSignProps } from "@/types/RequestTypes"
 import { ConsultationResultProps } from "@/types/ConsultationTypes";
+import { normalizeConsultationDefaults } from "@/utils/consultation/normalizeConsultationDefaults";
+import { mapConsultationToPrisma } from "@/utils/consultation/mapConsultationToPrisma";
 
 type RegisterConsultationFormValues = z.infer<typeof patientConsultationSchema>;
 
@@ -359,105 +361,16 @@ function Step4({ form }: StepProps) {
   );
 }
 
-function normalizeConsultationDefaults(
-  patient?: PatientProps,
-  consult?: ConsultationResultProps,
-  vitals?: VitalSignProps
-): RegisterConsultationFormValues {
-  return {
-    // Patient Info
-    name: patient?.name ?? "",
-    contact_number: patient?.contact_number ?? "",
-    address: patient?.address ?? "",
-    birth_date: patient?.birth_date
-      ? new Date(patient.birth_date).toISOString().split("T")[0]
-      : "",
-    sex: patient?.sex?.toLowerCase() === "female" ? "female" : "male",
-    age: patient?.age?.toString() ?? "",
-    religion: consult?.religion ?? "",
-
-    // Consultation Info
-    consultation_date: new Date().toISOString().split("T")[0],
-    chief_complaint: consult?.chief_complaint ?? "",
-    hist_illness: consult?.hist_illness ?? "",
-
-    // Vitals
-    bp: vitals?.bp ?? "",
-    temp: vitals?.temp ?? "",
-    cr: vitals?.cr ?? "",
-    rr: vitals?.rr ?? "",
-    wt: vitals?.wt ?? "",
-    ht: vitals?.ht ?? "",
-
-    // Personal Medical History
-    pmh_allergy: consult?.pmh_allergy ?? false,
-    pmh_admission: consult?.pmh_admission ?? false,
-    pmh_others: consult?.pmh_others ?? false,
-    pmh_others_text: consult?.pmh_others_text ?? "",
-
-    // Family History
-    fh_htn: consult?.fh_htn ?? false,
-    fh_dm: consult?.fh_dm ?? false,
-    fh_ba: consult?.fh_ba ?? false,
-    fh_cancer: consult?.fh_cancer ?? false,
-    fh_others: consult?.fh_others ?? false,
-    fh_others_text: consult?.fh_others_text ?? "",
-
-    // OB History
-    ob_score: consult?.ob_score ?? "",
-    ob_nvsd: consult?.ob_nvsd ?? false,
-    ob_cs: consult?.ob_cs ?? false,
-
-    menarche: consult?.menarche ?? "",
-    interval: consult?.interval ?? "",
-    duration: consult?.duration ?? "",
-    amount: consult?.amount ?? "",
-    ob_symptoms: consult?.ob_symptoms ?? "",
-
-    // Social History
-    cigarette_use: consult?.cigarette_use ?? false,
-    alcohol_use: consult?.alcohol_use ?? false,
-    drug_use: consult?.drug_use ?? false,
-    exercise: consult?.exercise ?? false,
-    hygiene_prac: consult?.hygiene_prac ?? false,
-    coffee_cons: consult?.coffee_cons ?? false,
-    soda_cons: consult?.soda_cons ?? false,
-
-    sh_allergy: consult?.sh_allergy ?? false,
-    sh_admission: consult?.sh_admission ?? false,
-
-    // Lifestyle
-    travel_history: consult?.travel_history ?? "",
-    diet: consult?.diet ?? "",
-    stress: consult?.stress ?? "",
-    occupation: consult?.occupation ?? "",
-
-    // Medical
-    examination: consult?.examination ?? "",
-    assessment: consult?.assessment ?? "",
-    plans: consult?.plans ?? "",
-
-    // Follow-up
-    follow_up_date: consult?.follow_up_date
-      ? new Date(consult.follow_up_date).toISOString().split("T")[0]
-      : "",
-  };
-}
-
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-const PatientConsultationForm: React.FC<{ patient: PatientProps | undefined, vitals: VitalSignProps | undefined, consult: ConsultationResultProps | undefined, cons_id: number, onClose: () => void }> = ({ patient, vitals, consult, cons_id, onClose }) => {
+const PatientConsultationForm: React.FC<{ patient: PatientProps | undefined, vitals: VitalSignProps | undefined, consult: ConsultationResultProps | undefined, cons_id: number, onClose: () => void, onPreview: (data: RegisterConsultationFormValues) => void }> = ({ patient, vitals, consult, cons_id, onClose, onPreview }) => {
   const [step, setStep] = useState(1);
-  const { mutateAsync: createConsultationResult, isPending } = useConsultaion(onClose);
 
-  // console.log('request data', cons_id)
   const form = useForm<RegisterConsultationFormValues>({
     resolver: zodResolver(patientConsultationSchema),
     mode: "onSubmit",
     defaultValues: normalizeConsultationDefaults(patient, consult, vitals) as RegisterConsultationFormValues,
   });
-
-  const { handleSubmit } = form;
 
   const panels: React.ReactElement[] = [
     <Step1 key="step1" form={form} />,
@@ -466,192 +379,100 @@ const PatientConsultationForm: React.FC<{ patient: PatientProps | undefined, vit
     <Step4 key="step4" form={form} />,
   ];
 
-  function mapToPrisma(data: RegisterConsultationFormValues) {
-    return {
-      // ─── STEP 1 ─────────────────────────
-      cons_id: cons_id,
-      patient_id: patient?.patient_id ?? 0,
-
-      full_name: data.name,
-      consultation_date: new Date(data.consultation_date),
-      address: data.address,
-      contact_number: data.contact_number,
-      birth_date: new Date(data.birth_date),
-      sex: data.sex,
-      age: Number(data.age),
-
-      religion: data.religion ?? "",
-      chief_complaint: data.chief_complaint,
-
-      // ─── STEP 2 ─────────────────────────
-      hist_illness: data.hist_illness ?? "",
-      bp: data.bp ?? "",
-      temp: data.temp ?? "",
-      cr: data.cr ?? "",
-      rr: data.rr ?? "",
-      wt: data.wt ?? "",
-      ht: data.ht ?? "",
-
-      // ─── STEP 3: PMH ────────────────────
-      pmh_allergy: data.pmh_allergy ?? false,
-      pmh_admission: data.pmh_admission ?? false,
-      pmh_others: data.pmh_others ?? false,
-      pmh_others_text: data.pmh_others_text ?? "",
-
-      // ─── FAMILY HISTORY ─────────────────
-      fh_htn: data.fh_htn ?? false,
-      fh_dm: data.fh_dm ?? false,
-      fh_ba: data.fh_ba ?? false,
-      fh_cancer: data.fh_cancer ?? false,
-      fh_others: data.fh_others ?? false,
-      fh_others_text: data.fh_others_text ?? "",
-
-      // ─── OB-GYNE ───────────────────────
-      ob_score: data.ob_score ?? "",
-      ob_nvsd: data.ob_nvsd ?? false,
-      ob_cs: data.ob_cs ?? false,
-
-      menarche: data.menarche ?? "",
-      interval: data.interval ?? "",
-      duration: data.duration ?? "",
-      amount: data.amount ?? "",
-      ob_symptoms: data.ob_symptoms ?? "",
-
-      // ─── PERSONAL HISTORY ──────────────
-      cigarette_use: data.cigarette_use ?? false,
-      alcohol_use: data.alcohol_use ?? false,
-      drug_use: data.drug_use ?? false,
-      exercise: data.exercise ?? false,
-      hygiene_prac: data.hygiene_prac ?? false,
-      coffee_cons: data.coffee_cons ?? false,
-      soda_cons: data.soda_cons ?? false,
-
-      // ─── SOCIAL HISTORY ────────────────
-      sh_allergy: data.sh_allergy ?? false,
-      sh_admission: data.sh_admission ?? false,
-
-      travel_history: data.travel_history ?? "",
-      diet: data.diet ?? "",
-      stress: data.stress ?? "",
-      occupation: data.occupation ?? "",
-
-      // ─── MEDICAL ───────────────────────
-      examination: data.examination ?? "",
-      assessment: data.assessment ?? "",
-      plans: data.plans ?? "",
-
-      // ─── FOLLOW UP ─────────────────────
-      follow_up_date: data.follow_up_date
-        ? new Date(data.follow_up_date)
-        : undefined,
-    };
-  }
-
-  const onSubmit = async (data: RegisterConsultationFormValues) => {
-    // console.log("SUBMIT DATA:", data);
-    await createConsultationResult(mapToPrisma(data));
+  const handlePreview = () => {
+    const values = form.getValues(); // get current form state
+    onPreview(values);
   };
-
-  const onError = (errors: unknown) => {
-    console.log("FORM ERRORS:", errors);
-  };
-
 
   return (
     <>
-      <form
-        onSubmit={handleSubmit(onSubmit, onError)}
-        className="w-full"
-        noValidate
-      >
-        <div className="bg-white rounded-2xl w-full overflow-y-none h-[80vh]">
-          {/* Step Indicator */}
-          <div className="bg-[#f7f8fc] border-b border-[#dce3ef] px-10 flex">
-            {STEPS.map((s, i) => {
-              const n = i + 1;
-              const isActive = step === n;
-              const isDone = step > n;
-              return (
+      <div className="bg-white rounded-2xl w-full overflow-y-none h-[80vh]">
+        {/* Step Indicator */}
+        <div className="bg-[#f7f8fc] border-b border-[#dce3ef] px-10 flex">
+          {STEPS.map((s, i) => {
+            const n = i + 1;
+            const isActive = step === n;
+            const isDone = step > n;
+            return (
+              <div
+                key={n}
+                className={`flex-1 flex items-center gap-2.5 py-4 relative ${i < STEPS.length - 1
+                  ? "after:content-[''] after:absolute after:right-0 after:top-1/2 after:-translate-y-1/2 after:w-px after:h-7 after:bg-[#dce3ef]"
+                  : ""
+                  }`}
+              >
                 <div
-                  key={n}
-                  className={`flex-1 flex items-center gap-2.5 py-4 relative ${i < STEPS.length - 1
-                    ? "after:content-[''] after:absolute after:right-0 after:top-1/2 after:-translate-y-1/2 after:w-px after:h-7 after:bg-[#dce3ef]"
-                    : ""
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold border-2 flex-shrink-0 transition-all duration-300 ${isActive
+                    ? "bg-[#c8102e] border-[#c8102e] text-white"
+                    : isDone
+                      ? "bg-[#0e7c7b] border-[#0e7c7b] text-white"
+                      : "bg-white border-[#dce3ef] text-[#6b7da0]"
                     }`}
                 >
+                  {isDone ? "✓" : n}
+                </div>
+                <div className="leading-tight">
                   <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold border-2 flex-shrink-0 transition-all duration-300 ${isActive
-                      ? "bg-[#c8102e] border-[#c8102e] text-white"
-                      : isDone
-                        ? "bg-[#0e7c7b] border-[#0e7c7b] text-white"
-                        : "bg-white border-[#dce3ef] text-[#6b7da0]"
+                    className={`text-[11.5px] font-${isActive ? "600" : "500"} ${isActive ? "text-[#1a2a45]" : isDone ? "text-[#0e7c7b]" : "text-[#6b7da0]"
                       }`}
                   >
-                    {isDone ? "✓" : n}
+                    {s.label}
                   </div>
-                  <div className="leading-tight">
-                    <div
-                      className={`text-[11.5px] font-${isActive ? "600" : "500"} ${isActive ? "text-[#1a2a45]" : isDone ? "text-[#0e7c7b]" : "text-[#6b7da0]"
-                        }`}
-                    >
-                      {s.label}
-                    </div>
-                    <div
-                      className={`text-[11.5px] font-${isActive ? "600" : "500"} ${isActive ? "text-[#1a2a45]" : isDone ? "text-[#0e7c7b]" : "text-[#6b7da0]"
-                        }`}
-                    >
-                      {s.sub}
-                    </div>
+                  <div
+                    className={`text-[11.5px] font-${isActive ? "600" : "500"} ${isActive ? "text-[#1a2a45]" : isDone ? "text-[#0e7c7b]" : "text-[#6b7da0]"
+                      }`}
+                  >
+                    {s.sub}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Body */}
-
-          <div className="px-10 py-9 min-h-[440px]">{panels[step - 1]}</div>
-
-          {/* Footer */}
-          <div className="border-t border-[#dce3ef] bg-[#f7f8fc] px-10 py-5 flex items-center justify-between">
-            <span className="text-xs text-[#6b7da0]">Step {step} of {STEPS.length}</span>
-            <div className="flex gap-2.5">
-              <Button variant="danger" type="button" onClick={onClose}>
-                Cancel
-              </Button>
-              {step > 1 && (
-                <Button
-                  variant="secondary"
-                  type="button"
-                  onClick={() => setStep(step - 1)}
-                >
-                  ← Previous
-                </Button>
-              )}
-              {step < STEPS.length && (
-
-                <Button
-                  variant="primary"
-                  type="button"
-                  onClick={() => setStep(step + 1)}
-                >
-                  Next →
-                </Button>
-              )}
-              {step === STEPS.length && (
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isLoading={isPending}
-                >
-                  Submit ✓
-                </Button>
-              )}
-            </div>
-          </div>
-
+              </div>
+            );
+          })}
         </div>
-      </form>
+
+        {/* Body */}
+
+        <div className="px-10 py-9 min-h-[440px]">{panels[step - 1]}</div>
+
+        {/* Footer */}
+        <div className="border-t border-[#dce3ef] bg-[#f7f8fc] px-10 py-5 flex items-center justify-between">
+          <span className="text-xs text-[#6b7da0]">Step {step} of {STEPS.length}</span>
+          <div className="flex gap-2.5">
+            <Button variant="danger" type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            {step > 1 && (
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setStep(step - 1)}
+              >
+                ← Previous
+              </Button>
+            )}
+            {step < STEPS.length && (
+
+              <Button
+                variant="primary"
+                type="button"
+                onClick={() => setStep(step + 1)}
+              >
+                Next →
+              </Button>
+            )}
+            {step === STEPS.length && (
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handlePreview}
+              >
+                Preview
+              </Button>
+            )}
+          </div>
+        </div>
+
+      </div>
     </>
 
   );

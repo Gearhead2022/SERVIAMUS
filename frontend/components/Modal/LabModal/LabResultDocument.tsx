@@ -431,17 +431,17 @@ function SingleChemistryDocument({ request, form }: Props) {
             { label: config.fieldLabel, value: getValue(form, config.fieldName) },
             ...(config.conversionFieldName
               ? [
-                  {
-                    label: config.conversionLabel ?? "Conversion",
-                    value: getValue(form, config.conversionFieldName),
-                  },
-                ]
+                {
+                  label: config.conversionLabel ?? "Conversion",
+                  value: getValue(form, config.conversionFieldName),
+                },
+              ]
               : []),
             ...(config.showMealFields
               ? [
-                  { label: "Last Meal", value: getValue(form, "last_meal") },
-                  { label: "Time Taken", value: getValue(form, "time_taken") },
-                ]
+                { label: "Last Meal", value: getValue(form, "last_meal") },
+                { label: "Time Taken", value: getValue(form, "time_taken") },
+              ]
               : []),
           ]}
         />

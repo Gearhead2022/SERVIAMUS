@@ -55,8 +55,13 @@ export default function useSocket(onNotification?: NotificationHandler) {
         });
 
         socket.on("request:updated", () => {
-            // console.log("🔥 request:updated RECEIVED");
+            // console.log("request:updated RECEIVED");
             queryClient.invalidateQueries({ queryKey: ["labRequests"] });
+        });
+
+        socket.on("consultation:updated", () => {
+            // console.log("request:updated RECEIVED");
+            queryClient.invalidateQueries({ queryKey: ["consultation-print"] });
         });
 
         // Single source of truth event

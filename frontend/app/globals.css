@@ -24,3 +24,85 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* BASE */
+
+.print-document {
+  background: #e5e7eb;
+  padding: 20px 0;
+}
+
+.print-page {
+  margin: 0 auto 20px auto;
+
+  background: white;
+  color: black;
+
+  box-sizing: border-box;
+
+  page-break-after: always;
+}
+
+.print-page:last-child {
+  page-break-after: auto;
+}
+
+/* LEGAL */
+
+.paper-legal {
+  width: 216mm;
+  min-height: 356mm;
+  padding: 10mm;
+}
+
+/* B6 */
+
+.paper-b6 {
+  width: 125mm;
+  min-height: 176mm;
+  padding: 7mm;
+}
+
+/* A4 */
+
+.paper-a4 {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 10mm;
+}
+
+@media print {
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  .print-document {
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  .print-page {
+    margin: 0 auto;
+    box-shadow: none;
+    border: none;
+  }
+
+  .paper-legal {
+    width: 216mm;
+    min-height: 356mm;
+  }
+
+  .paper-b6 {
+    width: 125mm;
+    min-height: 176mm;
+  }
+
+  .paper-a4 {
+    width: 210mm;
+    min-height: 297mm;
+  }
+}

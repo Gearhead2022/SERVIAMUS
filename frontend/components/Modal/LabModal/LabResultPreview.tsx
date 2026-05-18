@@ -27,7 +27,7 @@ export default function LabResultPreview({
   onPassToDoctor,
   request,
   showPassToDoctor = true,
-  showDoneButton = false,
+  showDoneButton = true,
 }: Props) {
   return (
     <div className="lab-print-sheet space-y-5 bg-slate-100 p-5 print:bg-white print:p-0">
@@ -63,8 +63,8 @@ export default function LabResultPreview({
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 print:hidden">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                    </div>
+          <div>
+          </div>
 
           <div className="flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" onClick={onBack}>
@@ -89,8 +89,8 @@ export default function LabResultPreview({
               Reprint Result
             </Button>
           </div>
-                      <div>
-                      </div>
+          <div>
+          </div>
         </div>
       </div>
     </div>

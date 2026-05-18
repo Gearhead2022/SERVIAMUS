@@ -107,3 +107,23 @@ export const getLabRequestByName = async (name: string, patientId: number) => {
   });
   return res.data;
 }
+
+export const getConsultationPrint = async (req_id: number) => {
+  const res = await api.get(`/api/consultation/${req_id}/getConsultationRecordByIdz`);
+  return res.data;
+}
+
+export const getDoctorInfo = async (doctor_id: number) => {
+  const res = await api.get(`/api/consultation/${doctor_id}/getDoctorById`);
+  return res.data.data;
+}
+
+export const getConsultationRxPrint = async (req_id: number) => {
+  const res = await api.get(`/api/consultation/${req_id}/getConsultationRxById`);
+  return res.data;
+}
+
+export const getMedicalCertificatePrint = async (req_id: number) => {
+  const res = await api.get(`/api/consultation/${req_id}/getMedicalCertificateById`);
+  return res.data;
+}

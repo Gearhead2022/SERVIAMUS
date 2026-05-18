@@ -17,6 +17,7 @@ import ViewPrescriptionModal from "@/components/Modal/NestedModal/ViewPrescripti
 import ViewConsultationModal from "@/components/Modal/NestedModal/ViewConsultationModal";
 import { ConsultationResultProps } from "@/types/ConsultationTypes";
 import EditPatientForm from "@/components/Modal/ChildModal/EditPatientForm";
+import ViewPatientProfile from "@/components/Modal/ChildModal/ViewPatientProfile";
 
 const RegistrationPage = () => {
 
@@ -98,6 +99,13 @@ const RegistrationPage = () => {
               onViewHistory={() => { setActiveAction("history") }}
             />
           </ModalHeader>
+        )}
+
+
+        {selectedPatient && activeAction == 'profile' && (
+          <ModalHeader showModal={true} title={`${modalTitle}  — ${selectedPatient?.name}`} subtitle="" sizeModal="large" onClose={closeNested}>
+            <ViewPatientProfile patient={selectedPatient} onClose={closeNested}></ViewPatientProfile>
+          </ModalHeader >
         )}
 
         {/* ── Page ── */}
@@ -186,81 +194,23 @@ const RegistrationPage = () => {
             )}
           </div>
         </div>
-        {/* ── View Profile Modal ── */}
-        {selectedPatient && activeAction === 'profile' && (
-          <ModalHeader
-            showModal={true}
-            title="Patient Profile"
-            subtitle={selectedPatient.name}
-            sizeModal="medium"
-            onClose={closeNested}
-          >
-            <div className="p-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Full Name</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Patient ID</p>
-                    <p className="text-sm font-semibold text-gray-900">#{selectedPatient.patient_code}</p>
-                  </div>
-                  {selectedPatient.philhealth_id && (
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase">PhilHealth ID</p>
-                      <p className="text-sm font-semibold text-gray-900">{selectedPatient.philhealth_id}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Age</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.age} years</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Sex</p>
-                    <p className="text-sm font-semibold text-gray-900 capitalize">{selectedPatient.sex}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Address</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.address}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Contact Number</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.contact_number}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Birth Date</p>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {selectedPatient.birth_date
-                        ? new Date(selectedPatient.birth_date).toLocaleDateString()
-                        : "—"}
-                    </p>
-                  </div>
-                  {selectedPatient.religion && (
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase">Religion</p>
-                      <p className="text-sm font-semibold text-gray-900">{selectedPatient.religion}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </ModalHeader>
-        )}
+
 
         {/* ── Edit Patient Modal ── */}
-        {selectedPatient && activeAction === 'edit' && (
-          <ModalHeader
-            showModal={true}
-            title="Edit Patient"
-            subtitle="Update patient information"
-            sizeModal="medium"
-            onClose={closeNested}
-          >
-            <EditPatientForm patient={selectedPatient} onClose={closeAll} />
-          </ModalHeader>
-        )}
-      </RoleGuard>
+        {
+          selectedPatient && activeAction === 'edit' && (
+            <ModalHeader
+              showModal={true}
+              title="Edit Patient"
+              subtitle="Update patient information"
+              sizeModal="medium"
+              onClose={closeNested}
+            >
+              <EditPatientForm patient={selectedPatient} onClose={closeAll} />
+            </ModalHeader>
+          )
+        }
+      </RoleGuard >
     </>
   );
 };

@@ -15,7 +15,8 @@ import {
 import { useDebounce } from "use-debounce";
 import {
   useGetAllRequest, useRequestAction, useConsultationRecords,
-  useStatisticsRecords, useRequestPerWeek, useGetLabRequestByName
+  useStatisticsRecords, useRequestPerWeek, useGetLabRequestByName, useConsultationById,
+  useMedicalCertificateResult
 } from "@/hooks/Consultation/useConsultation";
 import SweetAlert from "@/utils/SweetAlert";
 import ModalHeader from "@/components/Modal/ModalHeader";
@@ -29,6 +30,13 @@ import { PatientProps } from "@/types/PatientTypes";
 import { useAuth } from "@/context/AuthContext";
 import { formattedIsoPH, formattedIsoTimePH } from "@/utils/Date";
 import AddRequestForm from "@/components/Modal/NestedModal/AddRequestForm";
+import ConsultaitionPreview from "@/components/Modal/ChildModal/ConsultationPreview";
+import { openConsultPrintPage } from "@/utils/consultation/consultPrint";
+import { useConsultaion, usePrescription, useGetDoctorById } from "@/hooks/Consultation/useConsultation";
+import { mapConsultationToPrisma } from "@/utils/consultation/mapConsultationToPrisma";
+import { MedCertFormValues, PrescriptionValues, RegisterConsultationFormValues } from "@/schemas/consultation.schema";
+import { mapPrescriptionToPrisma } from "@/utils/consultation/mapRxToPrisma";
+import { mapMedCertToPrisma } from "@/utils/consultation/mapMedCertToPrisma";
 
 type RequestCardProps = {
   currentRequest: RequestProps;
@@ -166,7 +174,7 @@ function ConsultationActions({ currentRequest, onConsult, onPresc, onDone }: Con
       <Button onClick={onConsult} variant="consult" disabled={!!currentRequest?.consult?.consultation}>
         <Stethoscope size={12} /> Consult
       </Button>
-      <Button variant="prescription" onClick={onPresc} disabled={!currentRequest?.consult?.consultation}>
+      <Button variant="prescription" onClick={onPresc} disabled={!!currentRequest?.prescription}>
         <ChevronRight size={10} /> Rx
       </Button>
       <Button
@@ -192,9 +200,6 @@ function CertificateActions({ currentRequest, onMedical, onDone }: CertificateCa
     <div className="grid grid-cols-3 gap-2 mt-3">
       <Button onClick={onMedical} variant="consult" disabled={!!currentRequest?.cert?.certificate}>
         <Stethoscope size={12} /> Cert
-      </Button>
-      <Button variant="secondary" onClick={onMedical} disabled={!currentRequest?.cert?.certificate}>
-        <ChevronRight size={10} /> Preview
       </Button>
       <Button
         variant="doneStatus"
@@ -254,12 +259,25 @@ const Dashboard = () => {
   const waitingList = requestList?.filter((r) => r.status === "WAITING") ?? [];
   const servingList = requestList?.filter((r) => r.status === "SERVING") ?? [];
   const doneCount = requestList?.filter((r) => r.status === "DONE").length ?? 0;
+  const doctorId =
+    currentRequest?.consult?.physician ??
+    currentRequest?.cert?.physician ??
+    0;
 
   const { data: prevVitalSigns } = useGetPrevVitalSigns(currentPatient?.patient_id);
   const { data: consultationRecords } = useConsultationRecords(currentPatient?.patient_id);
   const { data: statisticsRecords } = useStatisticsRecords();
   const { data: WeeklyData } = useRequestPerWeek(['CONSULTATION', 'CERTIFICATE']);
   const { data: labRequest } = useGetLabRequestByName("abdon sugrarartr", currentPatient?.patient_id ?? 0);
+
+  const [consultationResultData, setConsultationResultData] = useState<RegisterConsultationFormValues | null>(null);
+  const [consultationResultPreview, setConsultationResultPreview] = useState(false);
+
+  const [prescriptionData, setPrescriptionData] = useState<PrescriptionValues | null>(null);
+  const [prescriptionPreview, setPrescriptionPreview] = useState(false);
+
+  const [medCertData, setMedCertData] = useState<MedCertFormValues | null>(null);
+  const [medCertPreview, setMedCertPreview] = useState(false);
 
   const dayCounts = [
     WeeklyData?.Monday ?? 0,
@@ -342,23 +360,51 @@ const Dashboard = () => {
   const weeklyTotal = dayCounts.reduce((a, b) => a + b, 0);
   const maxCount = Math.max(...dayCounts, 1);
 
+  const closePreviewModal = () => {
+    setConsultationResultPreview(false);
+  };
+  const closePreviewRxModal = () => {
+    setPrescriptionPreview(false);
+  };
+  const closePreviewMedCertModal = () => {
+    setMedCertPreview(false);
+  };
+
+  const { mutateAsync: createConsultationResult, isPending: consultationPending, isSuccess: consultationSuccess } = useConsultaion();
+  const { mutateAsync: prescription, isPending, isSuccess: prescriptionSuccess } = usePrescription();
+  const { mutateAsync: createMedCertResult, isSuccess: medCertSuccess } = useMedicalCertificateResult();
+  const { data: doctorInfo } = useGetDoctorById(doctorId);
+  const { data: consultationRecord } = useConsultationById(selectedConsultationId);
+
   return (
     <RoleGuard allowedRoles={["DOCTOR"]}>
 
       {/* ── Modals ── */}
       {addConsultationOpen && (
         <ModalHeader showModal title="Patient Consultation Results" subtitle="Fill in the details below" sizeModal="xlarge" onClose={() => setAddConsultationOpen(false)}>
-          <PatientConsultationForm patient={currentPatient} vitals={prevVitalSigns ?? undefined} consult={consultationRecords ?? undefined} cons_id={selectedConsultationId} onClose={() => setAddConsultationOpen(false)} />
+          <PatientConsultationForm patient={currentPatient} vitals={prevVitalSigns ?? undefined} consult={consultationRecords ?? undefined} cons_id={selectedConsultationId} onClose={() => setAddConsultationOpen(false)}
+            onPreview={(data) => {
+              setConsultationResultData(data);   // store form data
+              setConsultationResultPreview(true); // open preview
+            }} />
         </ModalHeader>
       )}
       {addPrescriptionOpen && (
         <ModalHeader showModal title="Patient Prescription" subtitle="" sizeModal="xlarge" onClose={() => setAddPrescriptionOpen(false)}>
-          <AddPrescriptionForm patient={currentPatient} consult_id={selectedConsultationId} onClose={() => setAddPrescriptionOpen(false)} />
+          <AddPrescriptionForm patient={currentPatient} consult={consultationRecord ?? undefined} onClose={() => setAddPrescriptionOpen(false)} doctor={doctorInfo}
+            onPreview={(data) => {
+              setPrescriptionData(data);   // store form data
+              setPrescriptionPreview(true); // open preview
+            }} />
         </ModalHeader>
       )}
       {addAssesmentOpen && (
         <ModalHeader showModal title="Patient Medical Certificate" subtitle="" sizeModal="xlarge" onClose={() => setAddAssesmentOpen(false)}>
-          <AddMedicalCertificateForm mcrId={selectedCertificateId} patient={currentPatient} requestEntry={currentRequest?.cert} onClose={() => setAddAssesmentOpen(false)} />
+          <AddMedicalCertificateForm mcrId={selectedCertificateId} patient={currentPatient} requestEntry={currentRequest?.cert} onClose={() => setAddAssesmentOpen(false)}
+            onPreview={(data) => {
+              setMedCertData(data);   // store form data
+              setMedCertPreview(true); // open preview
+            }} />
         </ModalHeader>
       )}
 
@@ -368,34 +414,180 @@ const Dashboard = () => {
         </ModalHeader>
       )}
 
+      {currentRequest && consultationResultData && consultationResultPreview && (
+        <ModalHeader
+          showModal={true}
+          title={`Consultation Result Preview — ${currentPatient?.name}`}
+          subtitle=""
+          meta={`${currentRequest.req_id} - ${currentPatient?.patient_id}`}
+          sizeModal="2xlarge"
+          onClose={closePreviewModal}
+        >
+          <ConsultaitionPreview
+            request={currentRequest}
+            onDone={async () => {
+              if (!consultationResultData) return;
+
+              const confirmed = await SweetAlert.confirmationAlert2(
+                "Are you sure?",
+                `You are about to submit this form.`,
+              );
+
+              if (!confirmed) return;
+
+              await createConsultationResult(
+                mapConsultationToPrisma(
+                  consultationResultData,
+                  currentPatient?.patient_id ?? 0,
+                  selectedConsultationId
+                )
+              );
+
+              setAddConsultationOpen(false);
+            }}
+            form={consultationResultData}
+            backLabel="Back to Records"
+            onBack={closePreviewModal}
+            onDownloadPdf={() =>
+              openConsultPrintPage(currentRequest.req_id, {
+                autoDownload: true,
+                type: 'consult-result',
+                patientName: currentPatient?.name
+              })
+            }
+            onOpenPrintPage={() =>
+              openConsultPrintPage(currentRequest.req_id, {
+                autoPrint: true,
+                type: 'consult-result',
+                patientName: currentPatient?.name
+              })
+            }
+            onSubmitSuccess={consultationSuccess}
+            type={'consult-result'}
+            doctorId={doctorId}
+          />
+        </ModalHeader>
+      )}
+
+      {currentRequest && prescriptionData && prescriptionPreview && (
+        <ModalHeader
+          showModal={true}
+          title={`Consultation Rx Preview — ${currentPatient?.name}`}
+          subtitle=""
+          meta={`${currentRequest.req_id} - ${currentPatient?.patient_id}`}
+          sizeModal="2xlarge"
+          onClose={closePreviewRxModal}
+        >
+          <ConsultaitionPreview
+            request={currentRequest}
+            onDone={async () => {
+              if (!prescriptionData) return;
+
+              const confirmed = await SweetAlert.confirmationAlert2(
+                "Are you sure?",
+                `You are about to submit this form.`,
+              );
+
+              if (!confirmed) return;
+
+              await prescription(
+                mapPrescriptionToPrisma(
+                  prescriptionData,
+                  currentPatient?.patient_id ?? 0,
+                  consultationRecord?.consultation_id ?? 0,
+                  doctorId
+                )
+              );
+
+              setAddPrescriptionOpen(false);
+            }}
+            form={prescriptionData}
+            backLabel="Back to Records"
+            onBack={closePreviewRxModal}
+            onDownloadPdf={() =>
+              openConsultPrintPage(currentRequest.req_id, {
+                autoDownload: true,
+                doctorId,
+                type: 'prescription',
+                patientName: currentPatient?.name
+              })
+            }
+            onOpenPrintPage={() =>
+              openConsultPrintPage(currentRequest.req_id, {
+                autoPrint: true,
+                doctorId,
+                type: 'prescription',
+                patientName: currentPatient?.name
+              })
+            }
+            onSubmitSuccess={prescriptionSuccess}
+            type={'prescription'}
+            doctorId={doctorId}
+          />
+        </ModalHeader>
+      )}
+
+      {currentRequest && medCertData && medCertPreview && currentPatient && (
+        <ModalHeader
+          showModal={true}
+          title={`Medical Certificate Preview — ${currentPatient?.name}`}
+          subtitle=""
+          meta={`${currentRequest.req_id} - ${currentPatient?.patient_id}`}
+          sizeModal="2xlarge"
+          onClose={closePreviewMedCertModal}
+        >
+          <ConsultaitionPreview
+            request={currentRequest}
+            onDone={async () => {
+              if (!medCertData) return;
+
+              const confirmed = await SweetAlert.confirmationAlert2(
+                "Are you sure?",
+                `You are about to submit this form.`,
+              );
+
+              if (!confirmed) return;
+
+              await createMedCertResult(
+                mapMedCertToPrisma(
+                  medCertData,
+                  currentPatient?.patient_id ?? 0,
+                  doctorId
+                )
+              );
+
+              setAddAssesmentOpen(false);
+            }}
+            form={medCertData}
+            backLabel="Back to Records"
+            onBack={closePreviewMedCertModal}
+            onDownloadPdf={() =>
+              openConsultPrintPage(currentRequest.req_id, {
+                autoDownload: true,
+                doctorId,
+                type: 'med-cert',
+                patientName: currentPatient?.name
+              })
+            }
+            onOpenPrintPage={() =>
+              openConsultPrintPage(currentRequest.req_id, {
+                autoPrint: true,
+                doctorId,
+                type: 'med-cert',
+                patientName: currentPatient?.name
+              })
+            }
+            onSubmitSuccess={medCertSuccess}
+            type={'med-cert'}
+            doctorId={doctorId}
+          />
+        </ModalHeader>
+      )}
+
       <div
         className="min-h-screen font-['DM_Sans']"
         style={{ background: "linear-gradient(160deg, #f0f2f5 0%, #d1d8e4 50%, #a8b7ce 100%)" }}
       >
-
-        {/* ── Top Header ── */}
-        <div className="px-8 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-          <div className="max-w-[1500px] mx-auto flex items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0"
-                style={{ background: "#c8102e", boxShadow: "0 4px 16px rgba(200,16,46,0.35)" }}
-              >
-                <User size={18} />
-              </div>
-              <div>
-                <h1 className="text-[17px] leading-tight" style={{ fontFamily: "'DM Serif Display', serif", color: "#0f2244" }}>
-                  <span className="opacity-50">Good morning,</span> {user?.name ?? "Doctor"}
-                </h1>
-                <p className="text-[11px] mt-0.5" style={{ color: "#6b7da0" }}>
-                  {user?.title ?? "Doctor"} &nbsp;·&nbsp; {formattedIsoPH()} &nbsp;·&nbsp;
-                  <span className="font-mono">{formattedIsoTimePH()}</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="max-w-[1500px] mx-auto px-6 py-6 space-y-5">
 
           {/* ── ① Stats Row ── */}

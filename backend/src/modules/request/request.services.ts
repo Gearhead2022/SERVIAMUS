@@ -72,11 +72,6 @@ export const createRequest = async (payload: CreateRequestProps) => {
       },
     });
 
-    if (payload.req_type === "LABORATORY") {
-      // Doctor-side request creation only normalizes the selected tests and
-      // hands them off to the lab module. The lab module owns the later
-      // morphing/consolidation rules so the workflow stays centralized.
-      const normalizedTests = splitLabTests(payload.test.join(", "));
     const consult = await prisma.consultationRequest.create({
       data: {
         req_id: result.req_id,
@@ -189,12 +184,19 @@ export const getRequestData = async (request_id: number) => {
       },
     });
 
+    const prescription = await tx.prescription.findFirst({
+      where: {
+        consultation_id: consultation?.consultation_id,
+      }
+    })
+
     return {
       ...request,
       consult: {
         ...request.consult,
         consultation,
       },
+      prescription
     };
   });
 };

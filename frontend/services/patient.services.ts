@@ -17,7 +17,7 @@ export const createPatient = async (
 };
 
 export const fetchPatientById = async (patientId: number) => {
-  const res = await api.get(`/api/patient/${patientId}`);
+  const res = await api.get(`/api/patient/${patientId}/patientInfo`);
   return res.data.data;
 };
 
@@ -25,6 +25,6 @@ export const updatePatient = async (
   patientId: number,
   data: PatientProps
 ) => {
-  const res = await api.put(`/api/patient/${patientId}`, data);
+  const res = await api.put(`/api/patient/${patientId}/patientUpdate`, data);
   return res.data.data;
 };

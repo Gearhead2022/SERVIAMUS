@@ -998,3 +998,225 @@ export const getLabRequestByName = async (name: string, patientId: number) => {
     };
   });
 };
+
+export const getConsultationResultById = async (req_id: number) => {
+  const record = await prisma.request.findFirst({
+    where: {
+      req_id
+    },
+    select: {
+      consult: {
+        include: {
+          consultations: {
+            include: {
+              patient: true,
+              vitals: true,
+              consultRecords: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  console.log('records', record)
+
+  if (!record || !record.consult) return null;
+
+  const consultation = record.consult;
+  const consultationData = consultation.consultations[0];
+
+  if (!consultationData) return null;
+
+  const patient = consultationData.patient;
+  const vitals = consultationData.vitals;
+  const consultRecords = consultationData.consultRecords;
+
+  return {
+    consultation_id: consultationData.consultation_id,
+    cons_id: consultation.cons_id,
+
+    // ─── PATIENT INFO ─────────────────
+    name: patient.name,
+    address: patient.address,
+    contact_number: patient.contact_number,
+    birth_date: patient.birth_date,
+    sex: patient.sex,
+    age: patient.age,
+    religion: patient.religion ?? undefined,
+
+    // ─── CONSULTATION ─────────────────
+    consultation_date: consultationData.consultation_date,
+    chief_complaint: consultationData.chief_complaint,
+    hist_illness: consultationData.hist_illness ?? undefined,
+
+    // ─── VITALS ───────────────────────
+    bp: vitals?.bp ?? undefined,
+    temp: vitals?.temp ?? undefined,
+    cr: vitals?.cr ?? undefined,
+    rr: vitals?.rr ?? undefined,
+    wt: vitals?.wt ?? undefined,
+    ht: vitals?.ht ?? undefined,
+
+    // ─── PMH ──────────────────────────
+    pmh_allergy: consultRecords?.pmh_allergy ?? false,
+    pmh_admission: consultRecords?.pmh_admission ?? false,
+    pmh_others: consultRecords?.pmh_others ?? false,
+    pmh_others_text: consultRecords?.pmh_others_text ?? undefined,
+
+    // ─── FAMILY HISTORY ───────────────
+    fh_htn: consultRecords?.fh_htn ?? false,
+    fh_dm: consultRecords?.fh_dm ?? false,
+    fh_ba: consultRecords?.fh_ba ?? false,
+    fh_cancer: consultRecords?.fh_cancer ?? false,
+    fh_others: consultRecords?.fh_others ?? false,
+    fh_others_text: consultRecords?.fh_others_text ?? undefined,
+
+    // ─── OB ───────────────────────────
+    ob_score: consultRecords?.ob_score ?? "",
+    ob_nvsd: consultRecords?.ob_nvsd ?? false,
+    ob_cs: consultRecords?.ob_cs ?? false,
+
+    menarche: consultRecords?.menarche ?? "",
+    interval: consultRecords?.interval ?? "",
+    duration: consultRecords?.duration ?? "",
+    amount: consultRecords?.amount ?? "",
+    ob_symptoms: consultRecords?.ob_symptoms ?? "",
+
+    // ─── PERSONAL ─────────────────────
+    cigarette_use: consultRecords?.cigarette_use ?? false,
+    alcohol_use: consultRecords?.alcohol_use ?? false,
+    drug_use: consultRecords?.drug_use ?? false,
+    exercise: consultRecords?.exercise ?? false,
+    hygiene_prac: consultRecords?.hygiene_prac ?? false,
+    coffee_cons: consultRecords?.coffee_cons ?? false,
+    soda_cons: consultRecords?.soda_cons ?? false,
+
+    // ─── SOCIAL ───────────────────────
+    sh_allergy: consultRecords?.sh_allergy ?? false,
+    sh_admission: consultRecords?.sh_admission ?? false,
+
+    travel_history: consultRecords?.travel_history ?? undefined,
+    diet: consultRecords?.diet ?? undefined,
+    stress: consultRecords?.stress ?? undefined,
+    occupation: consultRecords?.occupation ?? undefined,
+
+    // ─── MEDICAL ──────────────────────
+    examination: consultationData.examination ?? undefined,
+    assessment: consultationData.assessment ?? undefined,
+    plans: consultationData.plans ?? undefined,
+
+    // ─── FOLLOW UP ────────────────────
+    follow_up_date: consultationData.follow_up_date ?? undefined,
+  };
+};
+
+export const getDoctorById = async (doctorId: number) => {
+  const doctor = await prisma.users.findUnique({
+    where: { user_id: doctorId },
+  });
+
+  if (!doctor) {
+    throw new Error("Patient not found");
+  }
+
+  return doctor;
+};
+
+export const getConsultationRxById = async (req_id: number) => {
+  const record = await prisma.request.findFirst({
+    where: {
+      req_id,
+    },
+    select: {
+      consult: {
+        include: {
+          consultations: {
+            include: {
+              prescriptions: {
+                include: {
+                  patient: true,
+                  medicines: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!record?.consult?.consultations?.length) {
+    return null;
+  }
+
+  const consultation = record.consult;
+
+  const consultationData = consultation.consultations[0];
+
+  if (!consultationData?.prescriptions?.length) {
+    return null;
+  }
+
+  const prescriptionData = consultationData.prescriptions[0];
+
+  return {
+    patient_id: prescriptionData.patient.patient_id,
+    cons_id: consultation.cons_id,
+    doctor_id: prescriptionData.doctor_id,
+    gen_notes: prescriptionData.gen_notes,
+
+    medicines: prescriptionData.medicines.map((m) => ({
+      medicine_name: m.medicine_name,
+      strength: m.strength,
+      form: m.form,
+      dose: m.dose,
+      frequency: m.frequency,
+      route: m.route,
+      duration: m.duration,
+      quantity: m.quantity,
+      instruction: m.instruction,
+    })),
+  };
+};
+
+export const getMedicalCertificateById = async (req_id: number) => {
+  const record = await prisma.request.findFirst({
+    where: {
+      req_id,
+    },
+    select: {
+      cert: {
+        include: {
+          certificate: {
+            include: {
+              patient: true
+            }
+          }
+        }
+      }
+    },
+  });
+
+  if (!record?.cert?.certificate) {
+    return null;
+  }
+
+  const cert = record.cert;
+  const certificateData = cert.certificate;
+
+  if (!certificateData) {
+    return null;
+  }
+
+  return {
+    mcr_id: certificateData.mcr_id,
+    purpose: certificateData.purpose,
+    impression: certificateData.impression,
+    recommendation: certificateData.recommendation,
+    physician: cert.physician,
+    patient_id: certificateData.patient_id,
+    result_date: certificateData.result_date
+  };
+
+};
