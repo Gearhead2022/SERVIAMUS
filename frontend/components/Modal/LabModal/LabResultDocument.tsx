@@ -21,6 +21,7 @@ import {
 } from "@/utils/lab-templates";
 
 type Props = {
+  displayMode?: "preview" | "print";
   request: LabRequest;
   form: LabResultPayload;
 };
@@ -373,10 +374,11 @@ function UrinalysisDocument({ request, form }: Props) {
   );
 }
 
-function ClinicalChemistryDocument({ request, form }: Props) {
+function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: Props) {
   const fieldNames = resolveClinicalChemistryFieldNames(request);
-  const rows = getClinicalChemistryRows(fieldNames);
+  const rows = getClinicalChemistryRows(displayMode === "print" ? undefined : fieldNames);
   const showMealFields = shouldShowClinicalChemistryMealFields(request);
+  const rowFallback = displayMode === "print" ? "0" : "____";
 
   return (
     <PreviewShell title="CLINICAL CHEMISTRY" form={form}>
@@ -394,10 +396,10 @@ function ClinicalChemistryDocument({ request, form }: Props) {
               className="result-table-row grid grid-cols-[1.45fr_0.85fr_0.85fr] border-t border-slate-200 px-4 py-2.5 text-[12px] leading-4 text-slate-700"
             >
               <span>{row.label}</span>
-              <span>{getValue(form, row.fieldName, "____")}</span>
+              <span>{getValue(form, row.fieldName, rowFallback)}</span>
               <span>
                 {row.conversionFieldName
-                  ? getValue(form, row.conversionFieldName, "____")
+                  ? getValue(form, row.conversionFieldName, rowFallback)
                   : "N/A"}
               </span>
             </div>
@@ -529,17 +531,19 @@ function Hba1cDocument({ request, form }: Props) {
   );
 }
 
-function ChemistryPanelDocument({ request, form }: Props) {
+function ChemistryPanelDocument({ request, form, displayMode = "preview" }: Props) {
   const fieldNames = resolveChemistryPanelFieldNames(request);
+  const rows = getChemistryPanelRows(displayMode === "print" ? undefined : fieldNames);
+  const valueFallback = displayMode === "print" ? "0" : "__________________";
 
   return (
     <PreviewShell title="CHEMISTRY" form={form}>
       <PatientBlock request={request} />
       <Section title="TEST RESULTS">
         <CompactFieldGrid
-          fields={getChemistryPanelRows(fieldNames).map((row) => ({
+          fields={rows.map((row) => ({
             label: row.label,
-            value: getValue(form, row.fieldName),
+            value: getValue(form, row.fieldName, valueFallback),
           }))}
         />
       </Section>
@@ -614,7 +618,11 @@ function GenericDocument({
   );
 }
 
-export default function LabResultDocument({ request, form }: Props) {
+export default function LabResultDocument({
+  request,
+  form,
+  displayMode = "preview",
+}: Props) {
   const template = resolveLabTemplate(request);
 
   if (template.key === "cbc") {
@@ -634,7 +642,7 @@ export default function LabResultDocument({ request, form }: Props) {
   }
 
   if (template.key === "clinical-chemistry-panel") {
-    return <ClinicalChemistryDocument request={request} form={form} />;
+    return <ClinicalChemistryDocument request={request} form={form} displayMode={displayMode} />;
   }
 
   if (template.key === "single-chemistry") {
@@ -658,7 +666,7 @@ export default function LabResultDocument({ request, form }: Props) {
   }
 
   if (template.key === "chemistry-panel") {
-    return <ChemistryPanelDocument request={request} form={form} />;
+    return <ChemistryPanelDocument request={request} form={form} displayMode={displayMode} />;
   }
 
   if (template.key === "ogtt") {

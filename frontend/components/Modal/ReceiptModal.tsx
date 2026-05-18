@@ -1,12 +1,12 @@
 import Button from "@/components/ui/Button";
 import BillingReceiptDocument from "@/components/Modal/BillingReceiptDocument";
 import {
+  BillingReceiptPreviewPayload,
   BillingBreakdownItem,
   BillingRequestType,
   PaymentMethod,
-  PrintableBillingReceiptPayload,
 } from "@/types/BillingTypes";
-import { Printer, X } from "lucide-react";
+import { X } from "lucide-react";
 
 interface ReceiptModalProps {
   billingCode: string;
@@ -23,7 +23,6 @@ interface ReceiptModalProps {
   referenceNo?: string | null;
   paidAt?: string | null;
   onClose: () => void;
-  onPrint?: () => void;
 }
 
 export default function ReceiptModal({
@@ -41,9 +40,8 @@ export default function ReceiptModal({
   referenceNo,
   paidAt,
   onClose,
-  onPrint,
 }: ReceiptModalProps) {
-  const receipt: PrintableBillingReceiptPayload = {
+  const receipt: BillingReceiptPreviewPayload = {
     billingCode,
     patientName,
     patientCode,
@@ -65,13 +63,13 @@ export default function ReceiptModal({
         <div className="flex items-start justify-between gap-4 border-b border-[#dce7e4] bg-white px-6 py-5">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5b7c76]">
-              Billing Receipt Preview
+              Billing Breakdown Preview
             </p>
             <h2 className="font-['DM_Serif_Display'] text-2xl text-[#0f2244]">
-              Payment Receipt
+              Billing Breakdown
             </h2>
             <p className="text-sm text-[#6b7da0]">
-              Cleaner print layout based on the clinic&apos;s existing laboratory document style.
+              Cleaner billing preview using the same structured document style as nearby modules.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -96,17 +94,6 @@ export default function ReceiptModal({
           <Button variant="danger" onClick={onClose} className="flex-1">
             Close
           </Button>
-          {onPrint ? (
-            <Button
-              variant="primary"
-              onClick={onPrint}
-              icon={<Printer size={16} />}
-              iconPosition="left"
-              className="flex-1"
-            >
-              Print Receipt
-            </Button>
-          ) : null}
         </div>
       </div>
     </div>

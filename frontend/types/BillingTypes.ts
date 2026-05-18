@@ -43,7 +43,7 @@ export type BillingRecord = {
   paidAt?: string | null;
 };
 
-export type PrintableBillingReceiptPayload = {
+export type BillingReceiptPreviewPayload = {
   billingCode: string;
   patientName: string;
   patientCode: string;

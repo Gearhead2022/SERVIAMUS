@@ -6,16 +6,13 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import ReceiptModal from "@/components/Modal/ReceiptModal";
-import SweetAlert from "@/utils/SweetAlert";
 import { useForm } from "react-hook-form";
 import { useBillings, useProcessPayment } from "@/hooks/Billing/useBilling";
 import {
   BillingRecord,
   PaymentProps,
-  PrintableBillingReceiptPayload,
 } from "@/types/BillingTypes";
 import { getApiErrorMessage } from "@/utils/api-error";
-import { openBillingReceiptPrintPage } from "@/utils/billing-receipt-print";
 import {
   FileText,
   CheckCircle2,
@@ -36,25 +33,6 @@ type ReceiptPreview = {
 
 const getBillingDisplayStatus = (billing: BillingRecord) =>
   billing.isPaid ? "DONE" : "PENDING";
-
-const buildReceiptPayload = (
-  billing: BillingRecord,
-  receiptPreview: ReceiptPreview
-): PrintableBillingReceiptPayload => ({
-  billingCode: billing.billingCode,
-  patientName: billing.patientName,
-  patientCode: billing.patientCode,
-  requestType: billing.requestType,
-  requestedBy: billing.requestedBy,
-  requestedDate: billing.requestedDate,
-  breakdown: billing.breakdown,
-  subtotal: billing.totalPrice,
-  discount: billing.discount,
-  amountPaid: receiptPreview.amountPaid,
-  paymentMethod: receiptPreview.paymentMethod,
-  referenceNo: receiptPreview.referenceNo ?? null,
-  paidAt: receiptPreview.paidAt,
-});
 
 const BillingDashboard = () => {
   const [search, setSearch] = useState("");
@@ -145,26 +123,6 @@ const BillingDashboard = () => {
       return;
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  const handlePrintReceipt = () => {
-    if (!selectedBilling || !receiptPreview) {
-      return;
-    }
-
-    try {
-      openBillingReceiptPrintPage(
-        buildReceiptPayload(selectedBilling, receiptPreview),
-        { autoPrint: true }
-      );
-    } catch (error) {
-      SweetAlert.errorAlert(
-        "Print Failed",
-        error instanceof Error && error.message.trim()
-          ? error.message
-          : "Unable to open the billing receipt print preview."
-      );
     }
   };
 
@@ -469,7 +427,6 @@ const BillingDashboard = () => {
               referenceNo={receiptPreview.referenceNo}
               paidAt={receiptPreview.paidAt}
               onClose={resetPaymentFlow}
-              onPrint={handlePrintReceipt}
             />
           ) : null}
         </div>
@@ -508,7 +465,7 @@ const BillingDashboard = () => {
                 }}
                 className="flex-1"
               >
-                Show Receipt
+                View Breakdown
               </Button>
             </div>
           </div>

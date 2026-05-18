@@ -1,11 +1,11 @@
 import Image from "next/image";
 import {
+  BillingReceiptPreviewPayload,
   BillingBreakdownItem,
-  PrintableBillingReceiptPayload,
 } from "@/types/BillingTypes";
 
 type Props = {
-  receipt: PrintableBillingReceiptPayload;
+  receipt: BillingReceiptPreviewPayload;
 };
 
 const pesoFormatter = new Intl.NumberFormat("en-PH", {
@@ -58,7 +58,7 @@ const formatPrintableDate = (
   }
 
   return parsedDate.toLocaleString("en-PH", {
-    month: "long",
+    month: "short",
     day: "numeric",
     year: "numeric",
     hour: "numeric",
@@ -66,7 +66,7 @@ const formatPrintableDate = (
   });
 };
 
-function ReceiptField({
+function DetailField({
   label,
   value,
 }: {
@@ -85,8 +85,37 @@ function ReceiptField({
   );
 }
 
+function SummaryRow({
+  label,
+  value,
+  emphasis = false,
+  negative = false,
+}: {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+  negative?: boolean;
+}) {
+  return (
+    <div className={`flex items-center justify-between gap-4 ${emphasis ? "text-[13px]" : "text-[12px]"}`}>
+      <span className={emphasis ? "font-semibold text-slate-700" : "text-slate-500"}>{label}</span>
+      <span
+        className={
+          emphasis
+            ? "font-semibold text-slate-800"
+            : negative
+              ? "font-medium text-rose-600"
+              : "font-medium text-slate-700"
+        }
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 function getReceiptBreakdown(
-  receipt: PrintableBillingReceiptPayload
+  receipt: BillingReceiptPreviewPayload
 ): BillingBreakdownItem[] {
   if (receipt.breakdown.length > 0) {
     return receipt.breakdown;
@@ -95,7 +124,7 @@ function getReceiptBreakdown(
   return [
     {
       lineId: `${receipt.billingCode}-summary`,
-      label: `${receipt.requestType} billing services`,
+      label: `${formatTitleCase(receipt.requestType)} billing services`,
       quantity: 1,
       unitPrice: receipt.subtotal,
       totalPrice: receipt.subtotal,
@@ -109,9 +138,9 @@ export default function BillingReceiptDocument({ receipt }: Props) {
   const totalDue = Math.max(receipt.subtotal - receipt.discount, 0);
 
   return (
-    <div className="mx-auto w-full max-w-[7.4in] rounded-[20px] bg-white p-5 text-sm shadow-xl print:max-w-none print:rounded-none print:p-4 print:shadow-none">
-      <header className="border-b border-slate-300 pb-3">
-        <div className="grid grid-cols-[3.5rem_1fr_3.5rem] items-center gap-4">
+    <div className="mx-auto w-full max-w-[6.8in] rounded-[20px] bg-white p-5 text-sm shadow-xl">
+      <header className="border-b border-slate-300 pb-4">
+        <div className="grid items-center gap-4 sm:grid-cols-[3.5rem_1fr_10rem]">
           <div className="flex justify-center">
             <Image
               src="/images/serviamus.jpeg"
@@ -123,7 +152,7 @@ export default function BillingReceiptDocument({ receipt }: Props) {
               unoptimized
             />
           </div>
-          <div className="min-w-0 text-center">
+          <div className="min-w-0 text-center sm:text-left">
             <h1 className="text-[17px] font-bold uppercase leading-tight text-blue-800">
               SERVIAMUS MEDICAL CLINIC AND LABORATORY, INC.
             </h1>
@@ -132,39 +161,48 @@ export default function BillingReceiptDocument({ receipt }: Props) {
             </p>
             <p className="text-[10px] text-slate-500">Mobile No. (034) 4746678</p>
           </div>
-          <div aria-hidden="true" className="h-14 w-14" />
+          <div className="rounded-2xl border border-slate-300 px-4 py-3 text-center sm:text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#0e7c7b]">
+              Billing Summary
+            </p>
+            <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+              Bill Code
+            </p>
+            <p className="mt-1 text-sm font-bold text-slate-800">{receipt.billingCode}</p>
+          </div>
         </div>
-        <h2 className="mt-3 text-center text-sm font-semibold tracking-[0.28em] text-[#0e7c7b]">
-          PAYMENT RECEIPT
-        </h2>
       </header>
 
-      <section className="mt-4 space-y-3 [break-inside:avoid]">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <ReceiptField label="Receipt No." value={receipt.billingCode} />
-          <ReceiptField
-            label="Payment Date"
-            value={formatPrintableDate(receipt.paidAt, { includeTime: true })}
-          />
-          <ReceiptField
-            label="Payment Method"
-            value={formatTitleCase(receipt.paymentMethod)}
-          />
-          <ReceiptField label="Request Date" value={formatPrintableDate(receipt.requestedDate)} />
+      <section className="mt-4 grid gap-4 sm:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-2xl border border-slate-200 px-4 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
+            Billing Details
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <DetailField label="Patient Name" value={receipt.patientName} />
+            <DetailField label="Patient ID" value={receipt.patientCode} />
+            <DetailField label="Request Type" value={formatTitleCase(receipt.requestType)} />
+            <DetailField label="Requested By" value={receipt.requestedBy || "Clinic"} />
+            <DetailField label="Request Date" value={formatPrintableDate(receipt.requestedDate)} />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <ReceiptField label="Patient Name" value={receipt.patientName} />
-          <ReceiptField label="Patient Code" value={receipt.patientCode} />
-          <ReceiptField label="Request Type" value={formatTitleCase(receipt.requestType)} />
-          <ReceiptField label="Requested By" value={receipt.requestedBy || "Clinic"} />
-          {receipt.referenceNo ? (
-            <ReceiptField label="Reference No." value={receipt.referenceNo} />
-          ) : null}
+        <div className="rounded-2xl border border-slate-200 px-4 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
+            Payment Details
+          </p>
+          <div className="mt-3 grid gap-3">
+            <DetailField
+              label="Paid On"
+              value={formatPrintableDate(receipt.paidAt, { includeTime: true })}
+            />
+            <DetailField label="Method" value={formatTitleCase(receipt.paymentMethod)} />
+            <DetailField label="Reference No." value={receipt.referenceNo || "N/A"} />
+          </div>
         </div>
       </section>
 
-      <section className="mt-4 [break-inside:avoid]">
+      <section className="mt-4">
         <h3 className="border-b border-slate-200 pb-2 text-[10px] font-bold tracking-[0.22em] text-slate-600">
           BILLING BREAKDOWN
         </h3>
@@ -174,9 +212,9 @@ export default function BillingReceiptDocument({ receipt }: Props) {
             <thead>
               <tr className="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
                 <th className="px-4 py-3">Description</th>
-                <th className="px-4 py-3 text-center">Qty</th>
-                <th className="px-4 py-3 text-right">Unit Price</th>
-                <th className="px-4 py-3 text-right">Amount</th>
+                <th className="w-20 px-4 py-3 text-center">Qty</th>
+                <th className="w-28 px-4 py-3 text-right">Unit Price</th>
+                <th className="w-28 px-4 py-3 text-right">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -184,11 +222,12 @@ export default function BillingReceiptDocument({ receipt }: Props) {
                 <tr key={lineItem.lineId} className="border-t border-slate-200 align-top">
                   <td className="px-4 py-3">
                     <p className="font-medium text-slate-800">{lineItem.label}</p>
+                    <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                      {lineItem.source === "lab-test" ? "Laboratory Test" : "Service Item"}
+                    </p>
                   </td>
                   <td className="px-4 py-3 text-center">{lineItem.quantity}</td>
-                  <td className="px-4 py-3 text-right">
-                    {formatCurrency(lineItem.unitPrice)}
-                  </td>
+                  <td className="px-4 py-3 text-right">{formatCurrency(lineItem.unitPrice)}</td>
                   <td className="px-4 py-3 text-right font-semibold text-slate-800">
                     {formatCurrency(lineItem.totalPrice)}
                   </td>
@@ -199,41 +238,27 @@ export default function BillingReceiptDocument({ receipt }: Props) {
         </div>
       </section>
 
-      <section className="mt-4 grid gap-4 [break-inside:avoid] sm:grid-cols-[1fr_16rem]">
+      <section className="mt-4 grid gap-4 sm:grid-cols-[1fr_16rem]">
         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-[12px] leading-5 text-slate-600">
-          This receipt acknowledges payment for the services and laboratory items listed above.
-          Keep this copy for patient reference and cashier reconciliation.
+          This summary reflects the billing details currently recorded for the selected request.
+          Use this preview to review the final amount and posted payment details.
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-          <div className="space-y-2 text-[12px]">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-slate-500">Subtotal</span>
-              <span className="font-medium text-slate-700">
-                {formatCurrency(receipt.subtotal)}
-              </span>
-            </div>
+          <div className="space-y-2">
+            <SummaryRow label="Subtotal" value={formatCurrency(receipt.subtotal)} />
             {receipt.discount > 0 ? (
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500">Discount</span>
-                <span className="font-medium text-rose-600">
-                  -{formatCurrency(receipt.discount)}
-                </span>
-              </div>
+              <SummaryRow
+                label="Discount"
+                value={`-${formatCurrency(receipt.discount)}`}
+                negative
+              />
             ) : null}
-            <div className="flex items-center justify-between gap-4 border-t border-slate-200 pt-2 text-[13px]">
-              <span className="font-semibold text-slate-700">Total Due</span>
-              <span className="font-semibold text-slate-800">
-                {formatCurrency(totalDue)}
-              </span>
+            <div className="border-t border-slate-200 pt-2">
+              <SummaryRow label="Total Due" value={formatCurrency(totalDue)} emphasis />
             </div>
-            <div className="flex items-center justify-between gap-4 border-t border-dashed border-slate-200 pt-2 text-[14px]">
-              <span className="font-bold uppercase tracking-[0.12em] text-[#0f2244]">
-                Amount Paid
-              </span>
-              <span className="font-bold text-[#0f2244]">
-                {formatCurrency(receipt.amountPaid)}
-              </span>
+            <div className="border-t border-slate-200 pt-2">
+              <SummaryRow label="Amount Paid" value={formatCurrency(receipt.amountPaid)} emphasis />
             </div>
           </div>
         </div>
