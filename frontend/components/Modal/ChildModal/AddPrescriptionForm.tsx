@@ -11,8 +11,11 @@ import Textarea from "@/components/ui/Textarea";
 import { useForm, UseFormRegister, useFieldArray, FieldErrors, Controller, Control, FieldArrayWithId } from "react-hook-form";
 import { PrescriptionValues, prescriptionSchema } from "@/schemas/consultation.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useConsultationById, usePrescription } from "@/hooks/Consultation/useConsultation";
-import { PrescriptionProps } from "@/types/ConsultationTypes";
+import { ConsultationProps } from "@/types/ConsultationTypes";
+import { formattedIsoPH } from "@/utils/Date";
+import { normalizePrescriptionDefaults } from "@/utils/consultation/normalizeRxDefaults";
+import { RegisterPayload } from "@/types/AuthTypes";
+import Button from "@/components/ui/Button";
 
 interface MedicineEntry {
     presc_id: string;
@@ -29,9 +32,10 @@ interface MedicineEntry {
 
 interface PrescriptionModalProps {
     patient: PatientProps | undefined;
-    consult_id: number,
+    consult: ConsultationProps | undefined,
     onClose: () => void;
-    doctor?: { id: number; name: string; title?: string; licenseNo?: string; ptrNo?: string };
+    doctor?: RegisterPayload;
+    onPreview: (data: PrescriptionValues) => void;
 }
 
 //   CONSTANTS
@@ -252,267 +256,213 @@ function MedicineCard({
     );
 }
 
-export default function PrescriptionModal({ patient, consult_id, onClose, doctor = { id: 1, name: "Dr. Maria Santos", title: "General Practitioner", licenseNo: "—", ptrNo: "—" },
+export default function PrescriptionModal({ patient, consult, onClose, doctor, onPreview,
 }: PrescriptionModalProps) {
 
-    const { mutateAsync: prescription, isPending } = usePrescription(onClose);
-    const { data: consultationRecord } = useConsultationById(consult_id);
+    const rxDate = formattedIsoPH();
 
-    const rxDate = new Date().toLocaleDateString("en-PH", {
-        month: "long", day: "numeric", year: "numeric",
-    });
-
-    const {
-        register,
-        control,
-        handleSubmit,
-        reset,
-        formState: { errors },
-    } = useForm<PrescriptionValues>({
+    const form = useForm<PrescriptionValues>({
         resolver: zodResolver(prescriptionSchema),
-        defaultValues: {
-            patient_id: patient?.patient_id ?? 0,
-            gen_notes: "",
-            medicines: [EMPTY_MED()],
-            cons_id: 0,
-            doctor_id: doctor.id
-        },
+        defaultValues: normalizePrescriptionDefaults(patient, undefined, consult),
     });
 
-    useEffect(() => {
-        if (!consultationRecord) return;
+    const { control, register, formState: { errors }, } = form;
 
-        reset((prev) => ({
-            ...prev,
-            cons_id: consultationRecord.consultation_id,
-        }));
-    }, [consultationRecord, reset]);
-
-    console.log('error', errors)
+    const medicines = form.watch("medicines");
 
     const { fields, append, remove } = useFieldArray({
         control,
         name: "medicines",
     });
 
-    const onSubmit = async (data: PrescriptionValues) => {
-        const payload: PrescriptionProps = {
-            cons_id: consultationRecord?.consultation_id ?? 0,
-            patient_id: patient?.patient_id ?? data.patient_id,
-            doctor_id: doctor.id,
-            gen_notes: data.gen_notes,
-
-            medicines: data.medicines.map((m) => ({
-                medicine_name: m.medicine_name,
-                strength: m.strength,
-
-                form: m.form,
-                dose: m.dose,
-                frequency: m.frequency,
-                route: m.route,
-                duration: m.duration,
-
-                quantity: m.quantity,
-                instruction: m.instruction,
-            })),
-        };
-
-        await prescription(payload);
+    const handlePreview = () => {
+        const values = form.getValues();
+        onPreview(values);
     };
+
+    const validMedicineCount = medicines.filter(
+        (m) => (m.medicine_name ?? "").trim() !== ""
+    ).length;
 
     return (
         <>
-            <form onSubmit={handleSubmit(onSubmit)}>
-                <div
-                    className="relative flex flex-col bg-white rounded-2xl w-full overflow-hidden font-['DM_Sans']"
-                    style={{
-                        boxShadow: "0 24px 80px rgba(15,34,68,0.28)",
-                    }}
-                >
-                    <div className="flex-shrink-0 flex items-center justify-between px-7 py-3 flex-wrap gap-2"
-                        style={{ background: "#f7f8fc", borderBottom: "1px solid #dce3ef" }}>
-                        <div className="flex items-center gap-4">
-                            <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#8a99b8" }}>Prescribing Physician</p>
-                                <p className="text-sm font-bold" style={{ color: "#0f2244", fontFamily: "'DM Serif Display', serif" }}>{doctor.name}</p>
-                                {doctor.title && <p className="text-[11px]" style={{ color: "#6b7da0" }}>{doctor.title}</p>}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-6 text-right">
-                            {doctor.licenseNo && (
-                                <div>
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#8a99b8" }}>License No.</p>
-                                    <p className="text-[12px] font-semibold" style={{ color: "#1a2a45" }}>{doctor.licenseNo}</p>
-                                </div>
-                            )}
-                            {doctor.ptrNo && (
-                                <div>
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#8a99b8" }}>PTR No.</p>
-                                    <p className="text-[12px] font-semibold" style={{ color: "#1a2a45" }}>{doctor.ptrNo}</p>
-                                </div>
-                            )}
-                            <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#8a99b8" }}>Date</p>
-                                <p className="text-[12px] font-semibold" style={{ color: "#1a2a45" }}>{rxDate}</p>
-                            </div>
+            <div
+                className="relative flex flex-col bg-white rounded-2xl w-full overflow-hidden font-['DM_Sans']"
+                style={{
+                    boxShadow: "0 24px 80px rgba(15,34,68,0.28)",
+                }}
+            >
+                <div className="flex-shrink-0 flex items-center justify-between px-7 py-3 flex-wrap gap-2"
+                    style={{ background: "#f7f8fc", borderBottom: "1px solid #dce3ef" }}>
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#8a99b8" }}>Prescribing Physician</p>
+                            <p className="text-sm font-bold" style={{ color: "#0f2244", fontFamily: "'DM Serif Display', serif" }}>{doctor?.name}</p>
+                            {doctor?.title && <p className="text-[11px]" style={{ color: "#6b7da0" }}>{doctor.title}</p>}
                         </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto px-7 py-6 space-y-4"
-                        style={{ background: "#f4f6fb" }}>
-
-                        {/* Diagnosis note */}
-                        <div
-                            className="bg-white rounded-2xl p-5"
-                            style={{
-                                border: "1.5px solid #dce3ef",
-                                boxShadow: "0 1px 4px rgba(15,34,68,0.05)",
-                            }}
-                        >
-                            <div className="flex items-center gap-2 mb-3">
-                                <div
-                                    className="w-6 h-6 rounded-lg flex items-center justify-center"
-                                    style={{ background: "#eef1f9" }}
-                                >
-                                    <AlertCircle size={12} style={{ color: "#0f2244" }} />
-                                </div>
-
-                                <p
-                                    className="text-[11px] font-bold uppercase tracking-wider"
-                                    style={{ color: "#0f2244" }}
-                                >
-                                    Patient Information
-                                </p>
+                    <div className="flex items-center gap-6 text-right">
+                        {doctor?.license_no && (
+                            <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#8a99b8" }}>License No.</p>
+                                <p className="text-[12px] font-semibold" style={{ color: "#1a2a45" }}>{doctor.license_no}</p>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-3 text-sm">
-                                <div>
-                                    <p className="text-[10px] text-[#8a99b8] uppercase">Name</p>
-                                    <p className="font-semibold text-[#1a2a45]">
-                                        {patient?.name}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p className="text-[10px] text-[#8a99b8] uppercase">Patient Code</p>
-                                    <p className="font-semibold text-[#1a2a45]">
-                                        {patient?.patient_code}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p className="text-[10px] text-[#8a99b8] uppercase">Sex</p>
-                                    <p className="font-semibold text-[#1a2a45]">
-                                        {patient?.sex}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p className="text-[10px] text-[#8a99b8] uppercase">Age</p>
-                                    <p className="font-semibold text-[#1a2a45]">
-                                        {patient?.age}
-                                    </p>
-                                </div>
+                        )}
+                        {doctor?.ptr_no && (
+                            <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#8a99b8" }}>PTR No.</p>
+                                <p className="text-[12px] font-semibold" style={{ color: "#1a2a45" }}>{doctor.ptr_no}</p>
                             </div>
-                        </div>
-
-                        {/* Medicine cards */}
-                        <div className="space-y-3">
-                            {fields.map((field, index) => (
-                                <MedicineCard
-                                    key={field.id}
-                                    register={register}
-                                    control={control}
-                                    index={index}
-                                    errors={errors}
-                                    isOnly={fields.length === 1}
-                                    onRemove={() => remove(index)}
-                                    med={field}
-                                />
-                            ))}
-                        </div>
-
-                        {/* Add medicine button */}
-                        <button
-                            type="button"
-                            onClick={() => append(EMPTY_MED())}
-                            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold transition-all"
-                            style={{
-                                background: "white",
-                                border: "1.5px dashed #c0ccd8",
-                                color: "#6b7da0",
-                            }}
-                            onMouseEnter={(e) => {
-                                (e.currentTarget as HTMLButtonElement).style.borderColor = "#0f2244";
-                                (e.currentTarget as HTMLButtonElement).style.color = "#0f2244";
-                                (e.currentTarget as HTMLButtonElement).style.background = "#eef1f9";
-                            }}
-                            onMouseLeave={(e) => {
-                                (e.currentTarget as HTMLButtonElement).style.borderColor = "#c0ccd8";
-                                (e.currentTarget as HTMLButtonElement).style.color = "#6b7da0";
-                                (e.currentTarget as HTMLButtonElement).style.background = "white";
-                            }}
-                        >
-                            <Plus size={15} />
-                            Add Another Medicine
-                        </button>
-
-                        {/* General notes */}
-                        <div className="bg-white rounded-2xl p-5"
-                            style={{ border: "1.5px solid #dce3ef", boxShadow: "0 1px 4px rgba(15,34,68,0.05)" }}>
-                            <Textarea
-                                label="General Notes / Precautions to Patient"
-                                rows={3}
-                                placeholder="e.g. Avoid driving while on this medication. Complete the full course. Return to clinic if symptoms persist or worsen. Keep out of reach of children."
-                                {...register(`gen_notes`)}
-                                error={errors?.gen_notes?.message}
-                            />
-                        </div>
-
-                        {/* Refill note */}
-                        <div className="rounded-xl px-4 py-3 flex items-center gap-2.5"
-                            style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
-                            <AlertCircle size={13} className="flex-shrink-0" style={{ color: "#d97706" }} />
-                            <p className="text-[11.5px]" style={{ color: "#92400e" }}>
-                                <strong>No Refill</strong> unless a new prescription is issued by the prescribing physician.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex-shrink-0 flex items-center justify-between px-7 py-4 gap-4 flex-wrap"
-                        style={{ borderTop: "1px solid #dce3ef", background: "#f7f8fc" }}>
-
-                        {/* <p className="text-[11px]" style={{ color: "#8a99b8" }}>
-                    {medicines.filter((m) => m.name).length} medicine(s) listed
-                </p> */}
-
-                        <div className="flex items-center gap-2.5">
-                            <button type="button" onClick={onClose}
-                                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                                style={{ color: "#6b7da0", border: "1.5px solid #dce3ef", background: "white" }}
-                                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#0f2244"; (e.currentTarget as HTMLButtonElement).style.color = "#0f2244"; }}
-                                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#dce3ef"; (e.currentTarget as HTMLButtonElement).style.color = "#6b7da0"; }}>
-                                Cancel
-                            </button>
-                            <button type="button"
-                                onClick={() => window.print()}
-                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                                style={{
-                                    background: "#f0f3fa", color: "#0f2244",
-                                    border: "1.5px solid #dce3ef",
-                                }}>
-                                <Printer size={14} /> Print Preview
-                            </button>
-                            <button
-                                type="submit"
-
-                                // disabled={medicines.filter((m) => m.name.trim()).length === 0}
-                                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-red-900 hover:bg-red-700 text-sm font-semibold text-white transition-all">
-                                <Pill size={14} />
-                                Issue Prescription
-                            </button>
+                        )}
+                        <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#8a99b8" }}>Date</p>
+                            <p className="text-[12px] font-semibold" style={{ color: "#1a2a45" }}>{rxDate}</p>
                         </div>
                     </div>
                 </div>
-            </form></>
+                <div className="flex-1 overflow-y-auto px-7 py-6 space-y-4"
+                    style={{ background: "#f4f6fb" }}>
+
+                    {/* Diagnosis note */}
+                    <div
+                        className="bg-white rounded-2xl p-5"
+                        style={{
+                            border: "1.5px solid #dce3ef",
+                            boxShadow: "0 1px 4px rgba(15,34,68,0.05)",
+                        }}
+                    >
+                        <div className="flex items-center gap-2 mb-3">
+                            <div
+                                className="w-6 h-6 rounded-lg flex items-center justify-center"
+                                style={{ background: "#eef1f9" }}
+                            >
+                                <AlertCircle size={12} style={{ color: "#0f2244" }} />
+                            </div>
+
+                            <p
+                                className="text-[11px] font-bold uppercase tracking-wider"
+                                style={{ color: "#0f2244" }}
+                            >
+                                Patient Information
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p className="text-[10px] text-[#8a99b8] uppercase">Name</p>
+                                <p className="font-semibold text-[#1a2a45]">
+                                    {patient?.name}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p className="text-[10px] text-[#8a99b8] uppercase">Patient Code</p>
+                                <p className="font-semibold text-[#1a2a45]">
+                                    {patient?.patient_code}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p className="text-[10px] text-[#8a99b8] uppercase">Sex</p>
+                                <p className="font-semibold text-[#1a2a45]">
+                                    {patient?.sex}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p className="text-[10px] text-[#8a99b8] uppercase">Age</p>
+                                <p className="font-semibold text-[#1a2a45]">
+                                    {patient?.age}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Medicine cards */}
+                    <div className="space-y-3">
+                        {fields.map((field, index) => (
+                            <MedicineCard
+                                key={field.id}
+                                register={register}
+                                control={control}
+                                index={index}
+                                errors={errors}
+                                isOnly={fields.length === 1}
+                                onRemove={() => remove(index)}
+                                med={field}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Add medicine button */}
+                    <button
+                        type="button"
+                        onClick={() => append(EMPTY_MED())}
+                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold transition-all"
+                        style={{
+                            background: "white",
+                            border: "1.5px dashed #c0ccd8",
+                            color: "#6b7da0",
+                        }}
+                        onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.borderColor = "#0f2244";
+                            (e.currentTarget as HTMLButtonElement).style.color = "#0f2244";
+                            (e.currentTarget as HTMLButtonElement).style.background = "#eef1f9";
+                        }}
+                        onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.borderColor = "#c0ccd8";
+                            (e.currentTarget as HTMLButtonElement).style.color = "#6b7da0";
+                            (e.currentTarget as HTMLButtonElement).style.background = "white";
+                        }}
+                    >
+                        <Plus size={15} />
+                        Add Another Medicine
+                    </button>
+
+                    {/* General notes */}
+                    <div className="bg-white rounded-2xl p-5"
+                        style={{ border: "1.5px solid #dce3ef", boxShadow: "0 1px 4px rgba(15,34,68,0.05)" }}>
+                        <Textarea
+                            label="General Notes / Precautions to Patient"
+                            rows={3}
+                            placeholder="e.g. Avoid driving while on this medication. Complete the full course. Return to clinic if symptoms persist or worsen. Keep out of reach of children."
+                            {...register(`gen_notes`)}
+                            error={errors?.gen_notes?.message}
+                        />
+                    </div>
+
+                    {/* Refill note */}
+                    <div className="rounded-xl px-4 py-3 flex items-center gap-2.5"
+                        style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
+                        <AlertCircle size={13} className="flex-shrink-0" style={{ color: "#d97706" }} />
+                        <p className="text-[11.5px]" style={{ color: "#92400e" }}>
+                            <strong>No Refill</strong> unless a new prescription is issued by the prescribing physician.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex-shrink-0 flex items-center justify-between px-7 py-4 gap-4 flex-wrap"
+                    style={{ borderTop: "1px solid #dce3ef", background: "#f7f8fc" }}>
+
+                    <p className="text-[11px]" style={{ color: "#8a99b8" }}>
+                        {medicines.filter((m) => m.medicine_name).length} medicine(s) listed
+                    </p>
+
+                    <div className="flex items-center gap-2.5">
+                        <Button variant="danger" type="button" onClick={onClose}>
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="primary"
+                            onClick={handlePreview}
+                            disabled={validMedicineCount === 0}
+                        >
+                            Preview
+                        </Button>
+                    </div>
+                </div>
+            </div >
+        </>
     );
 }

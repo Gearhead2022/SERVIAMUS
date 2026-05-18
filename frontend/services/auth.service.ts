@@ -14,12 +14,11 @@ export const login = async (
     username,
     password
   }, {
-    withCredentials: true // ✅ REQUIRED
+    withCredentials: true
   });
 
   const user = res.data.data;
 
-  // ✅ ONLY store user (optional)
   localStorage.setItem("user", JSON.stringify(user));
 
   return user;

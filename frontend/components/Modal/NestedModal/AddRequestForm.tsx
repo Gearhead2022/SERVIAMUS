@@ -73,7 +73,6 @@ function VitalsRow<T extends FieldValues>({
   label,
   teal,
   register,
-  errors,
   readonly,
 }: VitalKeyProps<T>) {
   const fields = [
@@ -104,7 +103,7 @@ function VitalsRow<T extends FieldValues>({
               {...register(
                 (prefix ? `${prefix}_${f.name}` : f.name) as Path<T>
               )}
-              placeholder={f.placeholder}
+              placeholder={f.ph}
               className={`w-full text-center text-sm rounded-md px-2 py-2 border outline-none transition ${teal
                 ? "bg-[#e0f4f4] border-[#b0dede] focus:border-[#0e7c7b] focus:shadow-[0_0_0_3px_rgba(14,124,123,0.1)] focus:bg-white"
                 : "bg-[#f0f3fa] border-[#dce3ef] focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white"
@@ -275,58 +274,58 @@ const RequestForm: React.FC<{
       );
     }
   };
-  
-  const testOptions = [
-     {
-    label: "Clinical Chemistry",
-    options: [
-      { label: "Fasting Blood Sugar", value: "FBS" },
-      { label: "Random Blood Sugar", value: "Random Blood Sugar" },
-      { label: "Urea (BUN)", value: "Urea (BUN)" },
-      { label: "Creatinine", value: "Creatinine" },
-      { label: "Uric Acid", value: "Uric Acid" },
-      { label: "Total Cholesterol", value: "Total Cholesterol" },
-      { label: "HDL-Cholesterol", value: "HDL-Cholesterol" },
-      { label: "LDL-Cholesterol", value: "LDL-Cholesterol" },
-      { label: "Triglycerides", value: "Triglycerides" },
-      { label: "50g OGGT", value: "1H-OGTT" },
-      { label: "75g OGGT", value: "2H-OGTT" },
-      { label: "100g OGGT", value: "OGTT" },
-      { label: "SGPT", value: "Serum Glutamic Pyruvic Transaminase" },
-      { label: "Sodium", value: "Sodium" },
-      { label: "Potassium", value: "Potassium" },
-      { label: "HbA1c", value: "HbA1c" }, 
 
-    ],
-  },
-  {
-    label: "Clinical Microscopy",
-    options: [
-      { label: "Urinalysis", value: "Urinalysis" },
-      { label: "Fecalysis", value: "Fecalysis" },
-      { label: "Fecal Occult Blood Test", value: "Fecal Occult Blood Test" },
-    ],
-  },
-  {
-    label: "Serology",
-    options: [
-      { label: "Pregnancy Test (Urine)", value: "Pregnancy Test (Urine)" },
-      { label: "Pregnancy Test (Serum)", value: "Pregnancy Test (Serum)" },
-      { label: "Dengue NS1", value: "Dengue NS1" },
-      { label: "Syphilis", value: "Syphilis" },
-      { label: "Hepatitis B Surface Antigen", value: "Hepatitis B Surface Antigen" },
-    ],
-  },
-   {
-    label: "Hematology  ",
-    options: [
-      { label: "Complete Blood Count with Platelet Count", value: "Complete Blood Count with Platelet Count" },
-      { label: "Blood Typing", value: "Blood Typing" },
-    ],
-  },
+  const testOptions = [
+    {
+      label: "Clinical Chemistry",
+      options: [
+        { label: "Fasting Blood Sugar", value: "FBS" },
+        { label: "Random Blood Sugar", value: "Random Blood Sugar" },
+        { label: "Urea (BUN)", value: "Urea (BUN)" },
+        { label: "Creatinine", value: "Creatinine" },
+        { label: "Uric Acid", value: "Uric Acid" },
+        { label: "Total Cholesterol", value: "Total Cholesterol" },
+        { label: "HDL-Cholesterol", value: "HDL-Cholesterol" },
+        { label: "LDL-Cholesterol", value: "LDL-Cholesterol" },
+        { label: "Triglycerides", value: "Triglycerides" },
+        { label: "50g OGGT", value: "1H-OGTT" },
+        { label: "75g OGGT", value: "2H-OGTT" },
+        { label: "100g OGGT", value: "OGTT" },
+        { label: "SGPT", value: "Serum Glutamic Pyruvic Transaminase" },
+        { label: "Sodium", value: "Sodium" },
+        { label: "Potassium", value: "Potassium" },
+        { label: "HbA1c", value: "HbA1c" },
+
+      ],
+    },
+    {
+      label: "Clinical Microscopy",
+      options: [
+        { label: "Urinalysis", value: "Urinalysis" },
+        { label: "Fecalysis", value: "Fecalysis" },
+        { label: "Fecal Occult Blood Test", value: "Fecal Occult Blood Test" },
+      ],
+    },
+    {
+      label: "Serology",
+      options: [
+        { label: "Pregnancy Test (Urine)", value: "Pregnancy Test (Urine)" },
+        { label: "Pregnancy Test (Serum)", value: "Pregnancy Test (Serum)" },
+        { label: "Dengue NS1", value: "Dengue NS1" },
+        { label: "Syphilis", value: "Syphilis" },
+        { label: "Hepatitis B Surface Antigen", value: "Hepatitis B Surface Antigen" },
+      ],
+    },
+    {
+      label: "Hematology  ",
+      options: [
+        { label: "Complete Blood Count with Platelet Count", value: "Complete Blood Count with Platelet Count" },
+        { label: "Blood Typing", value: "Blood Typing" },
+      ],
+    },
   ];
 
-const flatTestOptions = testOptions.flatMap((group) => group.options);
+  const flatTestOptions = testOptions.flatMap((group) => group.options);
 
 
   const purposeOptions = [
@@ -538,7 +537,7 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
           </div>
 
         )}
-{/* GG Laboratory section */}
+        {/* GG Laboratory section */}
         {reqType === "LABORATORY" ? (
           <div className="space-y-4">
             <div className="col-span-2">
@@ -564,7 +563,7 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
                 control={control}
                 name="test"
                 render={({ field }) => (
-                    <Select<TestOption, true>
+                  <Select<TestOption, true>
                     {...field}
                     options={testOptions}
                     isMulti
@@ -581,9 +580,9 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
                     value={flatTestOptions.filter((option) =>
                       field.value?.includes(option.value)
                     )}
-                  className="mb-5 z-10"  />
+                    className="mb-5 z-10" />
                 )}
-              
+
               />
               <div className="space-y-3 rounded-2xl border border-[#dce3ef] bg-[#f7f8fc] p-4">
                 <div className="flex items-center gap-3">
@@ -633,18 +632,18 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
                   </div>
                 ) : null}
               </div>
-            <Button
-            className="mt-2"
-            type="button"
-            variant="print"
-            // icon={<Printer size={15} />}
-            disabled={isPending}
-            onClick={() => {
-              void handlePrintLabRequest();
-            }}
-            >
-            🖨️ Print Laboratory Request
-            </Button>
+              <Button
+                className="mt-2"
+                type="button"
+                variant="print"
+                // icon={<Printer size={15} />}
+                disabled={isPending}
+                onClick={() => {
+                  void handlePrintLabRequest();
+                }}
+              >
+                🖨️ Print Laboratory Request
+              </Button>
 
               {/* <Input
                 label="Add Other Test (if not in the list)"
@@ -662,8 +661,8 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
               )}
             </div>
           </div>
-        ): 
-        null
+        ) :
+          null
         }
 
         {/* ── CERTIFICATE fields ── */}
@@ -764,7 +763,7 @@ const flatTestOptions = testOptions.flatMap((group) => group.options);
       </form>
     </div >
   );
-  
+
 }
 
 export default RequestForm;

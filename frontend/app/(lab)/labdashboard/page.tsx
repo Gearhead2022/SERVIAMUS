@@ -1129,9 +1129,8 @@ export default function DashboardPage() {
                     setRequestPreviewStatusTab("pending");
                     setShowAllRequestPreviews(false);
                   }}
-                  className={`filter-tab ${
-                    requestPreviewStatusTab === "pending" ? "filter-tab-active" : "filter-tab-inactive"
-                  }`}
+                  className={`filter-tab ${requestPreviewStatusTab === "pending" ? "filter-tab-active" : "filter-tab-inactive"
+                    }`}
                 >
                   Pending Requests ({pendingRequestPreviewCount})
                 </button>
@@ -1141,9 +1140,8 @@ export default function DashboardPage() {
                     setRequestPreviewStatusTab("done");
                     setShowAllRequestPreviews(false);
                   }}
-                  className={`filter-tab ${
-                    requestPreviewStatusTab === "done" ? "filter-tab-active" : "filter-tab-inactive"
-                  }`}
+                  className={`filter-tab ${requestPreviewStatusTab === "done" ? "filter-tab-active" : "filter-tab-inactive"
+                    }`}
                 >
                   Done Requests ({doneRequestPreviewCount})
                 </button>

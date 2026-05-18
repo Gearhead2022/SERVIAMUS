@@ -71,6 +71,7 @@ export const createRequest = async (payload: CreateRequestProps) => {
         ht: payload.ht ?? null,
       },
     });
+
     const consult = await prisma.consultationRequest.create({
       data: {
         req_id: result.req_id,
@@ -186,12 +187,19 @@ export const getRequestData = async (request_id: number) => {
       },
     });
 
+    const prescription = await tx.prescription.findFirst({
+      where: {
+        consultation_id: consultation?.consultation_id,
+      }
+    })
+
     return {
       ...request,
       consult: {
         ...request.consult,
         consultation,
       },
+      prescription
     };
   });
 };

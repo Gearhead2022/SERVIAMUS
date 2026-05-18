@@ -71,8 +71,9 @@ export const patientConsultationSchema = z.object({
   follow_up_date: z.string().optional(),
 });
 
+export type RegisterConsultationFormValues = z.infer<typeof patientConsultationSchema>;
+
 export const medicineSchema = z.object({
-  presc_id: z.string(),
 
   medicine_name: z
     .string()
@@ -130,3 +131,15 @@ export const prescriptionSchema = z.object({
 });
 
 export type PrescriptionValues = z.infer<typeof prescriptionSchema>;
+
+export const medCertSchema = z.object({
+  mcr_id: z.number(),
+  purpose: z.string().min(1, "Purpose is required"),
+  impression: z.string().optional(),
+  recommendation: z.string().optional(),
+  physician: z.number(),
+  patient_id: z.number(),
+  result_date: z.string().min(1, "Date is required"),
+});
+
+export type MedCertFormValues = z.infer<typeof medCertSchema>;

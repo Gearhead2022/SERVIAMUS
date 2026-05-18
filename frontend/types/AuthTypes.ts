@@ -17,6 +17,7 @@ export interface AuthUser {
 }
 
 export interface RegisterPayload {
+  user_id?: number;
   name: string;
   username: string;
   password: string;

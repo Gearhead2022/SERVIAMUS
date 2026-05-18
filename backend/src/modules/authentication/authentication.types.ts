@@ -1,4 +1,5 @@
 export interface iRegister {
+  user_id?: number;
   name: string;
   username: string;
   password: string;

@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
-import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getLabRequestByName, getPatientPrescription, getRequestsPerWeekday, getStatistics, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
+import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getConsultationResultById, getConsultationRxById, getDoctorById, getLabRequestByName, getMedicalCertificateById, getPatientPrescription, getRequestsPerWeekday, getStatistics, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
 import { RequestStatus, RequestType } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
 import { getIO } from "../../socket";
-type NonLaboratoryRequestType = Exclude<RequestType, "LABORATORY">
+import { createNotification } from "../notification/notification.services";
+
+type NonLaboratoryRequestType = Exclude<RequestType, "LABORATORY">;
 
 export const createConsultationResultController = async (req: Request, res: Response) => {
   try {
@@ -17,11 +19,19 @@ export const createConsultationResultController = async (req: Request, res: Resp
     });
 
     const userIds = users.map(u => u.physician);
+
+    // await createNotification({
+    //   userIds,
+    //   type: "NEW_REQUEST",
+    //   title: "New Request",
+    //   message: `New ${request.result.req_type} request created`,
+    //   entity: "request",
+    //   entity_id: request.result.req_id,
+    // });
+
     const io = getIO();
 
-    io.to(`user_${userIds}`).emit("consultation:created", {
-      id: consult.cons_id,
-    });
+    io.to("role_DOCTOR").emit("consultation:updated");
 
     return res.status(201).json({
       success: true,
@@ -408,6 +418,77 @@ export const getLabRequestByNameController = async (req: Request, res: Response)
     res.json(data);
   } catch (err: any) {
     console.error("CONTROLLER ERROR:", err);
+    res.status(500).json({
+      message: err.message,
+      code: err.code,
+      meta: err.meta
+    });
+  }
+};
+
+export const getConsultationResultByIdController = async (req: Request, res: Response) => {
+  const cons_id = Number(req.params.id);
+
+  try {
+    const data = await getConsultationResultById(cons_id);
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({
+      message: err.message,
+      code: err.code,
+      meta: err.meta
+    });
+  }
+};
+
+export const getDoctorByIdController = async (req: Request, res: Response) => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const doctorId = parseInt(id, 10);
+
+    if (isNaN(doctorId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid patient ID",
+      });
+    }
+
+    const doctor = await getDoctorById(doctorId);
+
+    return res.status(200).json({
+      success: true,
+      data: doctor,
+    });
+  } catch (error: any) {
+    return res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getConsultationRxByIdController = async (req: Request, res: Response) => {
+  const req_id = Number(req.params.id);
+
+  try {
+    const data = await getConsultationRxById(req_id);
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({
+      message: err.message,
+      code: err.code,
+      meta: err.meta
+    });
+  }
+};
+
+export const getMedicalCertificateByIdController = async (req: Request, res: Response) => {
+  const req_id = Number(req.params.id);
+  try {
+    const data = await getMedicalCertificateById(req_id);
+    console.log('from backend', data)
+    res.json(data);
+  } catch (err: any) {
     res.status(500).json({
       message: err.message,
       code: err.code,

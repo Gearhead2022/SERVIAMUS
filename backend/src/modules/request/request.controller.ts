@@ -54,6 +54,8 @@ export const createRequestController = async (req: Request, res: Response) => {
       entity_id: request.result.req_id,
     });
 
+    console.log(request)
+
     const io = getIO();
 
     io.to([...labUpdateRooms]).emit("request:updated");

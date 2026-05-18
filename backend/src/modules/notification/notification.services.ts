@@ -111,10 +111,10 @@ export const resolveNotificationUsers = async (request: any): Promise<number | n
             }
             return request.consult.physician;
         case "CERTIFICATE":
-            if (!request.cert?.physician) {
+            if (!request?.med) {
                 throw new Error("No physician assigned");
             }
-            return request.cert.physician;
+            return request.med?.physician;
 
         default:
             return resolveUsersByRoleNames(["LAB", "LABORATORY"]);

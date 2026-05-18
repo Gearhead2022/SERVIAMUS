@@ -44,3 +44,33 @@ export const formattedIsoTimePH = () => {
     }).format(date);
 };
 
+export const formattedCurrentDate = () => {
+    const date = new Date();
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: TIMEZONE,
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+    }).format(date);
+};
+
+export const formatDate = (
+    value?: string | Date,
+    options?: Intl.DateTimeFormatOptions
+) => {
+    if (!value) return "";
+
+    const date = value instanceof Date ? value : new Date(value);
+
+    if (isNaN(date.getTime())) {
+        return "";
+    }
+
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: TIMEZONE,
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        ...options,
+    }).format(date);
+};

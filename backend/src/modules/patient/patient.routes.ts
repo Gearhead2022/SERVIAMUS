@@ -13,13 +13,14 @@ router.post(
 );
 
 router.get(
-  "/:id",
+  "/:id/patientInfo",
   getPatientByIdController
 );
 
 router.put(
-  "/:id",
+  "/:id/patientUpdate",
   updatePatientController
 );
+
 
 export default router;

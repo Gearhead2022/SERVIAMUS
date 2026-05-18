@@ -27,75 +27,56 @@ const ENTITY_QUERY_MAP: Record<EntityType, ReadonlyArray<readonly string[]>> = {
 };
 
 export default function useSocket(onNotification?: NotificationHandler) {
-  const queryClient = useQueryClient();
-  const { isAuthenticated, isAuthReady } = useAuth();
+    const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!isAuthReady || !isAuthenticated) {
-      return;
-    }
+    useEffect(() => {
+        const socket = createSocket();
 
-    const socket = createSocket();
-    const invalidateQueryKeys = (queryKeys: ReadonlyArray<readonly string[]>) => {
-      queryKeys.forEach((queryKey) => {
-        queryClient.invalidateQueries({ queryKey });
-      });
-    };
+        const handleNotification = (data: NotificationData) => {
+            // 1. Always refresh notification list
+            queryClient.invalidateQueries({ queryKey: ["notifications"] });
 
-    const handleNotification = (data: NotificationData) => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+            // 2. Smart invalidation based on entity
+            if (data.entity && ENTITY_QUERY_MAP[data.entity]) {
+                ENTITY_QUERY_MAP[data.entity].forEach((key) => {
+                    queryClient.invalidateQueries({ queryKey: [key] });
+                });
+            }
 
-      if (data.entity && ENTITY_QUERY_MAP[data.entity]) {
-        invalidateQueryKeys(ENTITY_QUERY_MAP[data.entity]);
-      }
+            // 3. Toast
+            if (typeof data.message === "string") {
+                AppToast.success(data.message);
+            }
 
-      if (typeof data.message === "string") {
-        AppToast.success(data.message);
-      }
+            // 4. External handler (optional)
+            onNotification?.(data);
+        };
 
-      onNotification?.(data);
-    };
+        socket.on("connect", () => {
+            console.log("Connected:", socket.id);
+        });
 
-    const handleRequestUpdated = () => {
-      invalidateQueryKeys([["request"], ["lab"], ["queue"], ["billing"], ["labRequests"]]);
-    };
+        socket.on("request:updated", () => {
+            // console.log("request:updated RECEIVED");
+            queryClient.invalidateQueries({ queryKey: ["labRequests"] });
+        });
 
-    const handleLabUpdated = () => {
-      invalidateQueryKeys([["lab"], ["queue"]]);
-    };
+        socket.on("consultation:updated", () => {
+            // console.log("request:updated RECEIVED");
+            queryClient.invalidateQueries({ queryKey: ["consultation-print"] });
+        });
 
-    const handleBillingUpdated = () => {
-      invalidateQueryKeys([["billing"], ["lab"]]);
-    };
+        // Single source of truth event
+        socket.on("notification", handleNotification);
 
-    const handleConsultationCreated = () => {
-      invalidateQueryKeys([["consultation"]]);
-    };
+        socket.on("connect_error", (err) => {
+            console.log("Socket error:", err.message);
+        });
 
-    const handleConnectError = (err: Error) => {
-      console.log("Socket error:", err.message);
-    };
-
-    socket.on("connect", () => {
-      console.log("Connected:", socket.id);
-    });
-
-    socket.on("request:updated", handleRequestUpdated);
-    socket.on("lab:updated", handleLabUpdated);
-    socket.on("billing:updated", handleBillingUpdated);
-    socket.on("consultation:created", handleConsultationCreated);
-    socket.on("notification", handleNotification);
-    socket.on("connect_error", handleConnectError);
-    socket.connect();
-
-    return () => {
-      socket.off("request:updated", handleRequestUpdated);
-      socket.off("lab:updated", handleLabUpdated);
-      socket.off("billing:updated", handleBillingUpdated);
-      socket.off("consultation:created", handleConsultationCreated);
-      socket.off("notification", handleNotification);
-      socket.off("connect_error", handleConnectError);
-      socket.disconnect();
-    };
-  }, [isAuthenticated, isAuthReady, onNotification, queryClient]);
+        return () => {
+            socket.off("request:updated");
+            socket.off("notification", handleNotification);
+            socket.disconnect();
+        };
+    }, []);
 }

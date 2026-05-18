@@ -7,6 +7,7 @@ import { ReactNode, useMemo } from "react";
 export default function ReactQueryProvider({ children }: { children: ReactNode }) {
   const queryClient = useMemo(() => new QueryClient(), []);
 
-  return <QueryClientProvider client={queryClient}>{children}
-    <ReactQueryDevtools initialIsOpen={false} /></QueryClientProvider>;
+  // return <QueryClientProvider client={queryClient}>{children}
+  //   <ReactQueryDevtools initialIsOpen={false} /></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

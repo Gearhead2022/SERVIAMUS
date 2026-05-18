@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createConsultationResultController, createMedCertResultController, createPrescriptionController, getAllPatientConsultationController, getAllPatientMedCertController, getAllPatientRequestController, getConsultationRecordByIdController, getConsultationRecordHistoryController, getLabRequestByNameController, getMedicalCertificateRecordHistoryController, getPatientPrescriptionController, getPatientRecordController, getPrescriptionByRequestController, getPrescriptionRecordHistoryController, getStatisticsController, getWeeklyTallyController, updateRequestStatusController } from "./consultation.controller";
+import { createConsultationResultController, createMedCertResultController, createPrescriptionController, getAllPatientConsultationController, getAllPatientMedCertController, getAllPatientRequestController, getConsultationRecordByIdController, getConsultationRecordHistoryController, getConsultationResultByIdController, getConsultationRxByIdController, getDoctorByIdController, getLabRequestByNameController, getMedicalCertificateByIdController, getMedicalCertificateRecordHistoryController, getPatientPrescriptionController, getPatientRecordController, getPrescriptionByRequestController, getPrescriptionRecordHistoryController, getStatisticsController, getWeeklyTallyController, updateRequestStatusController } from "./consultation.controller";
 
 const router = Router();
 
@@ -101,6 +101,26 @@ router.get(
   getLabRequestByNameController
 );
 
+
+router.get(
+  "/:id/getConsultationRecordByIdz",
+  getConsultationResultByIdController
+)
+
+router.get(
+  "/:id/getDoctorById",
+  getDoctorByIdController
+)
+
+router.get(
+  "/:id/getConsultationRxById",
+  getConsultationRxByIdController
+)
+
+router.get(
+  "/:id/getMedicalCertificateById",
+  getMedicalCertificateByIdController
+)
 
 
 export default router;

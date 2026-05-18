@@ -32,31 +32,31 @@ const testRows: TestRow[] = [
     label: "FBS (Fasting Blood Sugar)",
     name: "FBS",
     convName: "FBS_conv",
-    calculateConversion: (value) => Math.round(Math.abs(value * 0.055)*100)/100,
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.055) * 100) / 100,
   },
   {
     label: "RBS (Random Blood Sugar)",
     name: "RBS",
     convName: "RBS_conv",
-    calculateConversion: (value) => Math.round(Math.abs(value * 0.055)*100)/100,
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.055) * 100) / 100,
   },
   {
     label: "BUN (Blood Urea Nitrogen)",
     name: "BUN",
     convName: "BUN_conv",
-    calculateConversion: (value) => Math.round(Math.abs(value * 0.357)*100)/100,
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.357) * 100) / 100,
   },
   {
     label: "Creatinine",
     name: "creatinine",
     convName: "creatinine_conv",
-    calculateConversion: (value) => Math.round(Math.abs(value * 88.4)*100)/100,
+    calculateConversion: (value) => Math.round(Math.abs(value * 88.4) * 100) / 100,
   },
   {
     label: "Uric Acid",
     name: "uric_acid",
     convName: "uric_acid_conv",
-    calculateConversion: (value) => Math.round(Math.abs(value * 0.059)*100)/100,
+    calculateConversion: (value) => Math.round(Math.abs(value * 0.059) * 100) / 100,
   },
   {
     label: "Total Cholesterol",
@@ -124,7 +124,7 @@ export default function ClinicalChemistryModal({
     (row) => row.name === "FBS" || row.name === "RBS"
   );
   const {
-    control, 
+    control,
     register,
     handleSubmit,
     getValues,
@@ -201,7 +201,7 @@ export default function ClinicalChemistryModal({
                   tabIndex={-1}
                   {...register(row.convName, { valueAsNumber: true })}
                   error={errors[row.convName]?.message}
-                />  
+                />
               ) : (
                 <div />
               )}

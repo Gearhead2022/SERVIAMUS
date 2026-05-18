@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createPatient, fetchAllPatient, updatePatient } from "@/services/patient.services";
+import { createPatient, fetchAllPatient, fetchPatientById, updatePatient } from "@/services/patient.services";
 import SweetAlert from "@/utils/SweetAlert";
 import { getApiErrorMessage } from "@/utils/api-error";
 import { VitalSignProps } from "@/types/RequestTypes";
@@ -111,7 +111,15 @@ export const useUpdatePatient = (closeModal: () => void) => {
 };
 export const useGetAllUsers = () => {
   return useQuery<UsersProps[]>({
-    queryKey: ["users"],
+    queryKey: ["patient"],
     queryFn: getAllRegisteredUsers,
+  });
+};
+
+export const useGetPatientById = (patientId: number) => {
+  return useQuery<PatientProps>({
+    queryKey: ["patient", patientId],
+    queryFn: () => fetchPatientById(patientId),
+    enabled: !!patientId,
   });
 };

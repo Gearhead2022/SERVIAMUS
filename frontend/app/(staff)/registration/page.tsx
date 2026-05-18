@@ -18,6 +18,7 @@ import ViewConsultationModal from "@/components/Modal/NestedModal/ViewConsultati
 import { ConsultationResultProps } from "@/types/ConsultationTypes";
 import EditPatientForm from "@/components/Modal/ChildModal/EditPatientForm";
 import { getApiErrorMessage } from "@/utils/api-error";
+import ViewPatientProfile from "@/components/Modal/ChildModal/ViewPatientProfile";
 
 const RegistrationPage = () => {
   const [selectedPatient, setSelectedPatient] = useState<PatientProps | null>(null);
@@ -106,6 +107,14 @@ const RegistrationPage = () => {
         )}
 
         {/* â”€â”€ Page â”€â”€ */}
+
+        {selectedPatient && activeAction == 'profile' && (
+          <ModalHeader showModal={true} title={`${modalTitle}  — ${selectedPatient?.name}`} subtitle="" sizeModal="large" onClose={closeNested}>
+            <ViewPatientProfile patient={selectedPatient} onClose={closeNested}></ViewPatientProfile>
+          </ModalHeader >
+        )}
+
+        {/* ── Page ── */}
         <div
           className="min-h-screen font-['DM_Sans']"
           style={{
@@ -283,6 +292,23 @@ const RegistrationPage = () => {
           </ModalHeader>
         )}
       </RoleGuard>
+
+
+        {/* ── Edit Patient Modal ── */}
+        {
+          selectedPatient && activeAction === 'edit' && (
+            <ModalHeader
+              showModal={true}
+              title="Edit Patient"
+              subtitle="Update patient information"
+              sizeModal="medium"
+              onClose={closeNested}
+            >
+              <EditPatientForm patient={selectedPatient} onClose={closeAll} />
+            </ModalHeader>
+          )
+        }
+      </RoleGuard >
     </>
   );
 };
