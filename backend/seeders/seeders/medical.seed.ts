@@ -32,6 +32,7 @@ export async function seedMedicalCertificateRequest(prisma: PrismaClient) {
             data: {
                 req_id: requests[i].req_id,
                 physician: medTech.user_id,
+                purpose: 'Medical ASsistance',
             },
         });
 

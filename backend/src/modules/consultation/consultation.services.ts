@@ -5,9 +5,11 @@ import { QueueStatus, RequestStatus, RequestType } from "@prisma/client";
 import { mapRequestToQueueStatus } from "./consultation.helper";
 import { Prisma } from "@prisma/client";
 import { hasQueueTable } from "../queue/queue.services";
+import { ensureLabBillingForRequest } from "./consultation.helper";
 /**
  * CONSULTATION RECORDS
  */
+
 export const createConsultationResult = async (
   payload: PatientConsultationRecordsPayload
 ) => {
@@ -239,6 +241,11 @@ export const requestAction = async (
           ...(status === "DONE" && { completed_at: new Date() }),
         },
       });
+    }
+
+    if (status === 'DONE') {
+      const billing = await ensureLabBillingForRequest(tx, requestId, new Date());
+      if (!billing) throw new Error("Billing failed");
     }
 
     return updated;

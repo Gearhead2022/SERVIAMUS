@@ -8,10 +8,11 @@ import {
   createPayment,
   updateBillingStatus,
   getAllBillings,
-  payBilling,       
+  payBilling,
 } from "./billing.services";
 import { getIO } from "../../socket";
 import { createNotification, resolveUsersByRoleNames } from "../notification/notification.services";
+import { BillingFilter } from "./billing.types";
 
 const billingUpdateRooms = [
   "role_ADMIN",
@@ -217,7 +218,21 @@ export const updateBillingStatusController = async (req: Request, res: Response)
 };
 export const getAllBillingsController = async (req: Request, res: Response) => {
   try {
-    const billings = await getAllBillings();
+    const search =
+      typeof req.query.search === "string" && req.query.search.trim() !== ""
+        ? req.query.search.trim()
+        : undefined;
+
+    const status =
+      typeof req.query.status === "string" && req.query.status !== ""
+        ? req.query.status
+        : undefined;
+
+    const billings = await getAllBillings(
+      search,
+      status as BillingFilter
+    );
+
     return res.status(200).json({
       success: true,
       data: billings,
