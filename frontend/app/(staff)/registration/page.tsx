@@ -291,7 +291,6 @@ const RegistrationPage = () => {
             <EditPatientForm patient={selectedPatient} onClose={closeAll} />
           </ModalHeader>
         )}
-      </RoleGuard>
 
 
         {/* ── Edit Patient Modal ── */}

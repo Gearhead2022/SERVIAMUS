@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { FileSearch, Printer, Search, Users } from "lucide-react";
+import { FileSearch, Search, Users } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import PatientCard from "@/components/PatientCard";
 import PatientLabRecordsModal from "@/components/Modal/LabModal/PatientLabRecordsModal";
-import LabResultPreview from "@/components/Modal/LabModal/LabResultPreview";
+import LabResultPreviewModal from "@/components/Modal/LabModal/LabResultPreviewModal";
 import ModalHeader from "@/components/Modal/ModalHeader";
 import RoleGuard from "@/guards/RoleGuard";
 import { useLabPatientDirectory } from "@/hooks/Lab/useLab";
 import { LabRequest, PatientRecord } from "@/types/LabTypes";
-import { openLabPrintPage } from "@/utils/lab-print";
 
 export default function LabRecordsPage() {
   const [selectedPatient, setSelectedPatient] = useState<PatientRecord | null>(null);
@@ -40,7 +39,6 @@ export default function LabRecordsPage() {
           min-height: 100vh;
         }
 
-        /* ── Page Header ── */
         .page-header {
           background: #ffffff;
           border-bottom: 1px solid #e2eaf2;
@@ -66,7 +64,6 @@ export default function LabRecordsPage() {
           margin-top: 2px;
         }
 
-        /* ── Search Bar ── */
         .search-wrapper {
           position: relative;
           flex: 1;
@@ -101,7 +98,6 @@ export default function LabRecordsPage() {
           box-shadow: 0 0 0 3px rgba(37,99,168,0.10);
         }
 
-        /* ── Stat Card ── */
         .stat-card {
           background: #ffffff;
           border-radius: 16px;
@@ -115,7 +111,9 @@ export default function LabRecordsPage() {
         .stat-card::before {
           content: '';
           position: absolute;
-          top: 0; left: 0; right: 0;
+          top: 0;
+          left: 0;
+          right: 0;
           height: 3px;
           background: linear-gradient(90deg, #1e4d8c, #2a9d8f);
           border-radius: 16px 16px 0 0;
@@ -151,7 +149,6 @@ export default function LabRecordsPage() {
           flex-shrink: 0;
         }
 
-        /* ── Section header ── */
         .section-header {
           display: flex;
           align-items: center;
@@ -173,7 +170,6 @@ export default function LabRecordsPage() {
           color: #2563a8;
         }
 
-        /* ── Skeleton shimmer ── */
         .skeleton-card {
           height: 176px;
           border-radius: 16px;
@@ -186,7 +182,6 @@ export default function LabRecordsPage() {
           100% { background-position: -200% 0; }
         }
 
-        /* ── Empty state ── */
         .empty-state {
           border: 1.5px dashed #c8d8e8;
           border-radius: 16px;
@@ -215,7 +210,6 @@ export default function LabRecordsPage() {
           color: #8fa4bc;
         }
 
-        /* ── Error state ── */
         .error-state {
           border: 1px solid #fad2d2;
           border-radius: 16px;
@@ -226,7 +220,6 @@ export default function LabRecordsPage() {
           color: #8a4040;
         }
 
-        /* ── Search hint ── */
         .search-hint {
           font-size: 12px;
           color: #7a8fa8;
@@ -241,8 +234,8 @@ export default function LabRecordsPage() {
       {selectedPatient ? (
         <ModalHeader
           showModal={true}
-          title={`Laboratory Records — ${selectedPatient.name}`}
-          subtitle="Review encoded laboratory results by category, date, and patient request."
+          title={`Laboratory Records - ${selectedPatient.name}`}
+          subtitle="Review released and pending laboratory records for this patient."
           meta={selectedPatient.patient_code}
           sizeModal="2xlarge"
           onClose={closeRecordsModal}
@@ -255,37 +248,14 @@ export default function LabRecordsPage() {
       ) : null}
 
       {activeRecord?.resultPayload ? (
-        <ModalHeader
-          showModal={true}
-          title={`Laboratory Result Preview — ${activeRecord.patientName}`}
-          subtitle={activeRecord.testType}
-          meta={`${activeRecord.id} - ${activeRecord.patientId}`}
-          sizeModal="2xlarge"
+        <LabResultPreviewModal
+          backLabel="Back to Records"
           onClose={closePreviewModal}
-        >
-          <LabResultPreview
-            request={activeRecord}
-            form={activeRecord.resultPayload}
-            backLabel="Back to Records"
-            showPassToDoctor={false}
-            onBack={closePreviewModal}
-            onDownloadPdf={() =>
-              openLabPrintPage(activeRecord.labId, {
-                autoDownload: true,
-              })
-            }
-            onOpenPrintPage={() =>
-              openLabPrintPage(activeRecord.labId, {
-                autoPrint: true,
-              })
-            }
-          />
-        </ModalHeader>
+          record={activeRecord}
+        />
       ) : null}
 
       <div className="records-page">
-
-        {/* ── Page Header ── */}
         <div className="page-header">
           <div className="mx-auto max-w-7xl">
             <p className="page-eyebrow">Laboratory Management</p>
@@ -293,30 +263,26 @@ export default function LabRecordsPage() {
           </div>
         </div>
 
-        {/* ── Controls Row ── */}
         <div className="mx-auto max-w-7xl px-6 py-6">
           <div className="grid gap-4 xl:grid-cols-[1fr_auto]">
-
-            {/* Search + hint */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="search-wrapper">
                 <Search size={15} className="search-icon" />
                 <input
                   type="text"
-                  placeholder="Search by name, address, or patient ID…"
+                  placeholder="Search by name, address, or patient ID..."
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   className="search-input"
                 />
               </div>
-              {hasSearch && (
+              {hasSearch ? (
                 <span className="search-hint">
                   Results for &ldquo;{debouncedSearch}&rdquo;
                 </span>
-              )}
+              ) : null}
             </div>
 
-            {/* Stat card */}
             <div className="stat-card" style={{ minWidth: 180 }}>
               <div className="flex items-start justify-between">
                 <p className="stat-label">Visible Patients</p>
@@ -326,7 +292,7 @@ export default function LabRecordsPage() {
               </div>
               <p className="stat-value">
                 {isLoading ? (
-                  <span style={{ fontSize: 28, color: "#a0b0c4" }}>—</span>
+                  <span style={{ fontSize: 28, color: "#a0b0c4" }}>-</span>
                 ) : (
                   patients.length
                 )}
@@ -335,15 +301,14 @@ export default function LabRecordsPage() {
           </div>
         </div>
 
-        {/* ── Patient Grid ── */}
         <div className="mx-auto max-w-7xl px-6 pb-12">
           <div className="section-header">
             <h2 className="section-title">Patient Cards</h2>
-            {!isLoading && !error && patients.length > 0 && (
+            {!isLoading && !error && patients.length > 0 ? (
               <span className="results-count-pill">
                 {patients.length} {patients.length === 1 ? "patient" : "patients"}
               </span>
-            )}
+            ) : null}
           </div>
 
           {isLoading ? (

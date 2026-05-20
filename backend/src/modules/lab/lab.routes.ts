@@ -39,7 +39,7 @@ router.get(
 );
 router.get(
   "/patients/:patientId/records",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "STAFF"]),
   getPatientLabRecordsController
 );
 router.post("/requests", authorize(["ADMIN", "DOCTOR"]), createLabRequestController);
