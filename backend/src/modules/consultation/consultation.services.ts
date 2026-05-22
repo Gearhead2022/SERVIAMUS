@@ -5,10 +5,23 @@ import { QueueStatus, RequestStatus, RequestType } from "@prisma/client";
 import { mapRequestToQueueStatus } from "./consultation.helper";
 import { Prisma } from "@prisma/client";
 import { hasQueueTable } from "../queue/queue.services";
-import { ensureLabBillingForRequest } from "./consultation.helper";
+import { ensureBillingForRequest } from "./consultation.helper";
+import { getIO } from "../../socket";
+import { resolveNotificationUsers } from "../notification/notification.services";
+import { Status } from "../request/request.types";
 /**
  * CONSULTATION RECORDS
  */
+
+type ModifRequestTypes = Exclude<RequestType, 'LABORATORY'>;
+
+const requestUpdateRooms = [
+  "role_ADMIN",
+  "role_CASHIER",
+  "role_LAB",
+  "role_LABORATORY",
+  "role_STAFF",
+] as const;
 
 export const createConsultationResult = async (
   payload: PatientConsultationRecordsPayload
@@ -136,74 +149,216 @@ export const createConsultationResult = async (
   });
 };
 
-export const getAllRequests = async (search?: string, req_types?: RequestType[]) => {
-  const today = new Date();
-  const startOfDay = new Date(today);
-  startOfDay.setHours(0, 0, 0, 0);
+export const getAllRequests = async (
+  page: number = 1,
+  limit: number = 10,
+  search?: string,
+  status?: string,
+  req_type?: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string
+) => {
 
-  const endOfDay = new Date(today);
-  endOfDay.setHours(23, 59, 59, 999);
+  const where: Prisma.RequestWhereInput = {};
 
-  return prisma.request.findMany({
-    where: {
-      req_date: {
-        gte: startOfDay,
-        lte: endOfDay,
+  // SEARCH
+  if (search?.trim()) {
+    where.OR = [
+      {
+        patient: {
+          name: {
+            contains: search,
+          },
+        },
       },
+      {
+        request_code: {
+          contains: search,
+        },
+      },
+    ];
+  }
 
-      ...(search && {
-        OR: [
-          {
-            patient: {
-              name: {
-                contains: search,
+  if (status && status !== "ALL") {
+    where.status = status as Status;
+  }
+
+  if (req_type && req_type !== "ALL") {
+    where.req_type = req_type as ModifRequestTypes;
+  }
+
+  // DATE FILTER
+  if (dateFrom || dateTo) {
+
+    where.req_date = {};
+
+    if (dateFrom) {
+      where.req_date.gte =
+        new Date(dateFrom);
+    }
+
+    if (dateTo) {
+
+      const endDate =
+        new Date(dateTo);
+
+      endDate.setHours(
+        23,
+        59,
+        59,
+        999
+      );
+
+      where.req_date.lte =
+        endDate;
+    }
+
+  } else {
+
+    // DEFAULT TODAY FILTER
+    const today = new Date();
+
+    const startOfDay =
+      new Date(today);
+
+    startOfDay.setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+    const endOfDay =
+      new Date(today);
+
+    endOfDay.setHours(
+      23,
+      59,
+      59,
+      999
+    );
+
+    where.req_date = {
+      gte: startOfDay,
+      lte: endOfDay,
+    };
+  }
+
+  // SORTING
+  let orderBy:
+    Prisma.RequestOrderByWithRelationInput =
+  {
+    req_date: "desc",
+  };
+
+  switch (sort) {
+
+    case "date_asc":
+      orderBy = {
+        req_date: "asc",
+      };
+      break;
+
+    case "date_desc":
+      orderBy = {
+        req_date: "desc",
+      };
+      break;
+
+    case "patient_asc":
+      orderBy = {
+        patient: {
+          name: "asc",
+        },
+      };
+      break;
+
+    case "patient_desc":
+      orderBy = {
+        patient: {
+          name: "desc",
+        },
+      };
+      break;
+  }
+
+  const requests =
+    await prisma.request.findMany({
+
+      where,
+
+      skip:
+        (page - 1) * limit,
+
+      take: limit,
+
+      orderBy,
+
+      select: {
+        req_id: true,
+        request_code: true,
+        req_date: true,
+        req_type: true,
+        status: true,
+
+        patient: {
+          select: {
+            patient_id: true,
+            name: true,
+          },
+        },
+
+        laboratory: {
+          include: {
+            items: {
+              include: {
+                test: true,
               },
             },
           },
-        ],
-      }),
-      ...(req_types && req_types.length > 0 && {
-        req_type: {
-          in: req_types,
         },
-      }),
-    },
 
-    select: {
-      req_id: true,
-      req_date: true,
-      req_type: true,
-      status: true,
+        consult: {
+          select: {
+            cons_id: true,
+            req_id: true,
+            physician: true,
+            vs_id: true,
+            doctor: true,
+            consultations: true,
+          },
+        },
 
-      patient: {
-        select: {
-          patient_id: true,
-          name: true,
+        cert: {
+          select: {
+            mcr_id: true,
+            req_id: true,
+            physician: true,
+            purpose: true,
+            doctor: true,
+            certificate: true,
+          },
         },
       },
+    });
 
-      consult: {
-        select: {
-          cons_id: true,
-          req_id: true,
-          physician: true,
-          vs_id: true,
-          doctor: true,
-          consultations: true,
-        }
-      },
-      cert: {
-        select: {
-          mcr_id: true,
-          req_id: true,
-          physician: true,
-          purpose: true,
-          doctor: true,
-          certificate: true,
-        }
-      }
+  const total =
+    await prisma.request.count({
+      where,
+    });
+
+  return {
+    data: requests,
+
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages:
+        Math.ceil(total / limit),
     },
-  });
+  };
 };
 
 export const requestAction = async (
@@ -211,11 +366,17 @@ export const requestAction = async (
   status: RequestStatus
 ) => {
   return prisma.$transaction(async (tx) => {
-    const request = await tx.request.findUnique({
+    const result = await tx.request.findUnique({
       where: { req_id: requestId },
     });
 
-    if (!request) {
+    const userIds = await resolveNotificationUsers(result);
+
+    const io = getIO();
+
+    io.to([...requestUpdateRooms]).emit("request:updated");
+
+    if (!result) {
       throw new Error("Request not found");
     }
 
@@ -229,6 +390,7 @@ export const requestAction = async (
         status,
       },
     });
+
 
     const queueStatus = mapRequestToQueueStatus(status);
 
@@ -244,7 +406,7 @@ export const requestAction = async (
     }
 
     if (status === 'DONE') {
-      const billing = await ensureLabBillingForRequest(tx, requestId, new Date());
+      const billing = await ensureBillingForRequest(tx, requestId, new Date(), result.req_type);
       if (!billing) throw new Error("Billing failed");
     }
 
@@ -362,6 +524,7 @@ export const createPresciptions = async (payload: PrescriptionPayload) => {
         patient_id: payload.patient_id,
         doctor_id: payload.doctor_id,
         gen_notes: payload.gen_notes,
+        issued_date: payload.issued_date,
 
         medicines: {
           create: payload.medicines.map((m) => ({
@@ -540,69 +703,165 @@ export const consultationRecordsByRequest = async (consultation_id: number) => {
   });
 };
 
-export const consultationRecordHistory = async () => {
-  return prisma.$transaction(async (tx) => {
+export const consultationRecordHistory = async (
+  page: number = 1,
+  limit: number = 10,
+  search?: string,
+  status?: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string
+) => {
 
-    const requests = await tx.request.findMany({
-      where: {
+  const where: Prisma.ConsultationWhereInput = {};
+
+  // SEARCH
+  if (search?.trim()) {
+
+    where.OR = [
+      {
+        patient: {
+          name: {
+            contains: search,
+          },
+        },
+      },
+      {
+        consultRequest: {
+          request: {
+            request_code: {
+              contains: search,
+            },
+          },
+        },
+      },
+    ];
+  }
+
+  // STATUS
+  if (
+    status &&
+    status !== "ALL"
+  ) {
+
+    where.consultRequest = {
+      request: {
+        status:
+          status as Status,
+      },
+    };
+
+  } else {
+
+    where.consultRequest = {
+      request: {
         status: {
-          in: ["DONE", "SERVING", "CANCELED"]
-        }
-      },
-      select: {
-        req_id: true,
-        patient_id: true,
-        req_date: true,
-        req_type: true,
-        status: true,
-      },
-    });
-
-    const reqIds = requests.map(r => r.req_id);
-
-    if (reqIds.length === 0) return [];
-
-    const consultationRequests = await tx.consultationRequest.findMany({
-      where: {
-        req_id: {
-          in: reqIds,
+          in: [
+            "DONE",
+            "CANCELED",
+          ],
         },
       },
-      select: {
-        cons_id: true,
-        req_id: true,
-      },
-    });
+    };
+  }
 
-    const consIds = consultationRequests.map(c => c.cons_id);
+  // DATE RANGE
+  if (dateFrom || dateTo) {
 
-    if (consIds.length === 0) return [];
+    where.consultation_date = {};
 
-    const consultations = await tx.consultation.findMany({
-      where: {
-        cons_id: {
-          in: consIds,
+    if (dateFrom) {
+      where.consultation_date.gte =
+        new Date(dateFrom);
+    }
+
+    if (dateTo) {
+
+      const endDate =
+        new Date(dateTo);
+
+      endDate.setHours(
+        23,
+        59,
+        59,
+        999
+      );
+
+      where.consultation_date.lte =
+        endDate;
+    }
+  }
+
+  // SORTING
+  let orderBy:
+    Prisma.ConsultationOrderByWithRelationInput =
+  {
+    consultation_id: "desc",
+  };
+
+  switch (sort) {
+
+    case "date_asc":
+      orderBy = {
+        consultation_date: "asc",
+      };
+      break;
+
+    case "date_desc":
+      orderBy = {
+        consultation_date: "desc",
+      };
+      break;
+
+    case "patient_asc":
+      orderBy = {
+        patient: {
+          name: "asc",
         },
-      },
-      orderBy: {
-        consultation_id: "desc",
-      },
+      };
+      break;
+
+    case "patient_desc":
+      orderBy = {
+        patient: {
+          name: "desc",
+        },
+      };
+      break;
+  }
+
+  const consultations =
+    await prisma.consultation.findMany({
+
+      where,
+
+      skip:
+        (page - 1) * limit,
+
+      take: limit,
+
+      orderBy,
+
       include: {
         patient: true,
+
         vitals: true,
+
         consultRequest: {
           include: {
             request: true,
-          }
-        }
+          },
+        },
       },
     });
 
-    const phrIds = consultations
-      .map(c => c.phr_id)
+  const phrIds =
+    consultations
+      .map((c) => c.phr_id)
       .filter(Boolean) as number[];
 
-    const baselines = await tx.consultationRecords.findMany({
+  const baselines =
+    await prisma.consultationRecords.findMany({
       where: {
         phr_id: {
           in: phrIds,
@@ -610,20 +869,41 @@ export const consultationRecordHistory = async () => {
       },
     });
 
-    const baselineMap = new Map(
-      baselines.map(b => [b.phr_id, b])
+  const baselineMap =
+    new Map(
+      baselines.map((b) => [
+        b.phr_id,
+        b,
+      ])
     );
 
-    return consultations.map(c => ({
+  const data =
+    consultations.map((c) => ({
+
       consultation: {
-        consultation_id: c.consultation_id,
-        consultation_date: c.consultation_date,
-        chief_complaint: c.chief_complaint,
-        hist_illness: c.hist_illness,
-        examination: c.examination,
-        assessment: c.assessment,
-        plans: c.plans,
-        follow_up_date: c.follow_up_date,
+        consultation_id:
+          c.consultation_id,
+
+        consultation_date:
+          c.consultation_date,
+
+        chief_complaint:
+          c.chief_complaint,
+
+        hist_illness:
+          c.hist_illness,
+
+        examination:
+          c.examination,
+
+        assessment:
+          c.assessment,
+
+        plans:
+          c.plans,
+
+        follow_up_date:
+          c.follow_up_date,
 
         bp: c.vitals?.bp,
         temp: c.vitals?.temp,
@@ -632,157 +912,648 @@ export const consultationRecordHistory = async () => {
         wt: c.vitals?.wt,
         ht: c.vitals?.ht,
 
-        ...(c.phr_id ? baselineMap.get(c.phr_id) : {})
+        ...(c.phr_id
+          ? baselineMap.get(c.phr_id)
+          : {}),
       },
+
       patient: {
-        name: c.patient.name,
-        address: c.patient.address,
-        contact_number: c.patient.contact_number,
-        birth_date: c.patient.birth_date,
-        sex: c.patient.sex,
-        age: c.patient.age,
-        religion: c.patient.religion,
+        name:
+          c.patient.name,
+
+        address:
+          c.patient.address,
+
+        contact_number:
+          c.patient.contact_number,
+
+        birth_date:
+          c.patient.birth_date,
+
+        sex:
+          c.patient.sex,
+
+        age:
+          c.patient.age,
+
+        religion:
+          c.patient.religion,
       },
 
       request: {
-        req_id: c.consultRequest.request.req_id,
-        patient_id: c.consultRequest.request.patient_id,
-        req_date: c.consultRequest.request.req_date,
-        req_type: c.consultRequest.request.req_date,
-        status: c.consultRequest.request.status,
-      }
+        req_id:
+          c.consultRequest.request.req_id,
+
+        patient_id:
+          c.consultRequest.request.patient_id,
+
+        req_date:
+          c.consultRequest.request.req_date,
+
+        req_type:
+          c.consultRequest.request.req_type,
+
+        status:
+          c.consultRequest.request.status,
+      },
 
     }));
-  });
+
+  const total =
+    await prisma.consultation.count({
+      where,
+    });
+
+  return {
+    data,
+
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages:
+        Math.ceil(total / limit),
+    },
+  };
 };
 
-export const prescriptionRecordHistory = async () => {
-  return prisma.$transaction(async (tx) => {
+export const prescriptionRecordHistory = async (
+  page: number = 1,
+  limit: number = 10,
+  search?: string,
+  status?: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string
+) => {
 
-    const requests = await tx.request.findMany({
-      where: {
-        status: {
-          in: ["DONE", "SERVING", "CANCELED"]
-        }
-      },
-      select: {
-        req_id: true,
-      },
-    });
+  const where: Prisma.PrescriptionWhereInput = {};
 
-    const reqIds = requests.map(r => r.req_id);
+  // SEARCH
+  if (search?.trim()) {
 
-    if (reqIds.length === 0) return [];
-
-    const consultationRequests = await tx.consultationRequest.findMany({
-      where: {
-        req_id: {
-          in: reqIds,
+    where.OR = [
+      {
+        patient: {
+          name: {
+            contains: search,
+          },
         },
       },
-      select: {
-        cons_id: true,
-        req_id: true,
-      },
-    });
-
-    const consIds = consultationRequests.map(c => c.cons_id);
-
-    if (consIds.length === 0) return [];
-
-    const consultations = await tx.consultation.findMany({
-      where: {
-        cons_id: {
-          in: consIds,
+      {
+        consultation: {
+          consultRequest: {
+            request: {
+              request_code: {
+                contains: search,
+              },
+            },
+          },
         },
       },
-      select: {
-        consultation_id: true
-      },
-    });
+    ];
+  }
 
-    const consultsIds = consultations.map(c => c.consultation_id);
+  // STATUS
+  if (
+    status &&
+    status !== "ALL"
+  ) {
 
-    if (consultsIds.length === 0) return [];
+    where.consultation = {
+      consultRequest: {
+        request: {
+          status:
+            status as Status,
+        },
+      },
+    };
 
-    const prescription = await tx.prescription.findMany({
-      where: {
-        consultation_id: {
-          in: consultsIds
-        }
+  } else {
+
+    where.consultation = {
+      consultRequest: {
+        request: {
+          status: {
+            in: [
+              "DONE",
+              "CANCELED",
+            ],
+          },
+        },
       },
-      orderBy: {
-        consultation_id: "desc"
-      },
+    };
+  }
+
+  // DATE RANGE
+  if (dateFrom || dateTo) {
+
+    where.issued_date = {};
+
+    if (dateFrom) {
+      where.issued_date.gte =
+        new Date(dateFrom);
+    }
+
+    if (dateTo) {
+
+      const endDate =
+        new Date(dateTo);
+
+      endDate.setHours(
+        23,
+        59,
+        59,
+        999
+      );
+
+      where.issued_date.lte =
+        endDate;
+    }
+  }
+
+  // SORTING
+  let orderBy:
+    Prisma.PrescriptionOrderByWithRelationInput =
+  {
+    presc_id: "desc",
+  };
+
+  switch (sort) {
+
+    case "date_asc":
+      orderBy = {
+        issued_date: "asc",
+      };
+      break;
+
+    case "date_desc":
+      orderBy = {
+        issued_date: "desc",
+      };
+      break;
+
+    case "patient_asc":
+      orderBy = {
+        patient: {
+          name: "asc",
+        },
+      };
+      break;
+
+    case "patient_desc":
+      orderBy = {
+        patient: {
+          name: "desc",
+        },
+      };
+      break;
+  }
+
+  const prescriptions =
+    await prisma.prescription.findMany({
+
+      where,
+
+      skip:
+        (page - 1) * limit,
+
+      take: limit,
+
+      orderBy,
+
       include: {
+
         patient: true,
+
+        medicines: true,
+
         consultation: {
           include: {
             consultRequest: {
               include: {
-                request: true
-              }
-            }
-          }
+                request: true,
+              },
+            },
+          },
         },
-
-      }
-
+      },
     });
 
-    return prescription.map(c => ({
+  const data =
+    prescriptions.map((c) => ({
+
       prescription: {
-        presc_id: true,
-        consultation_id: true,
-        patient_id: true,
-        doctor_id: true,
-        gen_notes: true,
-        medicines: {
-          select: {
-            item_id: true,
-            medicine_name: true,
-            strength: true,
-            form: true,
-            dose: true,
-            frequency: true,
-            route: true,
-            duration: true,
-            quantity: true,
-            instruction: true,
-          }
-        }
+        presc_id:
+          c.presc_id,
+
+        consultation_id:
+          c.consultation_id,
+
+        patient_id:
+          c.patient_id,
+
+        doctor_id:
+          c.doctor_id,
+
+        gen_notes:
+          c.gen_notes,
+
+        issued_date:
+          c.issued_date,
+
+        medicines:
+          c.medicines.map((m) => ({
+            item_id:
+              m.item_id,
+
+            medicine_name:
+              m.medicine_name,
+
+            strength:
+              m.strength,
+
+            form:
+              m.form,
+
+            dose:
+              m.dose,
+
+            frequency:
+              m.frequency,
+
+            route:
+              m.route,
+
+            duration:
+              m.duration,
+
+            quantity:
+              m.quantity,
+
+            instruction:
+              m.instruction,
+          })),
       },
+
       patient: {
-        name: c.patient.name,
-        address: c.patient.address,
-        contact_number: c.patient.contact_number,
-        birth_date: c.patient.birth_date,
-        sex: c.patient.sex,
-        age: c.patient.age,
-        religion: c.patient.religion,
+        name:
+          c.patient.name,
+
+        address:
+          c.patient.address,
+
+        contact_number:
+          c.patient.contact_number,
+
+        birth_date:
+          c.patient.birth_date,
+
+        sex:
+          c.patient.sex,
+
+        age:
+          c.patient.age,
+
+        religion:
+          c.patient.religion,
       },
 
       request: {
-        req_id: c.consultation.consultRequest.request.req_id,
-        patient_id: c.consultation.consultRequest.request.patient_id,
-        req_date: c.consultation.consultRequest.request.req_date,
-        req_type: c.consultation.consultRequest.request.req_date,
-        status: c.consultation.consultRequest.request.status,
+        req_id:
+          c.consultation
+            .consultRequest
+            .request
+            .req_id,
+
+        patient_id:
+          c.consultation
+            .consultRequest
+            .request
+            .patient_id,
+
+        req_date:
+          c.consultation
+            .consultRequest
+            .request
+            .req_date,
+
+        req_type:
+          c.consultation
+            .consultRequest
+            .request
+            .req_type,
+
+        status:
+          c.consultation
+            .consultRequest
+            .request
+            .status,
       },
 
       consultation: {
-        consultation_id: c.consultation.cons_id,
-        consultation_date: c.consultation.consultation_date,
-        chief_complaint: c.consultation.chief_complaint,
-        hist_illness: c.consultation.hist_illness,
-        examination: c.consultation.examination,
-        assessment: c.consultation.assessment,
-        plans: c.consultation.plans,
-        follow_up_date: c.consultation.follow_up_date,
-      }
+        consultation_id:
+          c.consultation
+            .consultation_id,
+
+        consultation_date:
+          c.consultation
+            .consultation_date,
+
+        chief_complaint:
+          c.consultation
+            .chief_complaint,
+
+        hist_illness:
+          c.consultation
+            .hist_illness,
+
+        examination:
+          c.consultation
+            .examination,
+
+        assessment:
+          c.consultation
+            .assessment,
+
+        plans:
+          c.consultation
+            .plans,
+
+        follow_up_date:
+          c.consultation
+            .follow_up_date,
+      },
+
     }));
-  });
+
+  const total =
+    await prisma.prescription.count({
+      where,
+    });
+
+  return {
+    data,
+
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages:
+        Math.ceil(total / limit),
+    },
+  };
 };
+
+export const medicalCertificateRecordHistory = async (
+  page: number = 1,
+  limit: number = 10,
+  search?: string,
+  status?: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string
+) => {
+
+  const where:
+    Prisma.MedicalCertificateResultWhereInput =
+    {};
+
+  // SEARCH
+  if (search?.trim()) {
+
+    where.OR = [
+      {
+        patient: {
+          name: {
+            contains: search,
+          },
+        },
+      },
+      {
+        med_cert_request: {
+          request: {
+            request_code: {
+              contains: search,
+            },
+          },
+        },
+      },
+    ];
+  }
+
+  // STATUS
+  if (
+    status &&
+    status !== "ALL"
+  ) {
+
+    where.med_cert_request = {
+      request: {
+        status:
+          status as Status,
+      },
+    };
+
+  } else {
+
+    where.med_cert_request = {
+      request: {
+        status: {
+          in: [
+            "DONE",
+            "CANCELED",
+          ],
+        },
+      },
+    };
+  }
+
+  // DATE RANGE
+  if (dateFrom || dateTo) {
+
+    where.result_date = {};
+
+    if (dateFrom) {
+      where.result_date.gte =
+        new Date(dateFrom);
+    }
+
+    if (dateTo) {
+
+      const endDate =
+        new Date(dateTo);
+
+      endDate.setHours(
+        23,
+        59,
+        59,
+        999
+      );
+
+      where.result_date.lte =
+        endDate;
+    }
+  }
+
+  // SORTING
+  let orderBy:
+    Prisma.MedicalCertificateResultOrderByWithRelationInput =
+  {
+    med_cert_id: "desc",
+  };
+
+  switch (sort) {
+
+    case "date_asc":
+      orderBy = {
+        result_date: "asc",
+      };
+      break;
+
+    case "date_desc":
+      orderBy = {
+        result_date: "desc",
+      };
+      break;
+
+    case "patient_asc":
+      orderBy = {
+        patient: {
+          name: "asc",
+        },
+      };
+      break;
+
+    case "patient_desc":
+      orderBy = {
+        patient: {
+          name: "desc",
+        },
+      };
+      break;
+  }
+
+  const certificates =
+    await prisma.medicalCertificateResult.findMany({
+
+      where,
+
+      skip:
+        (page - 1) * limit,
+
+      take: limit,
+
+      orderBy,
+
+      include: {
+
+        patient: true,
+
+        med_cert_request: {
+          include: {
+            request: true,
+          },
+        },
+      },
+    });
+
+  const data =
+    certificates.map((c) => ({
+
+      certificate: {
+        med_cert_id:
+          c.med_cert_id,
+
+        mcr_id:
+          c.mcr_id,
+
+        patient_id:
+          c.patient_id,
+
+        purpose:
+          c.purpose,
+
+        impression:
+          c.impression,
+
+        recommendation:
+          c.recommendation,
+
+        result_date:
+          c.result_date,
+      },
+
+      patient: {
+        name:
+          c.patient.name,
+
+        address:
+          c.patient.address,
+
+        contact_number:
+          c.patient.contact_number,
+
+        birth_date:
+          c.patient.birth_date,
+
+        sex:
+          c.patient.sex,
+
+        age:
+          c.patient.age,
+
+        religion:
+          c.patient.religion,
+      },
+
+      request: {
+        req_id:
+          c.med_cert_request
+            .request
+            .req_id,
+
+        patient_id:
+          c.med_cert_request
+            .request
+            .patient_id,
+
+        req_date:
+          c.med_cert_request
+            .request
+            .req_date,
+
+        req_type:
+          c.med_cert_request
+            .request
+            .req_type,
+
+        status:
+          c.med_cert_request
+            .request
+            .status,
+      },
+
+    }));
+
+  const total =
+    await prisma.medicalCertificateResult.count({
+      where,
+    });
+
+  return {
+    data,
+
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages:
+        Math.ceil(total / limit),
+    },
+  };
+};
+// END HISTORY RECORDS
 
 export const createMedicalCertificate = async (payload: MedicalCertificatePayload) => {
   return prisma.$transaction(async (tx) => {
@@ -822,97 +1593,6 @@ export const getConsultationRecordById = async (cons_id: number) => {
     return data;
   })
 }
-
-
-export const medicalCertificateRecordHistory = async () => {
-  return prisma.$transaction(async (tx) => {
-
-    const requests = await tx.request.findMany({
-      where: {
-        status: {
-          in: ["DONE", "SERVING", "CANCELED"]
-        }
-      },
-      select: {
-        req_id: true,
-        patient_id: true,
-        req_date: true,
-        req_type: true,
-        status: true,
-      },
-    });
-
-    const reqIds = requests.map(r => r.req_id);
-
-    if (reqIds.length === 0) return [];
-
-    const medicalCertificateRequests = await tx.medicalCertificateRequest.findMany({
-      where: {
-        req_id: {
-          in: reqIds,
-        },
-      },
-      select: {
-        mcr_id: true,
-        req_id: true,
-      },
-    });
-
-    const certsIds = medicalCertificateRequests.map(c => c.mcr_id);
-
-    if (certsIds.length === 0) return [];
-
-    const certificates = await tx.medicalCertificateResult.findMany({
-      where: {
-        med_cert_id: {
-          in: certsIds,
-        },
-      },
-      orderBy: {
-        med_cert_id: "desc",
-      },
-      include: {
-        patient: true,
-        med_cert_request: {
-          include: {
-            request: true,
-          }
-        }
-      },
-    });
-
-    return certificates.map(c => ({
-      certificate: {
-        med_cert_id: c.med_cert_id,
-        mcr_id: c.mcr_id,
-        patient_id: c.patient_id,
-        purpose: c.purpose,
-        impression: c.impression,
-        recommendation: c.recommendation,
-        result_date: c.result_date,
-
-      },
-      patient: {
-        name: c.patient.name,
-        address: c.patient.address,
-        contact_number: c.patient.contact_number,
-        birth_date: c.patient.birth_date,
-        sex: c.patient.sex,
-        age: c.patient.age,
-        religion: c.patient.religion,
-      },
-
-      request: {
-        req_id: c.med_cert_request.request.req_id,
-        patient_id: c.med_cert_request.request.patient_id,
-        req_date: c.med_cert_request.request.req_date,
-        req_type: c.med_cert_request.request.req_date,
-        status: c.med_cert_request.request.status,
-      }
-
-    }));
-  });
-};
 
 export const getRequestsPerWeekday = async (req_types?: RequestType[]) => {
   const hasFilter = req_types && req_types.length > 0;
@@ -1026,8 +1706,6 @@ export const getConsultationResultById = async (req_id: number) => {
       },
     },
   });
-
-  console.log('records', record)
 
   if (!record || !record.consult) return null;
 

@@ -46,6 +46,7 @@ const getPatientSelect = (supportsPhilhealthColumn: boolean): Prisma.PatientsSel
   sex: true,
   age: true,
   religion: true,
+  last_medical_assistance_year: true,
   ...(supportsPhilhealthColumn ? { philhealth_id: true } : {}),
 });
 

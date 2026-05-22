@@ -14,8 +14,6 @@ const router = Router();
 
 router.use(authenticate);
 
-router.use("/billing", BillingRoutes); //  Billing routes
-
 router.use("/billing", BillingRoutes); // Cashier billing routes
 
 router.use("/request", RequestsRoutes); // Request form related routes

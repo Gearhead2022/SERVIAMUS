@@ -47,30 +47,42 @@ export const createConsultationResultController = async (req: Request, res: Resp
 
 export const getAllPatientRequestController = async (req: Request, res: Response) => {
   try {
+    const page = Number(req.query.page) || 1;
+
+    const limit = Number(req.query.limit) || 10;
+
     const search =
       typeof req.query.search === "string" && req.query.search.trim() !== ""
         ? req.query.search.trim()
         : undefined;
 
-    let req_types: RequestType[] | undefined;
+    const status =
+      typeof req.query.status === "string" && req.query.status !== ""
+        ? req.query.status
+        : undefined;
 
-    if (req.query.req_types) {
-      let rawTypes: string[] = [];
+    const dateFrom =
+      typeof req.query.dateFrom === "string" && req.query.dateFrom !== ""
+        ? req.query.dateFrom
+        : undefined;
 
-      if (Array.isArray(req.query.req_types)) {
-        rawTypes = req.query.req_types as string[];
-      } else if (typeof req.query.req_types === "string") {
-        rawTypes = req.query.req_types.split(",");
-      }
+    const dateTo =
+      typeof req.query.dateTo === "string" && req.query.dateTo !== ""
+        ? req.query.dateTo
+        : undefined;
 
-      const validTypes = Object.values(RequestType);
+    const sort =
+      typeof req.query.sort === "string" && req.query.sort !== ""
+        ? req.query.sort
+        : undefined;
 
-      req_types = rawTypes.filter((type): type is RequestType =>
-        validTypes.includes(type as RequestType)
-      );
-    }
 
-    const request = await getAllRequests(search, req_types);
+    const req_type =
+      typeof req.query.req_type === "string" && req.query.req_type !== ""
+        ? req.query.req_type
+        : undefined;
+
+    const request = await getAllRequests(page, limit, search, status, req_type, dateFrom, dateTo, sort);
 
     return res.status(200).json({
       success: true,
@@ -287,7 +299,36 @@ export const getPrescriptionByRequestController = async (req: Request, res: Resp
 
 export const getConsultationRecordHistoryController = async (req: Request, res: Response) => {
   try {
-    const prescriptions = await consultationRecordHistory();
+    const page = Number(req.query.page) || 1;
+
+    const limit = Number(req.query.limit) || 10;
+
+    const search =
+      typeof req.query.search === "string" && req.query.search.trim() !== ""
+        ? req.query.search.trim()
+        : undefined;
+
+    const status =
+      typeof req.query.status === "string" && req.query.status !== ""
+        ? req.query.status
+        : undefined;
+
+    const dateFrom =
+      typeof req.query.dateFrom === "string" && req.query.dateFrom !== ""
+        ? req.query.dateFrom
+        : undefined;
+
+    const dateTo =
+      typeof req.query.dateTo === "string" && req.query.dateTo !== ""
+        ? req.query.dateTo
+        : undefined;
+
+    const sort =
+      typeof req.query.sort === "string" && req.query.sort !== ""
+        ? req.query.sort
+        : undefined;
+
+    const prescriptions = await consultationRecordHistory(page, limit, search, status, dateFrom, dateTo, sort);
 
     return res.status(200).json({
       success: true,
@@ -300,10 +341,40 @@ export const getConsultationRecordHistoryController = async (req: Request, res: 
     });
   }
 };
+
+// START HISTORY & RECORDS
 
 export const getPrescriptionRecordHistoryController = async (req: Request, res: Response) => {
   try {
-    const prescriptions = await prescriptionRecordHistory();
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+
+    const search =
+      typeof req.query.search === "string" && req.query.search.trim() !== ""
+        ? req.query.search.trim()
+        : undefined;
+
+    const status =
+      typeof req.query.status === "string" && req.query.status !== ""
+        ? req.query.status
+        : undefined;
+
+    const dateFrom =
+      typeof req.query.dateFrom === "string" && req.query.dateFrom !== ""
+        ? req.query.dateFrom
+        : undefined;
+
+    const dateTo =
+      typeof req.query.dateTo === "string" && req.query.dateTo !== ""
+        ? req.query.dateTo
+        : undefined;
+
+    const sort =
+      typeof req.query.sort === "string" && req.query.sort !== ""
+        ? req.query.sort
+        : undefined;
+
+    const prescriptions = await prescriptionRecordHistory(page, limit, search, status, dateFrom, dateTo, sort);
 
     return res.status(200).json({
       success: true,
@@ -316,6 +387,51 @@ export const getPrescriptionRecordHistoryController = async (req: Request, res: 
     });
   }
 };
+
+export const getMedicalCertificateRecordHistoryController = async (req: Request, res: Response) => {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+
+    const search =
+      typeof req.query.search === "string" && req.query.search.trim() !== ""
+        ? req.query.search.trim()
+        : undefined;
+
+    const status =
+      typeof req.query.status === "string" && req.query.status !== ""
+        ? req.query.status
+        : undefined;
+
+    const dateFrom =
+      typeof req.query.dateFrom === "string" && req.query.dateFrom !== ""
+        ? req.query.dateFrom
+        : undefined;
+
+    const dateTo =
+      typeof req.query.dateTo === "string" && req.query.dateTo !== ""
+        ? req.query.dateTo
+        : undefined;
+
+    const sort =
+      typeof req.query.sort === "string" && req.query.sort !== ""
+        ? req.query.sort
+        : undefined;
+
+    const prescriptions = await medicalCertificateRecordHistory(page, limit, search, status, dateFrom, dateTo, sort);
+
+    return res.status(200).json({
+      success: true,
+      data: prescriptions,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Something went wrong",
+    });
+  }
+};
+// END HISTORY & RECORDS
 
 export const createMedCertResultController = async (req: Request, res: Response) => {
   try {
@@ -334,44 +450,28 @@ export const createMedCertResultController = async (req: Request, res: Response)
 };
 
 export const getConsultationRecordByIdController = async (req: Request, res: Response) => {
-  try {
-    const cons_id = Number(req.params.id);
+  // try {
+  //   const cons_id = Number(req.params.id);
 
-    if (!cons_id || isNaN(cons_id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid cons_id",
-      });
-    }
+  //   if (!cons_id || isNaN(cons_id)) {
+  //     return res.status(400).json({
+  //       success: false,
+  //       message: "Invalid cons_ids",
+  //     });
+  //   }
 
-    const consultation = await getConsultationRecordById(cons_id);
+  //   const consultation = await getConsultationRecordById(cons_id);
 
-    return res.status(200).json({
-      success: true,
-      data: consultation,
-    });
-  } catch (error: any) {
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Something went wrong",
-    });
-  }
-};
-
-export const getMedicalCertificateRecordHistoryController = async (req: Request, res: Response) => {
-  try {
-    const prescriptions = await medicalCertificateRecordHistory();
-
-    return res.status(200).json({
-      success: true,
-      data: prescriptions,
-    });
-  } catch (error: any) {
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Something went wrong",
-    });
-  }
+  //   return res.status(200).json({
+  //     success: true,
+  //     data: consultation,
+  //   });
+  // } catch (error: any) {
+  //   return res.status(500).json({
+  //     success: false,
+  //     message: error.message || "Something went wrong",
+  //   });
+  // }
 };
 
 export const getWeeklyTallyController = async (req: Request, res: Response) => {

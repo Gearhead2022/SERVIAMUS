@@ -40,3 +40,5 @@ export interface UsersProps {
   title: string;
   ptr_no: string;
 }
+
+export type Status = "WAITING" | "SERVING" | "DONE" | "CANCELED";

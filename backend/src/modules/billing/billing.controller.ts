@@ -2,17 +2,18 @@
 
 import { Request, Response } from "express";
 import {
-  createBilling,
   getBillingByRequestId,
   getBillingById,
   createPayment,
   updateBillingStatus,
   getAllBillings,
   payBilling,
+  getAllPayment,
 } from "./billing.services";
 import { getIO } from "../../socket";
 import { createNotification, resolveUsersByRoleNames } from "../notification/notification.services";
 import { BillingFilter } from "./billing.types";
+import { PaymentMethod, RequestType } from "@prisma/client";
 
 const billingUpdateRooms = [
   "role_ADMIN",
@@ -51,38 +52,6 @@ const notifyLaboratoryPaymentReady = async (billing: {
     entity: "lab",
     entity_id: billing.req_id,
   });
-};
-
-export const createBillingController = async (req: Request, res: Response) => {
-  try {
-    const { req_id, service_ids } = req.body;
-
-    if (!req_id || !service_ids || !Array.isArray(service_ids)) {
-      return res.status(400).json({
-        success: false,
-        message: "req_id and service_ids (array) are required",
-      });
-    }
-
-    const billing = await createBilling(req_id, service_ids);
-
-    emitBillingUpdated({
-      billingId: billing?.billing_id,
-      patientId: billing?.request?.patient?.patient_id,
-      reason: "billing-created",
-      requestId: billing?.req_id,
-    });
-
-    return res.status(201).json({
-      success: true,
-      data: billing,
-    });
-  } catch (error: any) {
-    return res.status(400).json({
-      success: false,
-      message: error.message,
-    });
-  }
 };
 
 export const getBillingByRequestIdController = async (req: Request, res: Response) => {
@@ -136,7 +105,7 @@ export const getBillingByIdController = async (req: Request, res: Response) => {
     });
   }
 };
-
+// For Payment
 export const createPaymentController = async (req: Request, res: Response) => {
   try {
     const { billing_id, amount, method, reference_no } = req.body;
@@ -274,6 +243,66 @@ export const payBillingController = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getAllpaymentsController = async (req: Request, res: Response) => {
+  try {
+    const search =
+      typeof req.query.search === "string" && req.query.search.trim() !== ""
+        ? req.query.search.trim()
+        : undefined;
+
+    const status =
+      typeof req.query.status === "string" && req.query.status !== ""
+        ? req.query.status
+        : undefined;
+
+    const method =
+      typeof req.query.method === "string" && req.query.method !== ""
+        ? req.query.method
+        : undefined;
+
+    const type =
+      typeof req.query.type === "string" && req.query.type !== ""
+        ? req.query.type
+        : undefined;
+
+    const dateFrom =
+      typeof req.query.dateFrom === "string" && req.query.dateFrom !== ""
+        ? req.query.dateFrom
+        : undefined;
+
+    const dateTo =
+      typeof req.query.dateTo === "string" && req.query.dateTo !== ""
+        ? req.query.dateTo
+        : undefined;
+
+    const sort =
+      typeof req.query.sort === "string" && req.query.sort !== ""
+        ? req.query.sort
+        : undefined;
+
+
+    const billings = await getAllPayment(
+      search,
+      status as BillingFilter,
+      method as PaymentMethod,
+      type as RequestType,
+      dateFrom,
+      dateTo,
+      sort,
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: billings,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
       success: false,
       message: error.message,
     });

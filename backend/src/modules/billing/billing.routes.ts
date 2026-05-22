@@ -3,11 +3,11 @@ import { authorize } from "../../middlewares/authorize.middleware";
 import {
   getAllBillingsController,
   payBillingController,
-  createBillingController,
   getBillingByRequestIdController,
   getBillingByIdController,
   createPaymentController,
   updateBillingStatusController,
+  getAllpaymentsController,
 } from "./billing.controller";
 
 const router = Router();
@@ -15,8 +15,8 @@ const router = Router();
 // Get all billings (CASHIER/ADMIN only)
 router.get("/", authorize(["CASHIER", "ADMIN"]), getAllBillingsController);
 
-// Create billing from a request
-router.post("/create", authorize(["CASHIER", "ADMIN"]), createBillingController);
+// Get all payment records
+router.get("/getAllPayments", authorize(["CASHIER", "ADMIN"]), getAllpaymentsController);
 
 // Get billing by request ID
 router.get("/request/:req_id", authorize(["CASHIER", "ADMIN"]), getBillingByRequestIdController);
@@ -32,5 +32,6 @@ router.post("/payment", authorize(["CASHIER", "ADMIN"]), createPaymentController
 
 // Update billing status (CASHIER/ADMIN only)
 router.put("/:billing_id", authorize(["CASHIER", "ADMIN"]), updateBillingStatusController);
+
 
 export default router;

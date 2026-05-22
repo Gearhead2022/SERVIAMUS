@@ -88,7 +88,7 @@ model VitallSign {
 
   phr           ConsultationRecords[]
   cons_req      ConsultationRequest[]
-  patient       Patients              @relation(fields: [patient_id], references: [patient_id])
+  patient       Patients              @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
   consultations Consultation[]
 
   @@map("vital_signs")
@@ -115,10 +115,10 @@ model Consultation {
 
   created_at DateTime @default(now())
 
-  patient        Patients             @relation(fields: [patient_id], references: [patient_id])
+  patient        Patients             @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
   vitals         VitallSign?          @relation(fields: [vs_id], references: [vs_id])
   consultRecords ConsultationRecords? @relation(fields: [phr_id], references: [phr_id])
-  consultRequest ConsultationRequest  @relation(fields: [cons_id], references: [cons_id])
+  consultRequest ConsultationRequest  @relation(fields: [cons_id], references: [cons_id], onDelete: Cascade)
 
   prescriptions Prescription[]
 
@@ -193,6 +193,8 @@ model Request {
   req_type     RequestType
   status       RequestStatus
   req_date     DateTime      @db.Date
+  created_at   DateTime      @default(now())
+  updated_at   DateTime?     @updatedAt
 
   patient Patients @relation(fields: [patient_id], references: [patient_id])
 
@@ -225,7 +227,7 @@ model ConsultationRequest {
   vs_id     Int
   physician Int
 
-  request       Request        @relation(fields: [req_id], references: [req_id])
+  request       Request        @relation(fields: [req_id], references: [req_id], onDelete: Cascade)
   vitals        VitallSign     @relation(fields: [vs_id], references: [vs_id])
   consultations Consultation[]
   doctor        Users?         @relation("ConsultationRequestDoctor", fields: [physician], references: [user_id])
@@ -239,7 +241,7 @@ model MedicalCertificateRequest {
   physician Int
   purpose   String @db.VarChar(50)
 
-  request     Request                   @relation(fields: [req_id], references: [req_id])
+  request     Request                   @relation(fields: [req_id], references: [req_id], onDelete: Cascade)
   certificate MedicalCertificateResult?
   doctor      Users?                    @relation("MedicalCertificateRequestDoctor", fields: [physician], references: [user_id])
 
@@ -258,7 +260,7 @@ model MedicalCertificateResult {
   updated_at     DateTime? @updatedAt
 
   patient          Patients                  @relation(fields: [patient_id], references: [patient_id])
-  med_cert_request MedicalCertificateRequest @relation(fields: [mcr_id], references: [mcr_id])
+  med_cert_request MedicalCertificateRequest @relation(fields: [mcr_id], references: [mcr_id], onDelete: Cascade)
 
   @@index([patient_id])
   @@map("med_cert_results")
@@ -276,7 +278,7 @@ model Prescription {
 
   created_at DateTime @default(now())
 
-  consultation Consultation @relation(fields: [consultation_id], references: [consultation_id])
+  consultation Consultation @relation(fields: [consultation_id], references: [consultation_id], onDelete: Cascade)
   patient      Patients     @relation(fields: [patient_id], references: [patient_id])
   doctor       Users        @relation(fields: [doctor_id], references: [user_id])
 
@@ -312,7 +314,7 @@ model LaboratoryRequest {
   req_id Int    @unique
   req_by String @db.VarChar(50)
 
-  request Request                 @relation(fields: [req_id], references: [req_id])
+  request Request                 @relation(fields: [req_id], references: [req_id], onDelete: Cascade)
   items   LaboratoryRequestItem[]
 
   @@map("laboratory_request")
@@ -344,8 +346,8 @@ model LaboratoryRequestItem {
   updated_at   DateTime? @updatedAt
 
   laboratoryRequest         LaboratoryRequest        @relation(fields: [laboratory_request_id], references: [id], onDelete: Cascade)
-  test                      LaboratoryTest           @relation(fields: [test_id], references: [test_id])
-  processor                 Users?                   @relation(fields: [processed_by], references: [user_id])
+  test                      LaboratoryTest           @relation(fields: [test_id], references: [test_id], onDelete: Cascade)
+  processor                 Users?                   @relation(fields: [processed_by], references: [user_id], onDelete: Cascade)
   hematology_result         HematologyResult?
   serology_result           SerologyResult?
   parasitology_result       ParasitologyResult?
@@ -645,7 +647,7 @@ model Queue {
   updated_at   DateTime?   @updatedAt
 
   patient Patients @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
-  request Request  @relation(fields: [req_id], references: [req_id])
+  request Request  @relation(fields: [req_id], references: [req_id], onDelete: Cascade)
 
   @@index([patient_id])
   @@index([queue_type])
@@ -683,7 +685,7 @@ model Patients {
 
   philhealth_id String?
 
-  last_medical_assistance_acquired_at DateTime?
+  last_medical_assistance_year Int?
 
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
@@ -731,7 +733,7 @@ model Billing {
   discount     Decimal    @db.Decimal(12, 2)
   status       BillStatus
 
-  request  Request   @relation(fields: [req_id], references: [req_id])
+  request  Request   @relation(fields: [req_id], references: [req_id], onDelete: Cascade)
   payments Payment[]
 
   created_at DateTime @default(now())

@@ -57,7 +57,6 @@ export interface PatientConsultationRecordsPayload {
     rr?: string;
     wt?: string;
     ht?: string;
-
 }
 
 
@@ -68,6 +67,7 @@ export interface PrescriptionPayload {
 
     gen_notes?: string;
     consultationRequestCons_id?: number;
+    issued_date: string;
 
     medicines: PrescriptionMedicine[];
 }
