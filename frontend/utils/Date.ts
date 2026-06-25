@@ -74,3 +74,28 @@ export const formatDate = (
         ...options,
     }).format(date);
 };
+
+export const formatTime = (
+    value?: string | Date,
+    options?: Intl.DateTimeFormatOptions
+) => {
+    if (!value) return "";
+
+    const date = value instanceof Date ? value : new Date(value);
+
+    if (isNaN(date.getTime())) {
+        return "";
+    }
+
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: TIMEZONE,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+        ...options,
+    }).format(date);
+};
+
+export const formatCurrency = (v: number) => {
+    return `₱${v.toLocaleString("en-PH")}`;
+}

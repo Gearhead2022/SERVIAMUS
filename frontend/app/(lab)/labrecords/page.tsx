@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileSearch, Printer, Search, Users } from "lucide-react";
+import { FileSearch, Search, Users } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import PatientCard from "@/components/PatientCard";
 import PatientLabRecordsModal from "@/components/Modal/LabModal/PatientLabRecordsModal";

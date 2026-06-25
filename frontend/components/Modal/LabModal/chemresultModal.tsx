@@ -30,15 +30,26 @@ export default function ChemistryResultModal({
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<ChemistryFormValues>({
     resolver: zodResolver(chemistrySchema),
     defaultValues: mergeLabFormDefaults(chemistryDefaultValues, initialValues),
   });
 
+  const ionizedCalcium = watch("ionized_calcium") || 0;
+  const ionizedConv = Number((ionizedCalcium * 4.0078).toFixed(2));
+
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit((data) =>
+        onSubmit({
+          ...data,
+          ionized_calcium_conv: Number(
+            (data.ionized_calcium * 4.0078).toFixed(2)
+          ),
+        })
+      )}
       className="p-5 space-y-5"
     >
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -55,12 +66,29 @@ export default function ChemistryResultModal({
             />
           </div>
         ))}
+        <div>
+          <Input
+            label="Ionized Calcium (Converted)"
+            value={ionizedConv}
+            readOnly
+          />
+        </div>
         <div className="col-span-2 flex flex-col gap-1">
           <Textarea
             label="Others"
-            rows={4}
+            rows={2}
+            placeholder="Enter other notes..."
             {...register("others")}
             error={errors.others?.message}
+          />
+        </div>
+        <div className="col-span-2">
+          <Textarea
+            label="Remarks"
+            rows={2}
+            placeholder="Enter additional remarks"
+            {...register("remarks")}
+            error={errors.remarks?.message}
           />
         </div>
       </div>

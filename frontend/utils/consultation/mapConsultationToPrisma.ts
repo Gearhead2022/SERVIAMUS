@@ -10,7 +10,7 @@ export function mapConsultationToPrisma(
         cons_id: cons_id,
         patient_id: patientId,
 
-        full_name: data.name,
+        name: data.name,
         consultation_date: new Date(data.consultation_date),
         address: data.address,
         contact_number: data.contact_number,

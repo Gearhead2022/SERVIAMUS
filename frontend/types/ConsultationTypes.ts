@@ -3,12 +3,12 @@
 ===================== */
 import { RequestStatus } from "./LabTypes";
 import { PatientProps } from "./PatientTypes";
-import { UsersProps } from "./RequestTypes";
+import { RequestProps, UsersProps, VitalSignProps } from "./RequestTypes";
 
 export interface ConsultationResultProps {
     consultation_id?: number;
-    cons_id: number;
-    full_name: string;
+    cons_id?: number;
+    name: string;
     consultation_date: Date;
     chief_complaint: string;
     address: string;
@@ -66,16 +66,10 @@ export interface ConsultationResultProps {
     follow_up_date?: Date;
 }
 
-export interface RequestProps {
-    req_id: number;
-    patient_id: number;
-    req_type: string;
-    status: string;
-    req_date: string;
-    patient: PatientProps;
-    consult?: ConsultationRequestProps;
-    cert?: MedCertRequestProps;
-    prescription: PrescriptionMedicine;
+export interface ConsultationHistoryRecordsProps {
+    consultation: ConsultationResultProps;
+    consultationRequest: ConsultationRequestProps;
+    prescription: PrescriptionProps;
 }
 
 export interface MedCertRequestProps {
@@ -85,10 +79,16 @@ export interface MedCertRequestProps {
     purpose: string;
     certificate: MedicalCertificateProps;
     doctor: UsersProps;
+    request: RequestProps;
+}
+
+export interface medCertHistoryRecordsProps {
+    medCert: MedicalCertificateProps;
+    medCertRequest: MedCertRequestProps;
 }
 
 export interface MedicalCertificateProps {
-    mcr_id: number;
+    mcr_id?: number;
     patient_id: number;
     purpose: string;
     impression?: string;
@@ -97,23 +97,57 @@ export interface MedicalCertificateProps {
     result_date: string;
 }
 
+
+// edited 6/22/26
 export interface ConsultationRequestProps {
     cons_id: number;
     req_id: number;
     physician: number;
     request: RequestProps;
     consultation: ConsultationProps;
+    doctor: UsersProps;
+    vitals: VitalSignProps;
 }
 
+export interface medCertHistoryRecordsProps {
+    medCert: MedicalCertificateProps;
+    medCertRequest: MedCertRequestProps;
+}
+
+
 export interface PrescriptionProps {
-    cons_id: number;
+    presc_id?: number;
+    consultation_id: number;
     patient_id: number;
     doctor_id: number;
     gen_notes?: string;
     medicines: PrescriptionMedicine[];
+    issued_date: string;
+}
+
+export interface CreatePrescriptionPayload {
+    consultation_id: number;
+    patient_id: number;
+    doctor_id: number;
+    gen_notes: string;
+    issued_date: string;
+
+    medicines: {
+        medicine_name: string;
+        strength: string;
+        form: string;
+        dose: string;
+        frequency: string;
+        route: string;
+        duration: string;
+        quantity: string;
+        instruction: string;
+    }[];
 }
 
 export interface PrescriptionMedicine {
+    item_id?: number;
+    presc_id?: number;
     medicine_name: string;
     strength?: string;
 
@@ -136,6 +170,18 @@ export interface ConsultationProps {
     assessment?: string,
     plans?: string,
     follow_up_date?: string,
+}
+
+export interface ConsultationWithRequestProps {
+    consultation_id: number
+    consultation_date: string,
+    chief_complaint: string,
+    hist_illness?: string,
+    examination?: string,
+    assessment?: string,
+    plans?: string,
+    follow_up_date?: string,
+    doctor: UsersProps,
 }
 
 export type RequestTypes = 'CONSULTATION' | 'LABORATORY' | 'CERTIFICATE';

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  ArrowRight,
   CheckCircle2,
   ClipboardList,
   Clock3,
@@ -107,13 +106,6 @@ function getProgressPercent(completedCount: number, totalTests: number) {
   return Math.min(100, Math.round((completedCount / totalTests) * 100));
 }
 
-function jumpToSection(sectionId: string) {
-  document.getElementById(sectionId)?.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
-}
-
 export default function DashboardPage() {
   const [activeRequest, setActiveRequest] = useState<LabRequest | null>(null);
   const [previewPayload, setPreviewPayload] = useState<{
@@ -137,29 +129,75 @@ export default function DashboardPage() {
   const { mutateAsync: updateRequestStatus } = useUpdateLabRequestStatus();
   const { mutateAsync: persistLabResult, isPending: savingResults } = useSaveLabResult();
 
-  useEffect(() => {
-    if (!activeRequest) {
-      return;
-    }
-    const latestRequest = requests.find((item) => item.labId === activeRequest.labId);
-    if (latestRequest) {
-      setActiveRequest(latestRequest);
-    }
-  }, [activeRequest, requests]);
+  // useEffect(() => {
+  //   if (!activeRequest) {
+  //     return;
+  //   }
+  //   const latestRequest = requests.find((item) => item.labId === activeRequest.labId);
+  //   if (latestRequest) {
+  //     setActiveRequest(latestRequest);
+  //   }
+  // }, [activeRequest, requests]);
 
   useEffect(() => {
-    if (!previewPayload) {
-      return;
-    }
-    const latestRequest = requests.find(
-      (item) => item.labId === previewPayload.request.labId
-    );
-    if (latestRequest) {
-      setPreviewPayload((current) =>
-        current ? { ...current, request: latestRequest } : current
+
+    setPreviewPayload((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const latestRequest = requests.find(
+        (item) => item.labId === current.request.labId
       );
-    }
-  }, [previewPayload, requests]);
+
+      if (
+        latestRequest &&
+        latestRequest !== current.request
+      ) {
+        return {
+          ...current,
+          request: latestRequest,
+        };
+      }
+
+      return current;
+    });
+  }, [requests]);
+
+  // useEffect(() => {
+  //   if (!previewPayload) {
+  //     return;
+  //   }
+  //   const latestRequest = requests.find(
+  //     (item) => item.labId === previewPayload.request.labId
+  //   );
+  //   if (latestRequest) {
+  //     setPreviewPayload((current) =>
+  //       current ? { ...current, request: latestRequest } : current
+  //     );
+  //   }
+  // }, [previewPayload, requests]);
+
+  useEffect(() => {
+    setActiveRequest((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const latestRequest = requests.find(
+        (item) => item.labId === current.labId
+      );
+
+      if (
+        latestRequest &&
+        latestRequest !== current
+      ) {
+        return latestRequest;
+      }
+
+      return current;
+    });
+  }, [requests]);
 
   useEffect(() => {
     if (!labRequestsError) {

@@ -9,6 +9,7 @@ import { PatientProps } from "@/types/PatientTypes";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
+import SweetAlert from "@/utils/SweetAlert";
 
 type PatientFormValues = z.infer<typeof patientSchema>;
 
@@ -51,6 +52,14 @@ const EditPatientForm: React.FC<{ patient: PatientProps; onClose: () => void }> 
 
   const onSubmit = async (data: PatientFormValues) => {
     if (!patient.patient_id) return;
+
+    const confirmed = await SweetAlert.confirmationAlert2(
+      "Are you sure?",
+      `You are about to submit this form.`,
+    );
+
+    if (!confirmed) return;
+
     await updatePatientMutation({
       patientId: patient.patient_id,
       data: mapToPrisma(data),

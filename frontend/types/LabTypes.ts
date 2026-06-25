@@ -1,3 +1,5 @@
+import { LaboratoryItems } from "./RequestTypes";
+
 export type LabResultValue = string | number;
 export type LabResultPayload = Record<string, LabResultValue>;
 export type BillingStatus = "paid" | "unpaid";
@@ -47,6 +49,7 @@ export type LabSchemaKey =
   | "OGTT"
   | "onehOGTT"
   | "twohOGTT"
+  | "twohOGTTv2"
   | "FOBT"
   | "dengue"
   | "hbsag"
@@ -170,3 +173,44 @@ export type PatientLabRecordFilters = {
   dateTo?: string;
   recordGroup?: LabRecordGroup | "all";
 };
+
+export interface PatientLabRequestResponse {
+  labId: number;
+  requestId: number;
+  patientId: number;
+
+  patientName: string;
+  requestCode: string;
+
+  requestedDate: string;
+
+  status: string;
+
+  totalTests: number;
+  completedTests: number;
+  requestedBy: string;
+
+  tests: LaboratoryItems[];
+}
+
+// by john
+
+export interface PatientLabRequestResponseModified {
+  labId: number;
+  requestId: number;
+  patientId: number;
+
+  patientName: string;
+  requestCode: string;
+  address: string;
+
+  requestedDate: string;
+
+  status: string;
+
+  totalTests: number;
+  completedTests: number;
+  requestedBy: string;
+
+  tests: LaboratoryItems[];
+}

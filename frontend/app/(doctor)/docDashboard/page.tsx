@@ -2,20 +2,16 @@
 
 import RoleGuard from "@/guards/RoleGuard";
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import Button from "@/components/ui/Button";
 import {
   Users, UserPlus, CalendarCheck,
-  ChevronRight, Clock, CheckCircle2, AlertCircle,
-  Search, ArrowRight,
-  Stethoscope, TestTube2,
-  Calendar,
-  User, Hourglass, Ban, Plus, FileX
+  ChevronRight, Clock, CheckCircle2, AlertCircle, Search,
+  Stethoscope, TestTube2, X, Calendar, Hourglass, Ban, Plus, FileX, SlidersHorizontal, RefreshCw
 } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import {
   useGetAllRequest, useRequestAction, useConsultationRecords,
-  useStatisticsRecords, useRequestPerWeek, useGetLabRequestByName, useConsultationById,
+  useStatisticsRecords, useRequestPerWeek, useConsultationById,
   useMedicalCertificateResult
 } from "@/hooks/Consultation/useConsultation";
 import { usePatientLabRequests } from "@/hooks/Lab/useLab";
@@ -23,14 +19,13 @@ import SweetAlert from "@/utils/SweetAlert";
 import ModalHeader from "@/components/Modal/ModalHeader";
 import PatientConsultationForm from "@/components/Modal/NestedModal/PatientConsultationForm";
 import { useGetPrevVitalSigns } from "@/hooks/Patient/usePatientRegistration";
-import { RequestProps, Status, RequestTypes } from "@/types/ConsultationTypes";
+import { Status } from "@/types/ConsultationTypes";
+import { RequestProps } from "@/types/RequestTypes";
 import AddPrescriptionForm from "@/components/Modal/ChildModal/AddPrescriptionForm";
 import AddMedicalCertificateForm from "@/components/Modal/ChildModal/AddMedicalCertificateForm";
 import { useRequestData } from "@/hooks/Consultation/useConsultation";
 import { PatientProps } from "@/types/PatientTypes";
-import { useAuth } from "@/context/AuthContext";
-import { formattedIsoPH, formattedIsoTimePH } from "@/utils/Date";
-import AddRequestForm from "@/components/Modal/NestedModal/AddRequestForm";
+import { formatDate, formatTime } from "@/utils/Date";
 import ConsultaitionPreview from "@/components/Modal/ChildModal/ConsultationPreview";
 import { openConsultPrintPage } from "@/utils/consultation/consultPrint";
 import { useConsultaion, usePrescription, useGetDoctorById } from "@/hooks/Consultation/useConsultation";
@@ -38,6 +33,14 @@ import { mapConsultationToPrisma } from "@/utils/consultation/mapConsultationToP
 import { MedCertFormValues, PrescriptionValues, RegisterConsultationFormValues } from "@/schemas/consultation.schema";
 import { mapPrescriptionToPrisma } from "@/utils/consultation/mapRxToPrisma";
 import { mapMedCertToPrisma } from "@/utils/consultation/mapMedCertToPrisma";
+import Pagination from "@/components/Pagination";
+import LaboratoryRequestModal from "@/components/Modal/ChildModal/LaboratoryRequestModal";
+import { PatientLabRequestResponse } from "@/types/LabTypes";
+import LabResultModal from "@/components/Modal/ChildModal/LabResultModalView";
+import SummaryCards from "@/components/ui/SummaryCards";
+import ConsultationRequestViewModal from "@/components/Modal/ChildModal/ConsultationRequestViewModal";
+import LaboratoryRequestViewModal from "@/components/Modal/ChildModal/LaboratoryRequestViewModal";
+import CertificateRequestViewModal from "@/components/Modal/ChildModal/CertificateRequestViewModal";
 
 type RequestCardProps = {
   currentRequest: RequestProps;
@@ -56,8 +59,6 @@ type CertificateCardProps = {
   onMedical: () => void;
   onDone: (reqId: number, status: Status, request: RequestProps, certificateId: number) => void;
 };
-
-type ModifRequestTypes = Exclude<RequestTypes, "LABORATORY">;
 
 const LAB_STATUS: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   QUEUED: { label: "Queued", icon: CheckCircle2, color: "#f59e0b", bg: "#fffbeb" },
@@ -87,7 +88,7 @@ function StatusBadge({ status }: { status: Status }) {
   const m = STATUS_META[status];
   return (
     <span
-      className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold px-2.5 py-1 rounded-full"
+      className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full"
       style={{ background: m.bg, color: m.text }}
     >
       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.dot }} />
@@ -121,7 +122,7 @@ function CardHeader({ children }: { children: React.ReactNode }) {
 
 function CardLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.13em]" style={{ color: "#8a99b8" }}>
+    <p className="text-[12px] font-semibold uppercase tracking-[0.13em]" style={{ color: "#8a99b8" }}>
       {children}
     </p>
   );
@@ -139,7 +140,7 @@ function NowServingPatientCard({ currentRequest, currentPatient }: RequestCardPr
           {currentPatient?.name?.split(" ").map((n) => n[0]).slice(0, 2).join("")}
         </div>
         <div>
-          <p className="font-semibold text-sm" style={{ color: "#0f2244" }}>{currentPatient?.name}</p>
+          <p className="font-semibold text-sm text-nowrap" style={{ color: "#0f2244" }}>{currentPatient?.name}</p>
           <p className="text-[11px]" style={{ color: "#6b7da0" }}>
             {currentPatient?.age}y · {currentPatient?.sex}
           </p>
@@ -213,26 +214,130 @@ function CertificateActions({ currentRequest, onMedical, onDone }: CertificateCa
   );
 }
 
+type SortKey = "date_desc" | "date_asc" | "patient_asc";
+
 // ─── Main Dashboard ────────────────────────────────────────────────────────────
 
 const Dashboard = () => {
-  const { user } = useAuth();
-
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
-
-  const { data: requestList } = useGetAllRequest(debouncedSearch, ["CERTIFICATE", "CONSULTATION"] as ModifRequestTypes[]);
-  const { mutateAsync: requestAction } = useRequestAction();
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [typeFilters, setTypeFilters] = useState<string>("ALL");
+  const [rowsPerPage, setRowsPerPage] = useState(8);
+  const [totalEntries, setTotalEntries] = useState(0);
+  const [sortKey, setSortKey] = useState<SortKey>("date_desc");
+  const [statusFilter, setStatusFilter] = useState<Status | "ALL">("ALL");
 
   const [addConsultationOpen, setAddConsultationOpen] = useState(false);
   const [addAssesmentOpen, setAddAssesmentOpen] = useState(false);
   const [addPrescriptionOpen, setAddPrescriptionOpen] = useState(false);
   const [addLaboratoryOpen, setAddLaboratoryOpen] = useState(false);
-
-  const [selectedPatient, setSelectedPatient] = useState<PatientProps | null>(null);
-
+  const [showFilters, setShowFilters] = useState(false);
+  const [, setSelectedPatient] = useState<PatientProps | null>(null);
   const [currentRequestId, setCurrentRequestId] = useState<number | null>(null);
+  const [consultationResultData, setConsultationResultData] = useState<RegisterConsultationFormValues | null>(null);
+  const [consultationResultPreview, setConsultationResultPreview] = useState(false);
+  const [prescriptionData, setPrescriptionData] = useState<PrescriptionValues | null>(null);
+  const [prescriptionPreview, setPrescriptionPreview] = useState(false);
+  const [medCertData, setMedCertData] = useState<MedCertFormValues | null>(null);
+  const [medCertPreview, setMedCertPreview] = useState(false);
+
+  const { data, isLoading, refetch } = useGetAllRequest({
+    page,
+    limit: rowsPerPage,
+    search: debouncedSearch,
+    status: statusFilter,
+    type: typeFilters,
+    sort: sortKey,
+    dateFrom,
+    dateTo,
+  });
+
+  const requestList = data?.data ?? [];
+  const meta = data?.pagination;
+
+  console.log('data returned', requestList)
+
   const { data: currentRequest } = useRequestData(currentRequestId!);
+  const { data: WeeklyData } = useRequestPerWeek(['CONSULTATION', 'CERTIFICATE']);
+  const { data: statisticsRecords } = useStatisticsRecords();
+
+  const [isOpenLabResultModal, setIsOpenLabResultModal] = useState<boolean>(false);
+  const [modalType, setModalType] = useState<string>('');
+
+  // TOTAL PAGES
+  const totalPages =
+    meta?.totalPages ?? 1;
+
+  // SYNC TOTAL ENTRIES
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTotalEntries(
+      meta?.total ?? 0
+    );
+  }, [meta]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("request_id");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (stored) setCurrentRequestId(Number(stored));
+  }, []);
+
+  const [currentPatient, setCurrentPatient] = useState<PatientProps>();
+
+  const waitingList = requestList?.filter((r) => r.status === "WAITING") ?? [];
+  const servingList = requestList?.filter((r) => r.status === "SERVING") ?? [];
+  const doneCount = requestList?.filter((r) => r.status === "DONE").length ?? 0;
+  const doctorId =
+    currentRequest?.consult?.physician ??
+    currentRequest?.cert?.physician ??
+    0;
+  const dayCounts = [
+    WeeklyData?.Monday ?? 0,
+    WeeklyData?.Tuesday ?? 0,
+    WeeklyData?.Wednesday ?? 0,
+    WeeklyData?.Thursday ?? 0,
+    WeeklyData?.Friday ?? 0,
+    WeeklyData?.Saturday ?? 0,
+    WeeklyData?.Sunday ?? 0,
+  ];
+
+  const STATS = STAT_CONFIG.map((item) => ({
+    ...item,
+    value: statisticsRecords?.[item.key as keyof typeof statisticsRecords] ?? 0,
+  }));
+
+  const getStorageKey = (type: string) => (type === "CONSULTATION" ? "consult_id" : "cert_id");
+
+  // START INDEX
+  const calculateStartIndex = () => {
+    return totalEntries === 0
+      ? 0
+      : (page - 1) * rowsPerPage + 1;
+  };
+
+  // END INDEX
+  const calculateEndIndex = () => {
+    return Math.min(
+      page * rowsPerPage,
+      totalEntries
+    );
+  };
+
+  const activeFiltersCount = [
+    typeFilters !== "ALL",
+    statusFilter !== "ALL",
+    !!dateFrom,
+    !!dateTo,
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setStatusFilter("ALL");
+    setDateFrom("");
+    setDateTo("");
+  };
 
   const [selectedConsultationId, setSelectedConsultationId] = useState(() => {
     try {
@@ -250,52 +355,32 @@ const Dashboard = () => {
     } catch { return null; }
   });
 
-  const currentPatient = currentRequest?.patient;
-  const waitingList = requestList?.filter((r) => r.status === "WAITING") ?? [];
-  const servingList = requestList?.filter((r) => r.status === "SERVING") ?? [];
-  const doneCount = requestList?.filter((r) => r.status === "DONE").length ?? 0;
-  const doctorId =
-    currentRequest?.consult?.physician ??
-    currentRequest?.cert?.physician ??
-    0;
-
   const { data: prevVitalSigns } = useGetPrevVitalSigns(currentPatient?.patient_id);
   const { data: consultationRecords } = useConsultationRecords(currentPatient?.patient_id);
-  const { data: statisticsRecords } = useStatisticsRecords();
-  const { data: WeeklyData } = useRequestPerWeek(['CONSULTATION', 'CERTIFICATE']);
   const { data: patientLabRequests = [] } = usePatientLabRequests(currentPatient?.patient_id);
+  const { data: doctorInfo } = useGetDoctorById(doctorId);
+  const { data: consultationRecord } = useConsultationById(selectedConsultationId);
 
-  const [consultationResultData, setConsultationResultData] = useState<RegisterConsultationFormValues | null>(null);
-  const [consultationResultPreview, setConsultationResultPreview] = useState(false);
+  const { mutateAsync: requestAction } = useRequestAction();
+  const { mutateAsync: createConsultationResult, isSuccess: consultationSuccess } = useConsultaion();
+  const { mutateAsync: prescription, isSuccess: prescriptionSuccess } = usePrescription();
+  const { mutateAsync: createMedCertResult, isSuccess: medCertSuccess } = useMedicalCertificateResult();
 
-  const [prescriptionData, setPrescriptionData] = useState<PrescriptionValues | null>(null);
-  const [prescriptionPreview, setPrescriptionPreview] = useState(false);
+  const [viewingLab, setViewingLab] = useState<PatientLabRequestResponse | null>(null);
+  const [modalView, setModalView] = useState<boolean>(false);
+  const [isOpenModal, setIsOpenModal] = useState<boolean>(false);
+  const [selectedRequest, setSelectedRequest] = useState<RequestProps | null>(null);
 
-  const [medCertData, setMedCertData] = useState<MedCertFormValues | null>(null);
-  const [medCertPreview, setMedCertPreview] = useState(false);
+  const currentVitals = currentRequest?.consult?.vitals;
 
-  const dayCounts = [
-    WeeklyData?.Monday ?? 0,
-    WeeklyData?.Tuesday ?? 0,
-    WeeklyData?.Wednesday ?? 0,
-    WeeklyData?.Thursday ?? 0,
-    WeeklyData?.Friday ?? 0,
-    WeeklyData?.Saturday ?? 0,
-    WeeklyData?.Sunday ?? 0,
-  ];
-
-  const STATS = STAT_CONFIG.map((item) => ({
-    ...item,
-    value: statisticsRecords?.[item.key as keyof typeof statisticsRecords] ?? 0,
-  }));
-
-  useEffect(() => {
-    const stored = localStorage.getItem("request_id");
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored) setCurrentRequestId(Number(stored));
-  }, []);
-
-  const getStorageKey = (type: string) => (type === "CONSULTATION" ? "consult_id" : "cert_id");
+  const handleView = (request: RequestProps, type: string, patient: PatientProps
+  ) => {
+    setSelectedRequest(request);
+    setCurrentPatient(patient);
+    setModalType(type);
+    setModalView(true);
+    setIsOpenModal(true);
+  };
 
   const handleRequestAction = async (
     request_id: number,
@@ -317,6 +402,7 @@ const Dashboard = () => {
       localStorage.setItem(key, JSON.stringify(custom_id));
       if (key === "cert_id") setSelectedCertificateId(custom_id);
       else setSelectedConsultationId(custom_id);
+      console.log('selected id', custom_id)
       setCurrentRequestId(request_id);
     } else if (status === "CANCELED") {
       return;
@@ -367,11 +453,15 @@ const Dashboard = () => {
     setMedCertPreview(false);
   };
 
-  const { mutateAsync: createConsultationResult, isPending: consultationPending, isSuccess: consultationSuccess } = useConsultaion();
-  const { mutateAsync: prescription, isPending, isSuccess: prescriptionSuccess } = usePrescription();
-  const { mutateAsync: createMedCertResult, isSuccess: medCertSuccess } = useMedicalCertificateResult();
-  const { data: doctorInfo } = useGetDoctorById(doctorId);
-  const { data: consultationRecord } = useConsultationById(selectedConsultationId);
+  const closeAddLabRequestModal = () => {
+    setAddLaboratoryOpen(false);
+  };
+
+  const closeModal = () => {
+    setIsOpenModal(false);
+    setModalType('');
+    setModalView(false);
+  };
 
   return (
     <RoleGuard allowedRoles={["DOCTOR"]}>
@@ -402,12 +492,6 @@ const Dashboard = () => {
               setMedCertData(data);   // store form data
               setMedCertPreview(true); // open preview
             }} />
-        </ModalHeader>
-      )}
-
-      {selectedPatient && addLaboratoryOpen && (
-        <ModalHeader showModal={true} title="Patient Request Form" subtitle="Fill in details below to create request" sizeModal="2xlarge" onClose={() => setAddLaboratoryOpen(false)}>
-          <AddRequestForm patient={selectedPatient} vitals={prevVitalSigns ?? undefined} onClose={() => setAddLaboratoryOpen(false)} />
         </ModalHeader>
       )}
 
@@ -581,31 +665,78 @@ const Dashboard = () => {
         </ModalHeader>
       )}
 
+      {addLaboratoryOpen && currentPatient && modalType === 'LABORATORY' && (
+        <ModalHeader
+          showModal={addLaboratoryOpen}
+          title={`Medical Consultation Request — ${currentPatient?.name}`}
+          subtitle=""
+          meta={`${currentPatient?.patient_code}`}
+          sizeModal="2xlarge"
+          onClose={closeAddLabRequestModal}>
+          <LaboratoryRequestModal request={null} isEditMode={false} patient={currentPatient} onClose={closeAddLabRequestModal} />
+
+        </ModalHeader>
+      )}
+
+      {viewingLab && currentPatient && isOpenLabResultModal && (
+        <LabResultModal lab={viewingLab} labid={viewingLab.labId} patient={currentPatient} onClose={() => setIsOpenLabResultModal(false)} />
+      )}
+
+      {/* View Modals */}
+
+      {isOpenModal && currentPatient && modalType === 'CONSULTATION' && selectedRequest && modalView && (
+        <ModalHeader
+          showModal={isOpenModal}
+          title={`Medical Consultation Request — ${currentPatient?.name}`}
+          subtitle=""
+          meta={`${selectedRequest?.req_id} - ${currentPatient?.patient_id}`}
+          sizeModal="xlarge"
+          onClose={closeModal}>
+          <ConsultationRequestViewModal request={selectedRequest} patient={currentPatient} vitals={currentVitals} onClose={closeModal} />
+        </ModalHeader>
+      )}
+
+      {isOpenModal && currentPatient && modalType === 'LABORATORY' && selectedRequest && modalView && (
+        <ModalHeader
+          showModal={isOpenModal}
+          title={`Laboratory Test Request — ${currentPatient?.name}`}
+          subtitle=""
+          meta={`${selectedRequest?.req_id} - ${currentPatient?.patient_id}`}
+          sizeModal="xlarge"
+          onClose={closeModal}>
+          <LaboratoryRequestViewModal request={selectedRequest} patient={currentPatient} onClose={closeModal} />
+        </ModalHeader>
+      )}
+
+      {isOpenModal && currentPatient && modalType === 'CERTIFICATE' && selectedRequest && modalView && (
+        <ModalHeader
+          showModal={isOpenModal}
+          title={`Medical Certificate Request — ${currentPatient?.name}`}
+          subtitle=""
+          meta={`${selectedRequest?.req_id} - ${currentPatient?.patient_id}`}
+          sizeModal="2xlarge"
+          onClose={closeModal}>
+          <CertificateRequestViewModal request={selectedRequest} patient={currentPatient} onClose={closeModal} />
+        </ModalHeader>
+      )}
+
       <div
         className="min-h-screen font-['DM_Sans']"
         style={{ background: "linear-gradient(160deg, #f0f2f5 0%, #d1d8e4 50%, #a8b7ce 100%)" }}
       >
-        <div className="max-w-[1500px] mx-auto px-6 py-6 space-y-5">
-
-          {/* ── ① Stats Row ── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {STATS.map(({ label, value, icon: Icon, color, bg, bar }) => (
-              <Card key={label}>
-                <div className="h-[3px]" style={{ background: bar }} />
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: bg }}>
-                      <Icon size={18} style={{ color }} />
-                    </div>
-                    <p className="text-2xl font-bold" style={{ color: "#0f2244", fontFamily: "'DM Serif Display', serif" }}>
-                      {(value as number).toLocaleString()}
-                    </p>
-                  </div>
-                  <p className="text-[12px] font-semibold" style={{ color: "#6b7da0" }}>{label}</p>
-                </div>
-              </Card>
-            ))}
+        <div className="border-b border-white/10 px-8 py-5 flex items-center">
+          <div>
+            <h1 className="font-['DM_Serif_Display'] text-3xl text-black tracking-wide mb-1">
+              Dashboard
+            </h1>
+            <p className="text-black/60 text-sm">Queue & Dashboard</p>
           </div>
+        </div>
+        <div className="px-8 py-2 space-y-5">
+          {/* ── ① Stats Row ── */}
+          <SummaryCards
+            items={STATS}
+          />
 
           {/* ── ② Main Area: Queue (left) + Action Column (right) ── */}
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5">
@@ -614,127 +745,275 @@ const Dashboard = () => {
             <Card id="queue">
               <div className="h-[3px]" style={{ background: "#0e7c7b" }} />
               <CardHeader>
-                <div>
-                  <CardLabel>Today&apos;s Queue</CardLabel>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <p className="font-semibold text-sm" style={{ color: "#0f2244" }}>
-                      {requestList?.length ?? 0} patients
-                    </p>
-                    <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#fffbeb", color: "#92400e" }}>
-                      {waitingList.length} waiting
-                    </span>
-                    <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#f0fdf4", color: "#166534" }}>
-                      {doneCount} done
-                    </span>
-                    {currentPatient && (
-                      <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1.5" style={{ background: "#e0f4f4", color: "#065050" }}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#0e7c7b] animate-pulse" />
-                        {currentPatient.name} in progress
-                      </span>
-                    )}
+                <div className="flex-1">
+                  <div className="flex w-full justify-between">
+                    <CardLabel>Today&apos;s Queue</CardLabel>
                   </div>
-                </div>
-                <div className="relative">
-                  <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#b0bcd4" }} />
-                  <input
-                    type="text"
-                    placeholder="Search patient…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-8 pr-3 py-2 text-xs rounded-xl outline-none"
-                    style={{ background: "#f4f6fb", border: "1.5px solid #dce3ef", color: "#1a2a45", width: "160px" }}
-                  />
-                </div>
-              </CardHeader>
+                  <div className="flex-1 items-center gap-2 mt-1 flex-wrap">
 
-              <div className="overflow-y-auto" style={{ maxHeight: "520px" }}>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr style={{ background: "#f8f9fc", borderBottom: "1px solid #eef1f9" }}>
-                      {["#", "Patient", "Time", "Type", "Status", "Actions", ""].map((h) => (
-                        <th key={h} className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#8a99b8" }}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {requestList?.map((p, i) => {
-                      const pat = p.patient;
-                      const isActive = currentRequest?.req_id === p.req_id;
-                      return (
-                        <tr
-                          key={p.req_id}
-                          className="group transition-all"
+                    {/* Toolbar */}
+                    <div className="px-1 flex items-center justify-between gap-3 flex-wrap"
+                      style={{ borderBottom: "1px solid #f0f3fa" }}>
+
+                      <span className="flex">
+                        <p className="font-semibold text-sm" style={{ color: "#0f2244" }}>
+                          {requestList?.length ?? 0} patients
+                        </p>
+                        <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#fffbeb", color: "#92400e" }}>
+                          {waitingList.length} waiting
+                        </span>
+                        <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#f0fdf4", color: "#166534" }}>
+                          {doneCount} done
+                        </span>
+                        {currentPatient && (
+                          <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1.5" style={{ background: "#e0f4f4", color: "#065050" }}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#0e7c7b] animate-pulse" />
+                            {currentPatient.name} in progress
+                          </span>
+                        )}
+                      </span>
+
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Rows Per Page */}
+                        <select
+                          value={rowsPerPage}
+                          onChange={(e) => {
+                            setRowsPerPage(
+                              Number(e.target.value)
+                            );
+
+                            setPage(1);
+                          }}
+                          className="px-3 py-2 text-xs rounded-xl outline-none"
                           style={{
-                            borderBottom: "1px solid #f4f6fb",
-                            background: isActive ? "rgba(14,124,123,0.06)" : "white",
+                            background: "#f4f6fb",
+                            border: "1.5px solid #dce3ef",
+                            color: "#1a2a45",
                           }}
                         >
-                          <td className="px-4 py-3">
-                            <span className="text-[11px] font-mono" style={{ color: "#c0ccd8" }}>{i + 1}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2.5">
-                              <div
-                                className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                                style={{ background: isActive ? "#e0f4f4" : "#eef1f9", color: isActive ? "#0e7c7b" : "#0f2244" }}
-                              >
-                                {pat.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                          <option value={10}>
+                            10 / page
+                          </option>
+
+                          <option value={25}>
+                            25 / page
+                          </option>
+
+                          <option value={50}>
+                            50 / page
+                          </option>
+
+                          <option value={100}>
+                            100 / page
+                          </option>
+                        </select>
+                        {/* Search */}
+                        <div className="relative">
+                          <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#b0bcd4" }} />
+                          <input
+                            type="text"
+                            placeholder="Search patient, ID…"
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                            className="pl-8 pr-3 py-2 text-xs rounded-xl outline-none"
+                            style={{ background: "#f4f6fb", border: "1.5px solid #dce3ef", color: "#1a2a45", width: "185px" }}
+                          />
+                        </div>
+
+                        {/* Sort */}
+                        <select
+                          value={sortKey}
+                          onChange={(e) => setSortKey(e.target.value as SortKey)}
+                          className="px-3 py-2 text-xs rounded-xl outline-none"
+                          style={{ background: "#f4f6fb", border: "1.5px solid #dce3ef", color: "#1a2a45" }}
+                        >
+                          <option value="date_desc">Newest first</option>
+                          <option value="date_asc">Oldest first</option>
+                          <option value="patient_asc">Patient A–Z</option>
+                        </select>
+                        {/* Filters toggle */}
+                        <button
+                          onClick={() => setShowFilters((v) => !v)}
+                          className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors"
+                          style={{
+                            background: showFilters ? "#0f2244" : "#f4f6fb",
+                            color: showFilters ? "white" : "#1a2a45",
+                            border: "1.5px solid " + (showFilters ? "#0f2244" : "#dce3ef"),
+                          }}
+                        >
+                          <SlidersHorizontal size={12} /> Filters
+                          {activeFiltersCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white"
+                              style={{ background: "#c8102e" }}>
+                              {activeFiltersCount}
+                            </span>
+                          )}
+                        </button>
+
+                        {/* Refresh */}
+                        <button
+                          onClick={() => void refetch()}
+                          className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
+                          style={{ background: "#f4f6fb", border: "1.5px solid #dce3ef", color: "#6b7da0" }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#eef1f9"; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#f4f6fb"; }}
+                        >
+                          <RefreshCw size={13} className={isLoading ? "animate-spin" : ""} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </CardHeader>
+              {/* Filter drawer */}
+              {showFilters && (
+                <div className="px-5 flex flex-wrap items-end gap-4"
+                  style={{ background: "#f8f9fc", borderBottom: "1px solid #eef1f9" }}>
+
+                  {/* Type toggles */}
+                  <div>
+                    <CardLabel>Request Type</CardLabel>
+                    <div className="flex gap-2">
+                      <label className="text-[10px] font-semibold uppercase flex items-center tracking-wider" style={{ color: "#8a99b8" }}>Type</label>
+                      <select value={typeFilters} onChange={(e) => setTypeFilters(e.target.value)}
+                        className="px-2.5 py-1.5 text-xs rounded-lg outline-none"
+                        style={{ background: "white", border: "1.5px solid #dce3ef", color: "#1a2a45" }}>
+                        <option value="ALL">All Types</option>
+                        <option value="CONSULTATION">Consultation</option>
+                        <option value="CERTIFICATE">Certificate</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Status filter */}
+                  <div>
+                    <CardLabel>Status</CardLabel>
+
+                    <div className="flex gap-2">
+                      <label className="text-[10px] font-semibold uppercase flex items-center tracking-wider" style={{ color: "#8a99b8" }}>Status</label>
+                      <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as Status | "ALL")}
+                        className="px-2.5 py-1.5 text-xs rounded-lg outline-none"
+                        style={{ background: "white", border: "1.5px solid #dce3ef", color: "#1a2a45" }}>
+                        <option value="ALL">All Status</option>
+                        <option value="WAITING">Waiting</option>
+                        <option value="SERVING">Serving</option>
+                        <option value="CANCELLED">Cancelled</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Clear */}
+                  {activeFiltersCount > 0 && (
+                    <button
+                      onClick={() => {
+                        clearFilters();
+                      }}
+                      className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl"
+                      style={{
+                        background: "#fdf0f2",
+                        color: "#c8102e"
+                      }}
+                    >
+                      <X size={10} /> Clear
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="overflow-y-auto" style={{ maxHeight: "520px" }}>
+                <Card className="flex flex-col min-h-[510px]">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr style={{ background: "#f8f9fc", borderBottom: "1px solid #eef1f9" }}>
+                        {["#", "Patient", "Time", "Type", "Status", "Actions", ""].map((h) => (
+                          <th key={h} className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#8a99b8" }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {requestList?.map((p, i) => {
+                        const pat = p.patient;
+                        const isActive = currentRequest?.req_id === p.req_id;
+                        return (
+                          <tr
+                            key={p.req_id}
+                            className="group transition-all hover:bg-gray-100"
+                          >
+                            <td className="px-4 py-3">
+                              <span className="text-[11px] font-mono" style={{ color: "#c0ccd8" }}>{i + 1}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2.5">
+                                <div
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                                  style={{ background: isActive ? "#e0f4f4" : "#eef1f9", color: isActive ? "#0e7c7b" : "#0f2244" }}
+                                >
+                                  {pat.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-[12px]" style={{ color: "#1a2a45" }}>{pat.name}</p>
+                                  <p className="text-[11px]" style={{ color: "#8a99b8" }}>{pat.age}y · {pat.sex}</p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="font-semibold text-[13px]" style={{ color: "#1a2a45" }}>{pat.name}</p>
-                                <p className="text-[10.5px]" style={{ color: "#8a99b8" }}>{pat.age}y · {pat.sex}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1.5">
-                              <Clock size={10} style={{ color: "#c0ccd8" }} />
-                              <span className="text-[11px]" style={{ color: "#6b7da0" }}>{p.req_date}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-[12px]" style={{ color: "#4a5568" }}>{p.req_type}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <StatusBadge status={p.status as Status} />
-                          </td>
-                          <td className="px-4 py-3">
-                            {p.status?.toLowerCase() === "waiting" ? (
+                            </td>
+                            <td className="px-4 py-3">
                               <div className="flex items-center gap-1.5">
-                                <Button variant="acceptRequest" className="!text-[10px] !px-2 !py-1 !rounded-lg" onClick={() => handleAcceptRequest(p, "SERVING")}>
-                                  Accept
-                                </Button>
-                                <Button variant="declineRequest" className="!text-[10px] !px-2 !py-1 !rounded-lg" onClick={() => handleAcceptRequest(p, "CANCELED")}>
-                                  Decline
-                                </Button>
+                                <Clock size={10} style={{ color: "#c0ccd8" }} />
+                                <span className="text-[12px]" style={{ color: "#6b7da0" }}>{formatTime(p.req_date).toUpperCase()} - {formatDate(p.req_date).toUpperCase()}</span>
                               </div>
-                            ) : (
-                              <span className="text-[11px]" style={{ color: "#c0ccd8" }}>—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Link
-                              href={`/doctor/patients/${p.req_id}`}
-                              className="flex items-center gap-1 text-[11px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
-                              style={{ color: "#0f2244" }}
-                            >
-                              View <ChevronRight size={11} />
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-[12px]" style={{ color: "#4a5568" }}>{p.req_type}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <StatusBadge status={p.status as Status} />
+                            </td>
+                            <td className="px-4 py-3">
+                              {p.status?.toLowerCase() === "waiting" ? (
+                                <div className="flex items-center gap-1.5">
+                                  <Button variant="acceptRequest" className="!text-[12px] !px-2 !py-1 !rounded-lg" onClick={() => handleAcceptRequest(p, "SERVING")}>
+                                    Accept
+                                  </Button>
+                                  <Button variant="declineRequest" className="!text-[12px] !px-2 !py-1 !rounded-lg" onClick={() => handleAcceptRequest(p, "CANCELED")}>
+                                    Decline
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-[11px]" style={{ color: "#c0ccd8" }}>—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Button
+                                variant="secondary"
+                                className="flex items-center gap-1 text-[11px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+                                style={{ color: "#0f2244" }}
+                                onClick={() => handleView(p, p.req_type, p.patient)}
+                              >
+                                View <ChevronRight size={11} />
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </Card>
+              </div>
+              <div className="mb-[auto]">
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalEntries={totalEntries}
+                  calculateStartIndex={calculateStartIndex}
+                  calculateEndIndex={calculateEndIndex}
+                  setCurrentPage={setPage}
+                />
               </div>
 
-              <div className="px-5 py-3 flex justify-end" style={{ borderTop: "1px solid #f0f3fa" }}>
-                <Link href="/doctor/patients" className="flex items-center gap-1 text-[11.5px] font-semibold" style={{ color: "#0f2244" }}>
-                  View all patients <ArrowRight size={12} />
-                </Link>
-              </div>
             </Card>
 
             {/* ── Right Action Column ── */}
@@ -753,7 +1032,7 @@ const Dashboard = () => {
                     style={{ background: "#e0f4f4", color: "#065050", border: "1px solid rgba(14,124,123,0.2)" }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#0e7c7b] animate-pulse" />
-                    Live
+                    Active
                   </span>
                 </CardHeader>
 
@@ -792,14 +1071,14 @@ const Dashboard = () => {
                 <CardHeader>
                   <div>
                     <CardLabel>In Progress</CardLabel>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-2 mt-0.5 ">
                       <p className="font-semibold text-sm" style={{ color: "#0f2244" }}>{servingList.length} open</p>
                     </div>
                   </div>
                   <AlertCircle size={14} style={{ color: "#0e7c7b" }} />
                 </CardHeader>
 
-                <div className="overflow-y-auto" style={{ minHeight: "220px", maxHeight: "320px" }}>
+                <div className="overflow-y-auto" style={{ minHeight: "360px", maxHeight: "320px" }}>
                   {servingList.length ? (
                     servingList.map((r, i) => {
                       const isSelected = currentRequest?.req_id === r.req_id;
@@ -823,8 +1102,8 @@ const Dashboard = () => {
                             {r.req_type === "LABORATORY" ? <TestTube2 size={13} /> : <Stethoscope size={13} />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-[12.5px] truncate" style={{ color: "#1a2a45" }}>{r.patient.name}</p>
-                            <p className="text-[10.5px]" style={{ color: "#8a99b8" }}>{r.req_type}</p>
+                            <p className="font-semibold text-[14px] truncate" style={{ color: "#1a2a45" }}>{r.patient.name}</p>
+                            <p className="text-[12px]" style={{ color: "#8a99b8" }}>{r.req_type}</p>
                           </div>
                           <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" style={{ color: "#6b7da0" }} />
                         </div>
@@ -902,16 +1181,16 @@ const Dashboard = () => {
                         {patientLabRequests.length} requests
                       </p>
                       {pendingLabCount > 0 && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#fffbeb", color: "#92400e" }}>
+                        <span className="text-[12px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#fffbeb", color: "#92400e" }}>
                           {pendingLabCount} pending
                         </span>
                       )}
                     </div>
                   </div>
                   <button
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-colors"
                     style={{ background: "#f3eefb", color: "#7c4dab", border: "1.5px solid #e0d4f5" }}
-                    onClick={() => [setSelectedPatient(currentRequest?.patient ?? null), setAddLaboratoryOpen(true)]}
+                    onClick={() => [setSelectedPatient(currentRequest?.patient ?? null), setAddLaboratoryOpen(true), setModalType('LABORATORY')]}
                     disabled={!currentPatient}
                   >
                     <Plus size={11} /> New Request
@@ -927,9 +1206,9 @@ const Dashboard = () => {
                     patientLabRequests.map((lab) => {
                       const s = LAB_STATUS[lab.status.toUpperCase()] ?? LAB_STATUS.QUEUED;
                       const totalTests = lab.totalTests;
-                      const completedTests = lab.completedCount;
+                      const completedTests = lab.completedTests;
                       const pct = totalTests > 0 ? (completedTests / totalTests) * 100 : 0;
-                      const billStatus = lab.billingStatus === "paid" ? "PAID" : "UNPAID";
+                      const billStatus = lab.status === "paid" ? "PAID" : "UNPAID";
 
                       return (
                         <div
@@ -962,9 +1241,32 @@ const Dashboard = () => {
                           <p className="font-semibold text-[13px] truncate mt-1" style={{ color: "#173f39" }}>
                             {lab.patientName}
                           </p>
-                          <p className="text-[11px] mt-0.5" style={{ color: "#63867f" }}>
-                            {lab.testType}
-                          </p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {lab.tests.slice(0, 3).map((t) => (
+                              <span
+                                key={t.item_id}
+                                className="text-[10px] px-2 py-0.5 rounded-full"
+                                style={{
+                                  background: "#eef4ff",
+                                  color: "#39527a",
+                                }}
+                              >
+                                {t.test.name}
+                              </span>
+                            ))}
+
+                            {lab.tests.length > 3 && (
+                              <span
+                                className="text-[10px] px-2 py-0.5 rounded-full"
+                                style={{
+                                  background: "#f2f4f7",
+                                  color: "#667085",
+                                }}
+                              >
+                                +{lab.tests.length - 3}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[11px] mt-0.5" style={{ color: "#63867f" }}>
                             {billStatus} PAYMENT
                           </p>
@@ -996,9 +1298,10 @@ const Dashboard = () => {
                           {/* View link */}
                           <div className="mt-3 flex justify-end">
                             <span
-                              className="flex items-center gap-1 text-[10.5px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => [setViewingLab(lab), setIsOpenLabResultModal(true)]}
+                              className="flex items-center gap-1 text-[10.5px] font-semibold cursor-pointer"
                               style={{ color: "#0f2244" }}
-                              hidden={lab.status.toUpperCase() !== "DONE"}
+                            // hidden={lab.status.toUpperCase() !== "DONE"}
                             >
                               View <ChevronRight size={11} />
                             </span>
@@ -1022,7 +1325,7 @@ const Dashboard = () => {
             </div>
           </Card>
         </div>
-      </div>
+      </div >
     </RoleGuard >
   );
 };

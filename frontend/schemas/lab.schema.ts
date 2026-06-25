@@ -53,6 +53,7 @@ export const clinicalChemistrySchema = z.object({
   sgpt: numericResult("SGPT"),
   last_meal: optionalText(),
   time_taken: optionalText(),
+  remarks: optionalText()
 });
 
 export type ClinicalChemistryFormValues = z.infer<typeof clinicalChemistrySchema>;
@@ -79,10 +80,12 @@ export const clinicalChemistryDefaultValues: ClinicalChemistryFormValues = {
   sgpt: 0,
   last_meal: "",
   time_taken: "",
+  remarks: "PLEASE CORRELATE CLINICALLY FOR APPROPRIATE INTERPRETATION OF RESULTS"
 };
 
 export const cbcSchema = z.object({
   Hemoglobin: numericResult("Hemoglobin"),
+  Hematocrit: numericResult("Hematocrit"),
   rbc_count: numericResult("RBC count"),
   wbc_count: numericResult("WBC count"),
   platelet_count: numericResult("Platelet count"),
@@ -98,12 +101,14 @@ export const cbcSchema = z.object({
   basophils: numericResult("Basophils"),
   others1: optionalText(),
   others2: optionalText(),
+  remarks: optionalText(),
 });
 
 export type CbcFormValues = z.infer<typeof cbcSchema>;
 
 export const cbcDefaultValues: CbcFormValues = {
   Hemoglobin: 0,
+  Hematocrit: 0,
   rbc_count: 0,
   wbc_count: 0,
   platelet_count: 0,
@@ -119,12 +124,14 @@ export const cbcDefaultValues: CbcFormValues = {
   basophils: 0,
   others1: "",
   others2: "",
+  remarks: "PLEASE CORRELATE CLINICALLY FOR APPROPRIATE INTERPRETATION OF RESULTS",
 };
 
 export const bloodTypingSchema = z.object({
   abo_type: requiredText("ABO type is required"),
   rh_type: requiredText("Rh type is required"),
   others2: optionalText(),
+  remarks: optionalText(),
 });
 
 export type BloodTypingFormValues = z.infer<typeof bloodTypingSchema>;
@@ -133,6 +140,7 @@ export const bloodTypingDefaultValues: BloodTypingFormValues = {
   abo_type: "",
   rh_type: "",
   others2: "",
+  remarks: "PLEASE CORRELATE CLINICALLY FOR APPROPRIATE INTERPRETATION OF RESULTS",
 };
 
 export const parasitologySchema = z.object({
@@ -152,6 +160,7 @@ export const parasitologySchema = z.object({
   coli_cyst: optionalText(),
   coli_trophozoite: optionalText(),
   others: optionalText(),
+  remarks: optionalText()
 });
 
 export type ParasitologyFormValues = z.infer<typeof parasitologySchema>;
@@ -173,6 +182,7 @@ export const parasitologyDefaultValues: ParasitologyFormValues = {
   coli_cyst: "",
   coli_trophozoite: "",
   others: "",
+  remarks: "NO INTESTINAL PARASITE SEEN IN DIRECT FECAL SMEAR",
 };
 
 export const urinalysisSchema = z.object({
@@ -195,6 +205,7 @@ export const urinalysisSchema = z.object({
   crystals: optionalText(),
   casts: optionalText(),
   others: optionalText(),
+  remarks: optionalText(),
 });
 
 export type UrinalysisFormValues = z.infer<typeof urinalysisSchema>;
@@ -204,12 +215,12 @@ export const urinalysisDefaultValues: UrinalysisFormValues = {
   transparency: "",
   ph_result: "",
   spec_grav_result: "",
-  protein: "",
-  nitrite: "",
-  glucose: "",
-  ketones: "",
-  leukocytes: "",
-  blood: "",
+  protein: "Negative",
+  nitrite: "Negative",
+  glucose: "Negative",
+  ketones: "Negative",
+  leukocytes: "Negative",
+  blood: "Negative",
   pus_cells: "",
   rbc: "",
   bacteria: "",
@@ -219,6 +230,7 @@ export const urinalysisDefaultValues: UrinalysisFormValues = {
   crystals: "",
   casts: "",
   others: "",
+  remarks: "PLEASE CORRELATE CLINICALLY FOR APPROPRIATE INTERPRETATION OF RESULTS",
 };
 
 export const createSerologySchema = ({
@@ -231,6 +243,7 @@ export const createSerologySchema = ({
     method: optionalText(),
     specimen: requiredText("Specimen is required"),
     result: requiredText("Result is required"),
+    remarks: optionalText(),
     day_of_fever: requireDayOfFever
       ? requiredText("Day of fever is required")
       : optionalText(),
@@ -242,14 +255,16 @@ export type SerologyFormValues = {
   result: string;
   specimen: string;
   test: string;
+  remarks: string;
 };
 
 export const serologyDefaultValues: SerologyFormValues = {
   test: "",
   method: "",
-  specimen: "",
+  specimen: "Serum",
   result: "",
   day_of_fever: "",
+  remarks: "PLEASE CORRELATE CLINICALLY FOR APPROPRIATE INTERPRETATION OF RESULTS"
 };
 
 export const fecalOccultBloodSchema = z.object({
@@ -264,30 +279,38 @@ export type FecalOccultBloodFormValues = z.infer<typeof fecalOccultBloodSchema>;
 
 export const fecalOccultBloodDefaultValues: FecalOccultBloodFormValues = {
   test: "Fecal Occult Blood Test",
-  method: "",
+  method: "Qualitative Lateral Flow Chromatographic Immunoassay",
   specimen: "Stool",
   result: "",
-  remarks: "",
+  remarks: "PLEASE CORRELATE CLINICALLY FOR APPROPRIATE INTERPRETATION OF RESULTS",
 };
 
 export const hbA1cSchema = z.object({
+  test_requested: requiredText("Test requested is required"),
   test_method: requiredText("Test method is required"),
   lot_no: optionalText(),
   exp_date: optionalText(),
   specimen: requiredText("Specimen is required"),
   result: numericResult("HbA1c result"),
-  result_interpretation: optionalText(),
+  normal: optionalText(),
+  pre_diabetes: optionalText(),
+  diabetes: optionalText(),
+  remarks: optionalText(),
 });
 
 export type HbA1cFormValues = z.infer<typeof hbA1cSchema>;
 
 export const hbA1cDefaultValues: HbA1cFormValues = {
-  test_method: "",
+  test_requested: "GLYCOSYLATED HEMOGLOBIN (HbA1c)",
+  test_method: "LATEX IMMUNOAGGLUTINATION",
   lot_no: "",
   exp_date: "",
-  specimen: "",
+  specimen: "WHOLE BLOOD",
   result: 0,
-  result_interpretation: "",
+  normal: "≤ 5.6 %",
+  pre_diabetes: "5.7-6.4 %",
+  diabetes: "≥ 6.5 %",
+  remarks: "PLEASE CORRELATE CLINICALLY FOR APPOPRIATE INTERPRETATION OF RESULTS."
 };
 
 export const chemistrySchema = z.object({
@@ -295,7 +318,9 @@ export const chemistrySchema = z.object({
   potassium: numericResult("Potassium"),
   chloride: numericResult("Chloride"),
   ionized_calcium: numericResult("Ionized calcium"),
+  ionized_calcium_conv: numericResult("Ionized calcium"),
   others: optionalText(),
+  remarks: optionalText(),
 });
 
 export type ChemistryFormValues = z.infer<typeof chemistrySchema>;
@@ -305,7 +330,9 @@ export const chemistryDefaultValues: ChemistryFormValues = {
   potassium: 0,
   chloride: 0,
   ionized_calcium: 0,
+  ionized_calcium_conv: 0,
   others: "",
+  remarks: "PLEASE CORRELATE CLINICALLY FOR APPROPRIATE INTERPRETATION OF RESULTS."
 };
 
 export const createSingleChemistrySchema = ({
@@ -376,6 +403,12 @@ export const createOgttSchema = ({
 }) =>
   createDynamicSchema([
     { name: "test_type", type: "text", label: "Test type" },
+    {
+      name: "remarks",
+      type: "text",
+      label: "Remarks",
+      required: false,
+    },
     ...phases.flatMap((phase) => [
       {
         name: phase.fieldName,
@@ -401,6 +434,7 @@ export const getOgttDefaultValues = ({
 }) => {
   const defaultValues: OgttFormValues = {
     test_type: defaultTestType,
+    remarks: "PLEASE CORRELATE CLINICALLY FOR APPROPRIATE INTERPRETATION OF RESULTS."
   };
 
   phases.forEach((phase) => {

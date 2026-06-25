@@ -8,11 +8,12 @@ export function mapPrescriptionToPrisma(
 ) {
     return {
         // ─── IDENTIFIERS ───────────────────
-        cons_id: consultId,
+        consultation_id: consultId,
         patient_id: patientId,
         doctor_id: doctorId,
         // ─── NOTES ─────────────────────────
         gen_notes: data.gen_notes ?? "",
+        issued_date: data.issued_date ?? "",
 
         // ─── MEDICINES ─────────────────────
         medicines: data.medicines.map((medicine) => ({

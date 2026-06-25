@@ -140,6 +140,14 @@ export default function OGTTResultModal({
             </div>
           ))}
         </div>
+        <div className="mt-4">
+          <Input
+            label="Remarks"
+            placeholder="Enter ogtt remarks"
+            {...register("remarks")}
+            error={errors.remarks?.message}
+          />
+        </div>
       </div>
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">

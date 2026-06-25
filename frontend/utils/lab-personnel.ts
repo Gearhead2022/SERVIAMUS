@@ -219,10 +219,12 @@ export const getLabResultPersonnelDisplay = (
 
   return {
     medTech: {
+      ...medTechSnapshot,
       primaryLine: getPersonnelPrimaryLine(medTechSnapshot),
       secondaryLine: getPersonnelCredentialLine(medTechSnapshot),
     },
     pathologist: {
+      ...pathologistSnapshot,
       primaryLine: getPersonnelPrimaryLine(pathologistSnapshot),
       secondaryLine: getPersonnelCredentialLine(pathologistSnapshot),
     },

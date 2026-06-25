@@ -8,6 +8,7 @@ import { usePatientLabRecords } from "@/hooks/Lab/useLab";
 import { LabRecordGroup, LabRequest, PatientRecord } from "@/types/LabTypes";
 import { getApiErrorMessage } from "@/utils/api-error";
 import { getLabRecordGroupLabel, getLabTemplateLabel } from "@/utils/lab-templates";
+import { Section } from "lucide-react";
 
 type Props = {
   patient: PatientRecord;
@@ -73,6 +74,7 @@ export default function PatientLabRecordsModal({
       }))
       .filter((section) => section.items.length > 0);
   }, [records]);
+
   const lastRecordedAt = useMemo(() => {
     if (!records.length) {
       return null;
@@ -82,6 +84,7 @@ export default function PatientLabRecordsModal({
       .map((record) => new Date(record.requestedDate).getTime())
       .sort((left, right) => right - left)[0];
   }, [records]);
+
   const visibleCategorySummary = useMemo(() => {
     if (!groupedRecords.length) {
       return "No categories";
@@ -91,6 +94,8 @@ export default function PatientLabRecordsModal({
       .map((section) => getLabRecordGroupLabel(section.group))
       .join(", ");
   }, [groupedRecords]);
+
+  // console.log('labRecordModal', groupedRecords)
 
   return (
     <div className="space-y-5 p-5">
@@ -216,7 +221,7 @@ export default function PatientLabRecordsModal({
                         </span>
                       </div>
                       <div>
-                        <p className="text-base font-semibold text-[#173f39]">{record.testType}</p>
+                        <p className="text-base font-semibold text-[#173f39] w-100 truncate">{record.testType}</p>
                         <p className="mt-1 text-sm text-[#63867f]">
                           {getLabTemplateLabel(record)} - {formatRecordDate(record.requestedDate)}
                         </p>

@@ -40,6 +40,7 @@ export default function HbAIcResultModal({
     >
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         {[
+          { label: "Test Requested", name: "test_requested", type: "text" },
           { label: "Test Method", name: "test_method", type: "text" },
           { label: "Lot No.", name: "lot_no", type: "text" },
           { label: "Expiration Date", name: "exp_date", type: "date" },
@@ -58,13 +59,60 @@ export default function HbAIcResultModal({
             />
           </div>
         ))}
-        <div className="col-span-2 flex flex-col gap-1">
-          <Textarea
-            label="Interpretation"
-            rows={4}
-            {...register("result_interpretation")}
-            error={errors.result_interpretation?.message}
-          />
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="bg-slate-50 border-b border-slate-200 px-4 py-2">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">
+            Interpretation of Results
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-[180px_1fr] text-[13px]">
+          <div className="px-4 py-2 border-b border-r border-slate-200 font-medium text-slate-500 tracking-wide">
+            NORMAL
+          </div>
+          <div className="px-3 py-1 border-b border-slate-200 w-70">
+            <Input
+              type="text"
+              {...register("normal")}
+              error={errors.normal?.message}
+            />
+          </div>
+
+          <div className="px-4 py-2 border-b border-r border-slate-200 font-medium text-slate-500 tracking-wide">
+            PRE-DIABETES
+          </div>
+          <div className="px-3 py-1 border-b border-slate-200 w-70">
+            <Input
+              type="text"
+              {...register("pre_diabetes")}
+              error={errors.pre_diabetes?.message}
+            />
+          </div>
+
+          <div className="px-4 py-2 border-r border-slate-200 font-medium text-slate-500 tracking-wide">
+            DIABETES
+          </div>
+          <div className="px-3 py-1 w-70">
+            <Input
+              type="text"
+              {...register("diabetes")}
+              error={errors.diabetes?.message}
+            />
+          </div>
+        </div>
+      </div>
+      <div>
+        <div className="gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="col-span-2 flex flex-col gap-1">
+            <Textarea
+              label="Remarks"
+              rows={1}
+              {...register("remarks")}
+              error={errors.remarks?.message}
+            />
+          </div>
         </div>
       </div>
 

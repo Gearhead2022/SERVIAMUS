@@ -5,6 +5,7 @@
 import { useState, type KeyboardEvent } from "react";
 import { z } from "zod";
 import Select from "react-select";
+import CreatableSelect from "react-select/creatable";
 import {
   Controller,
   FieldErrors,
@@ -22,31 +23,26 @@ import {
   VitalSignProps,
 } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
-import { useRequest, useGetAllUsers } from "@/hooks/Patient/usePatientRegistration";
+import { useRequest, useGetAllUsers, useLastRecord } from "@/hooks/Patient/usePatientRegistration";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Label from "@/components/ui/label";
 import {
   File,
   Plus,
-  Printer,
   SquareActivity,
   TestTubeDiagonal,
   X,
 } from "lucide-react";
-import { todayPH } from "@/utils/Date";
+import { formatDate, todayPH } from "@/utils/Date";
 import SweetAlert from "@/utils/SweetAlert";
 import { openExternalLabRequestPrintPage } from "@/utils/lab-request-print";
-
 
 type RequestFormValues = z.infer<typeof requestSchema>;
 type Consultation = Extract<RequestFormValues, { req_type: "CONSULTATION" }>;
 type Laboratory = Extract<RequestFormValues, { req_type: "LABORATORY" }>;
 type Certificate = Extract<RequestFormValues, { req_type: "CERTIFICATE" }>;
-type TestOption = {
-  label: string;
-  value: string;
-};
+type TestOption = { label: string; value: string; };
 
 const normalizeLabTestLabel = (value: string) =>
   value.trim().replace(/\s+/g, " ");
@@ -140,6 +136,8 @@ const RequestForm: React.FC<{
 }> = ({ patient, vitals, onClose }) => {
   const { mutateAsync: request, isPending } = useRequest(onClose);
   const { data: UserList } = useGetAllUsers();
+  const { data: lastVisit } = useLastRecord(Number(patient.patient_id));
+
   const {
     register,
     handleSubmit,
@@ -147,7 +145,6 @@ const RequestForm: React.FC<{
     clearErrors,
     getValues,
     trigger,
-    watch,
     formState: { errors },
   } = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
@@ -181,12 +178,25 @@ const RequestForm: React.FC<{
   const consultErrors = errors as FieldErrors<Consultation>;
   const labErrors = errors as FieldErrors<Laboratory>;
   const certificateErrors = errors as FieldErrors<Certificate>;
-  const lastConsultation = vitals?.created_at ? new Date(vitals?.created_at).toISOString().split("T")[0] : '';
   const [additionalLabTestInput, setAdditionalLabTestInput] = useState("");
   const [additionalLabTests, setAdditionalLabTests] = useState<string[]>([]);
   const [printTestError, setPrintTestError] = useState("");
+  const currentYear = new Date().getFullYear();
+  const [reqByInput, setReqByInput] = useState("");
 
   const onSubmit = async (data: RequestFormValues) => {
+    const alreadyClaimed =
+      Number(patient.last_medical_assistance_year) === currentYear;
+
+    if (alreadyClaimed && data.req_type === 'CERTIFICATE' && data.purpose === 'Medical Assistance') {
+      const confirmed = await SweetAlert.confirmationAlert2(
+        "Are you sure?",
+        "Patient already claimed medical assistance this year."
+      );
+
+      if (!confirmed) return;
+    }
+
     await request(data);
   };
 
@@ -289,13 +299,15 @@ const RequestForm: React.FC<{
         { label: "LDL-Cholesterol", value: "LDL-Cholesterol" },
         { label: "Triglycerides", value: "Triglycerides" },
         { label: "50g OGGT", value: "1H-OGTT" },
-        { label: "75g OGGT", value: "2H-OGTT" },
+        { label: "75g OGGT (Gestational)", value: "2H-OGTT" },
+        { label: "75g OGGT (Non-Gestational)", value: "OGTT 75G" },
         { label: "100g OGGT", value: "OGTT" },
         { label: "SGPT", value: "Serum Glutamic Pyruvic Transaminase" },
-        { label: "Sodium", value: "Sodium" },
-        { label: "Potassium", value: "Potassium" },
+        { label: "Sodium (Na)", value: "Sodium" },
+        { label: "Potassium (K)", value: "Potassium" },
+        { label: "Chloride (CI)", value: "chloride" },
+        { label: "Ionized Calcium (ICa)", value: "Ionized Calcium" },
         { label: "HbA1c", value: "HbA1c" },
-
       ],
     },
     {
@@ -327,7 +339,6 @@ const RequestForm: React.FC<{
 
   const flatTestOptions = testOptions.flatMap((group) => group.options);
 
-
   const purposeOptions = [
     { value: "Fit To Work", label: "Fit to work" },
     { value: "Medical Assistance", label: "Medical Assistance" }
@@ -346,6 +357,24 @@ const RequestForm: React.FC<{
   };
 
   const options = userOptions(UserList ?? []);
+
+
+  // Lab Options Request by
+
+  type LabOption = {
+    label: string;
+    value: string;
+  };
+
+  const userLabOptions = (UserList: UsersProps[]): LabOption[] => {
+    return UserList.map((user) => ({
+      label: `${user.name} ${user.title ?? ""}`.trim(),
+      value: `${user.name} ${user.title ?? ""}`.trim(),
+    }));
+  };
+
+  const labRequester = userLabOptions(UserList ?? []);
+
   const labTestErrorMessage = labErrors.test?.message ?? printTestError;
 
   type ReqType = "CONSULTATION" | "CERTIFICATE" | "LABORATORY";
@@ -385,7 +414,7 @@ const RequestForm: React.FC<{
 
           </div>
           <div className="flex" style={{ transform: 'translateX(50%)' }}>
-            <h2 className="text-gray-900 italic">Last Consultation - {lastConsultation}</h2>
+            <h2 className="text-gray-900 italic">Last Visit - {formatDate(lastVisit?.req_date)}</h2>
           </div>
         </div>
 
@@ -541,14 +570,74 @@ const RequestForm: React.FC<{
         {reqType === "LABORATORY" ? (
           <div className="space-y-4">
             <div className="col-span-2">
-              <Input
-                label="Requested By"
-                type="text"
-                {...register("req_by" as const)}
-                className="bg-[#f7f8fc]"
-                placeholder="Enter Requestor Name Here..."
-                error={labErrors.req_by?.message}
+              <Label>Requested By</Label>
+              <Controller
+                control={control}
+                name="req_by"
+                render={({ field }) => (
+                  <CreatableSelect<LabOption, false>
+                    options={labRequester}
+                    placeholder="— Select or Type Requested By —"
+                    isClearable
+
+                    inputValue={reqByInput}
+                    onInputChange={(value, actionMeta) => {
+                      if (actionMeta.action === "input-change") {
+                        setReqByInput(value);
+                      }
+                    }}
+
+                    value={
+                      field.value
+                        ? { label: field.value, value: field.value }
+                        : null
+                    }
+
+                    onChange={(selected) => {
+                      const value = selected ? selected.value : "";
+                      field.onChange(value);
+                      setReqByInput("");
+                    }}
+
+                    onCreateOption={(inputValue) => {
+                      const value = inputValue.trim();
+                      field.onChange(value);
+                      setReqByInput("");
+                    }}
+
+                    onBlur={() => {
+                      const value = reqByInput.trim();
+
+                      if (value) {
+                        field.onChange(value);
+                        setReqByInput("");
+                      }
+
+                      field.onBlur();
+                    }}
+
+                    formatCreateLabel={(input) => `Use "${input}"`}
+                    menuPortalTarget={document.body}
+                    styles={{
+                      menuPortal: (base) => ({
+                        ...base,
+                        zIndex: 9999,
+                      }),
+                      menuList: (base) => ({
+                        ...base,
+                        maxHeight: 200,
+                        overflowY: "auto",
+                        color: "black",
+                      }),
+                    }}
+                  />
+                )}
               />
+              {labErrors.req_by && (
+                <p className="text-xs text-red-500 mt-1">
+                  {labErrors.req_by.message}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7da0]">
@@ -565,6 +654,7 @@ const RequestForm: React.FC<{
                 render={({ field }) => (
                   <Select<TestOption, true>
                     {...field}
+                    className='text-black'
                     options={testOptions}
                     isMulti
                     onChange={(selected) => {
@@ -580,7 +670,7 @@ const RequestForm: React.FC<{
                     value={flatTestOptions.filter((option) =>
                       field.value?.includes(option.value)
                     )}
-                    className="mb-5 z-10" />
+                  />
                 )}
 
               />

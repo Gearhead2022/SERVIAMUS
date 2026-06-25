@@ -20,6 +20,7 @@ type Props = {
 
 const cbcFields = [
   { label: "Hemoglobin", name: "Hemoglobin" },
+  { label: "Hematocrit", name: "Hematocrit" },
   { label: "RBC Count", name: "rbc_count" },
   { label: "WBC Count", name: "wbc_count" },
   { label: "Platelet Count", name: "platelet_count" },
@@ -29,9 +30,9 @@ const cbcFields = [
 ] as const;
 
 const differentialFields = [
-  { label: "Neutrophils (Seg)", name: "nss_1" },
-  { label: "Neutrophils (Stab)", name: "nss_2" },
-  { label: "NSS 3", name: "nss_3" },
+  { label: "Neutrophils", name: "nss_1" },
+  { label: "Segmenters", name: "nss_2" },
+  { label: "Stab", name: "nss_3" },
   { label: "Lymphocytes", name: "lymphocytes" },
   { label: "Monocytes", name: "monocytes" },
   { label: "Eosinophils", name: "eosinophils" },
@@ -93,7 +94,7 @@ export default function HematologyModal({
           ))}
           <div className="col-span-2">
             <Input
-              label="Remarks"
+              label="Others"
               placeholder="Additional hematology notes"
               {...register("others1")}
               error={errors.others1?.message}
@@ -103,10 +104,17 @@ export default function HematologyModal({
       </div>
 
       <Input
-        label="Additional Remarks"
-        placeholder="Enter final hematology remarks"
+        label="Overall Others"
+        placeholder="Enter final hematology others"
         {...register("others2")}
         error={errors.others2?.message}
+      />
+
+      <Input
+        label="Remarks"
+        placeholder="Enter hematology remarks"
+        {...register("remarks")}
+        error={errors.remarks?.message}
       />
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">

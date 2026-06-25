@@ -33,10 +33,10 @@ export default function ParasitologyModal({
       parasitologyDefaultValues,
       initialValues
         ? {
-            ...initialValues,
-            time_received:
-              initialValues.time_received ?? initialValues.time_recieved,
-          }
+          ...initialValues,
+          time_received:
+            initialValues.time_received ?? initialValues.time_recieved,
+        }
         : initialValues
     ),
   });
@@ -53,13 +53,14 @@ export default function ParasitologyModal({
         </div>
         <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           {[
-            { label: "Time Collected", name: "time_collected" },
-            { label: "Time Received", name: "time_received" },
-            { label: "Color", name: "color" },
-            { label: "Consistency", name: "consistency" },
-          ].map(({ label, name }) => (
+            { label: "Time Collected", name: "time_collected", type: 'time' },
+            { label: "Time Received", name: "time_received", type: 'time' },
+            { label: "Color", name: "color", type: 'text' },
+            { label: "Consistency", name: "consistency", type: 'text' },
+          ].map(({ label, name, type }) => (
             <div key={name} className="flex flex-col gap-1">
               <Input
+                type={type}
                 label={label}
                 {...register(name as keyof ParasitologyFormValues)}
                 error={errors[name as keyof ParasitologyFormValues]?.message}
@@ -101,7 +102,7 @@ export default function ParasitologyModal({
         <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           {[
             { label: "Hookworm", name: "hookworm" },
-            { label: "Ascaris", name: "ascaris" },
+            { label: "Ascaris lumbricoides", name: "ascaris" },
             { label: "Trichuris", name: "trichuris" },
             { label: "Strongyloides", name: "strongloides" },
             { label: "E. Histolytica (Cyst)", name: "histolytica_cyst" },
@@ -126,6 +127,15 @@ export default function ParasitologyModal({
           placeholder="Additional findings"
           {...register("others")}
           error={errors.others?.message}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <Input
+          label="Remarks"
+          placeholder="Remarks"
+          {...register("remarks")}
+          error={errors.remarks?.message}
         />
       </div>
 

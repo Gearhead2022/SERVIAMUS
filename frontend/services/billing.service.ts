@@ -3,7 +3,7 @@ import {
   BillingBreakdownItem,
   BillingRecord,
   BillingRequestType,
-  PaymentMethod,
+  PaymentRecord, PaymentMethod
 } from "@/types/BillingTypes";
 
 type BillingBreakdownApiItem = {
@@ -21,6 +21,7 @@ export type BillingApiResponse = {
   breakdown?: BillingBreakdownApiItem[];
   date: string | Date;
   discount?: number | string | null;
+  discount_reason?: string;
   payments?: Array<{
     method?: PaymentMethod | null;
     payment_date?: string | Date | null;
@@ -38,6 +39,18 @@ export type BillingApiResponse = {
   } | null;
   status: "PENDING" | "DONE";
   total_price: number | string;
+};
+
+export type PaymentApiResponse = {
+  payment_id: number;
+  billing_id: number;
+  amount: number;
+  method: string;
+  payment_date: string;
+  reference_no?: string | null;
+  notes?: string | null;
+
+  billing: BillingApiResponse;
 };
 
 export const toFrontendBilling = (billing: BillingApiResponse): BillingRecord => {
@@ -69,6 +82,7 @@ export const toFrontendBilling = (billing: BillingApiResponse): BillingRecord =>
     tests: breakdown.map((item) => item.label),
     totalPrice: Number(billing.total_price ?? 0),
     discount: Number(billing.discount ?? 0),
+    discountReason: billing.discount_reason ?? null,
     breakdown,
     status: billing.status === "DONE" ? "paid" : "unpaid",
     isPaid: billing.status === "DONE",
@@ -79,10 +93,77 @@ export const toFrontendBilling = (billing: BillingApiResponse): BillingRecord =>
   };
 };
 
-export const fetchBillings = async () => {
-  const res = await api.get("/api/billing");
-  const items = (res.data.data ?? []) as BillingApiResponse[];
-  return items.map(toFrontendBilling);
+export const toFrontendPayment = (
+  payment: PaymentApiResponse
+): PaymentRecord => {
+  const billing = toFrontendBilling(payment.billing);
+
+  return {
+    paymentId: payment.payment_id,
+
+    billingId: payment.billing_id,
+
+    billingCode: billing.billingCode,
+
+    patientName: billing.patientName,
+
+    patientCode: billing.patientCode,
+
+    requestType: billing.requestType,
+
+    requestedBy: billing.requestedBy ?? "",
+    requestedDate: billing.requestedDate,
+
+    amount: Number(payment.amount),
+
+    totalPrice: billing.totalPrice,
+    discount: billing.discount,
+
+    discountReason: billing.discountReason,
+
+    breakdown: billing.breakdown,
+    amountPaid: Number(payment.amount),
+
+    method: payment.method as PaymentMethod,
+
+    referenceNo: payment.reference_no,
+
+    paidAt: payment.payment_date,
+
+    status: billing.isPaid ? "PAID" : "VOIDED",
+
+    billing,
+  };
+};
+export const fetchBillings = async (
+  page: number,
+  limit: number,
+  search: string,
+  status: string,
+  type: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string
+) => {
+  const res = await api.get("/api/billing", {
+    params: {
+      page,
+      limit,
+      search,
+      status,
+      type,
+      dateFrom,
+      dateTo,
+      sort
+    }
+  });
+
+  const items = (res.data.data.data ?? []) as BillingApiResponse[];
+  return {
+    data: items.map(toFrontendBilling),
+    stats: res.data.data.stats,
+    pagination: res.data.data.pagination,
+  };
 };
 
 export const payBilling = async (
@@ -91,4 +172,33 @@ export const payBilling = async (
 ) => {
   const res = await api.patch(`/api/billing/${billingId}/pay`, { method });
   return toFrontendBilling(res.data.data as BillingApiResponse);
+};
+
+export const fetchPayment = async (
+  search?: string,
+  status?: string,
+  method?: string,
+  type?: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string,
+) => {
+  const res = await api.get("/api/billing/getAllPayments", {
+    params: {
+      search,
+      status,
+      method,
+      type,
+      dateFrom,
+      dateTo,
+      sort,
+    },
+  });
+
+  const items = (res.data.data.data ?? []) as PaymentApiResponse[];
+  return {
+    data: items.map(toFrontendPayment),
+    stats: res.data.data.stats,
+    pagination: res.data.data.pagination,
+  };
 };

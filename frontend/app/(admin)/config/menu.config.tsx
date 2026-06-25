@@ -1,12 +1,16 @@
 import { ReactNode } from "react";
 import {
-  Home,
-  ShoppingCart,
-  Package,
+  LayoutDashboard,
   Users,
-  BarChart,
-  FileStack,
-  Folders
+  ClipboardList,
+  History,
+  FlaskConical,
+  UserPlus,
+  ListTodo,
+  Clock3,
+  ReceiptText,
+  WalletCards,
+  BriefcaseMedical
 } from "lucide-react";
 
 export interface MenuItem {
@@ -18,108 +22,104 @@ export interface MenuItem {
 }
 
 export const MENU_ITEMS: MenuItem[] = [
-  // ADMIN pages
+  // ───────────────── ADMIN ─────────────────
   {
     label: "Dashboard",
     path: "/dashboard",
-    icon: <Home size={18} />,
-    iconOnly: <Home size={30} />,
+    icon: <LayoutDashboard size={18} />,
+    iconOnly: <LayoutDashboard size={30} />,
     roles: ["ADMIN"]
   },
   {
     label: "Accounts",
-    path: "/pages/admin/users",
-    icon: <ShoppingCart size={18} />,
-    iconOnly: <ShoppingCart size={30} />,
-    roles: ["ADMIN"]
-  },
-  {
-    label: "Services",
-    path: "/pages/admin/services",
-    icon: <Package size={18} />,
-    iconOnly: <Package size={30} />,
-    roles: ["ADMIN"]
-  },
-  {
-    label: "Reports",
-    path: "/reports",
-    icon: <BarChart size={18} />,
-    iconOnly: <BarChart size={30} />,
-    roles: ["ADMIN"]
-  },
-  {
-    label: "Settings",
-    path: "/pages/admin/setting",
+    path: "/register",
     icon: <Users size={18} />,
     iconOnly: <Users size={30} />,
     roles: ["ADMIN"]
   },
+  {
+    label: "Services",
+    path: "/services",
+    icon: <BriefcaseMedical size={18} />,
+    iconOnly: <BriefcaseMedical size={30} />,
+    roles: ["ADMIN"]
+  },
+  // {
+  //   label: "Settings",
+  //   path: "/pages/admin/setting",
+  //   icon: <Settings size={18} />,
+  //   iconOnly: <Settings size={30} />,
+  //   roles: ["ADMIN"]
+  // },
 
-  // DOCTOR
-
+  // ───────────────── DOCTOR ─────────────────
   {
     label: "Queue & Dashboard",
     path: "/docDashboard",
-    icon: <Home size={18} />,
-    iconOnly: <Home size={30} />,
-    roles: ["DOCTOR"]
-  },
-  {
-    label: "Registry & Request",
-    path: "/patientHistoryList",
-    icon: <Home size={18} />,
-    iconOnly: <Home size={30} />,
+    icon: <ClipboardList size={18} />,
+    iconOnly: <ClipboardList size={30} />,
     roles: ["DOCTOR"]
   },
   {
     label: "History & Records",
     path: "/historyRecords",
-    icon: <Home size={18} />,
-    iconOnly: <Home size={30} />,
-    roles: ["DOCTOR"]
+    icon: <History size={18} />,
+    iconOnly: <History size={30} />,
+    roles: ["DOCTOR", "ADMIN"]
   },
 
-  // LAB
-
+  // ───────────────── LAB ─────────────────
   {
     label: "Dashboard",
     path: "/labdashboard",
-    icon: <Home size={18} />,
-    iconOnly: <Home size={30} />,
+    icon: <LayoutDashboard size={18} />,
+    iconOnly: <LayoutDashboard size={30} />,
     roles: ["LAB", "LABORATORY"]
   },
-
   {
     label: "Laboratory Records",
     path: "/labrecords",
-    icon: <Folders size={18} />,
-    iconOnly: <Folders size={30} />,
-    roles: ["LAB", "LABORATORY", "DOCTOR"]
+    icon: <FlaskConical size={18} />,
+    iconOnly: <FlaskConical size={30} />,
+    roles: ["LAB", "LABORATORY"]
   },
 
-  // STAFF
+  // ───────────────── STAFF ─────────────────
   {
-    label: "Dashboard",
+    label: "Registry & Request",
     path: "/registration",
-    icon: <Home size={18} />,
-    iconOnly: <Home size={30} />,
-    roles: ["STAFF"]
+    icon: <UserPlus size={18} />,
+    iconOnly: <UserPlus size={30} />,
+    roles: ["STAFF", "DOCTOR", "ADMIN"]
+  },
+  {
+    label: "Request List",
+    path: "/requestList",
+    icon: <ListTodo size={18} />,
+    iconOnly: <ListTodo size={30} />,
+    roles: ["STAFF", "ADMIN"]
   },
   {
     label: "Queue",
     path: "/queue",
-    icon: <Home size={18} />,
-    iconOnly: <Home size={30} />,
+    icon: <Clock3 size={18} />,
+    iconOnly: <Clock3 size={30} />,
     roles: ["STAFF"]
   },
 
-  // CASHIER
+  // ───────────────── CASHIER ─────────────────
   {
     label: "Billing",
     path: "/billing",
-    icon: <Home size={18} />,
-    iconOnly: <Home size={30} />,
+    icon: <ReceiptText size={18} />,
+    iconOnly: <ReceiptText size={30} />,
     roles: ["CASHIER", "ADMIN"]
   },
-
+  {
+    label: "Payment Records",
+    path: "/payment",
+    icon: <WalletCards size={18} />,
+    iconOnly: <WalletCards size={30} />,
+    roles: ["CASHIER", "ADMIN"]
+  },
 ];

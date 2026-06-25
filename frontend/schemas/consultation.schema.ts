@@ -114,9 +114,10 @@ export const medicineSchema = z.object({
 
 export const prescriptionSchema = z.object({
   patient_id: z.number(),
-  cons_id: z.number(),
+  consultation_id: z.number(),
   doctor_id: z.number(),
   gen_notes: z.string().optional(),
+  issued_date: z.string(),
 
   medicines: z
     .array(medicineSchema)

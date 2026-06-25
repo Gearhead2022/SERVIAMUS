@@ -12,7 +12,8 @@ type ButtonVariant =
   | "prescription"
   | "doneStatus"
   | "print"
-  | "add";
+  | "add"
+  | "deleteRequest"
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -44,6 +45,10 @@ const variants: Record<ButtonVariant, string> = {
   declineRequest:
     "flex items-center gap-[.2rem] bg-[#c8102e] hover:bg-[#a50d25] text-white text-sm font-semibold px-[.7rem] py-[2px] rounded-xl transition shadow-lg shadow-[#c8102e]/30",
 
+  deleteRequest:
+    "flex items-center gap-[.2rem] bg-[#910a20] hover:bg-[#6b0718] text-white text-sm font-semibold px-[.7rem] py-[2px] rounded-xl transition shadow-lg shadow-[#c8102e]/30",
+
+
   consult:
     "flex items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-semibold transition-all bg-[#0e7c7b] hover:bg-[#13aba8] shadow-lg shadow-[#0e7c7a]/30",
   prescription:
@@ -53,7 +58,7 @@ const variants: Record<ButtonVariant, string> = {
   print:
     "text-white bg-[#fc0335] hover:bg-[#e83a5d]",
   add:
-    "text-white bg-[#0026ff] hover:bg-[#031a9e]",  
+    "text-white bg-[#0026ff] hover:bg-[#031a9e]",
 };
 
 

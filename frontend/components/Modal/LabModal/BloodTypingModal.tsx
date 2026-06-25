@@ -60,10 +60,17 @@ export default function BloodTypingModal({
       </div>
 
       <Input
-        label="Remarks"
+        label="Others"
         placeholder="Additional blood typing notes"
         {...register("others2")}
         error={errors.others2?.message}
+      />
+
+      <Input
+        label="Remarks"
+        placeholder="Enter blood typing remarks"
+        {...register("remarks")}
+        error={errors.remarks?.message}
       />
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">

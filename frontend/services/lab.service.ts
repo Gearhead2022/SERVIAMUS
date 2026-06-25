@@ -2,9 +2,11 @@ import api from "./axios";
 import {
   CreateLabRequestPayload,
   LabRequest,
+  LabResultPayload,
   LabTestCatalogItem,
   LabUser,
   PatientLabRecordFilters,
+  PatientLabRequestResponse,
   PatientRecord,
   RequestStatus,
   SaveLabResultPayload,
@@ -140,6 +142,31 @@ export const fetchPatientLabRecords = async (
 
 export const fetchPatientLabRequests = async (patientId: number) => {
   const res = await api.get(`/api/lab/patients/${patientId}/requests`);
-  const items = (res.data.data ?? []) as LabRequestApiResponse[];
-  return items.map(toFrontendRequest);
+  const items = (res.data.data ?? []) as PatientLabRequestResponse[];
+  return items;
+};
+
+export interface LabPreviewResponse {
+  request: LabRequest;
+  form: LabResultPayload;
+}
+
+export const fetchLabResultPreview = async (
+  labid: number,
+  itemId?: number
+) => {
+
+  const res = await api.get(
+    `/api/lab/preview/${labid}`,
+    {
+      params: {
+        itemId,
+      },
+    }
+  );
+
+  return res.data.data as {
+    request: LabRequest;
+    form: LabResultPayload;
+  };
 };

@@ -30,7 +30,7 @@ export default function ConsultResultDocument({
 
     if (type === "prescription" && doctorId && template === 'temp-1') {
         return (
-            <MedicalRxPreviewVer2
+            <MedicalRxPreview
                 form={form as PrescriptionValues}
                 doctorId={doctorId}
             />
@@ -39,7 +39,7 @@ export default function ConsultResultDocument({
 
     if (type === "prescription" && doctorId && template === 'default') {
         return (
-            <MedicalRxPreview
+            <MedicalRxPreviewVer2
                 form={form as PrescriptionValues}
                 doctorId={doctorId}
             />
@@ -89,7 +89,7 @@ function MedicalCertificatePreview({ form, doctorId }: { form: MedCertFormValues
                         fontFamily: "'Times New Roman', Times, serif",
                     }}
                 >
-                    <div className="grid grid-cols-[50px_1fr_50px] items-center">
+                    <div className="grid grid-cols-[70px_1fr_70px] items-center">
 
                         {/* LEFT LOGO */}
                         <div className="flex justify-center">
@@ -98,7 +98,7 @@ function MedicalCertificatePreview({ form, doctorId }: { form: MedCertFormValues
                                 alt="Serviamus logo"
                                 width={60}
                                 height={60}
-                                className="h-15 rounded-full object-cover"
+                                className="h-18 w-18 rounded-full object-cover"
                                 priority
                                 unoptimized
                             />
@@ -107,21 +107,21 @@ function MedicalCertificatePreview({ form, doctorId }: { form: MedCertFormValues
                         {/* CENTER INFO */}
                         <div className="text-center leading-tight">
 
-                            <p className="text-[19px] font-black text-red-600 uppercase">
+                            <p className="text-[22px] scale-y-[1.5] font-bold text-red-600 uppercase">
                                 {doctorInfo?.name}
                             </p>
-                            <p className="text-[7px] font-black uppercase tracking-wider leading-snug">
+                            <p className="text-[10px] text-black uppercase tracking-tight leading-snug">
                                 FAMILY AND COMMUNITY MEDICINE
                             </p>
-                            <p className="text-[7px] font-black uppercase tracking-wider leading-snug">
+                            <p className="text-[10px] text-black uppercase tracking-tight leading-snug">
                                 FELLOW AND DIPLOMATE OF THE PHILIPPINE ACADEMY OF FAMILY PHYSICIAN
                             </p>
 
-                            <p className="text-[11px] font-bold uppercase text-blue-900 tracking-wide">
+                            <p className="text-[14px] font-bold uppercase text-blue-900 tracking-tight">
                                 Serviamus Medical Clinic and Laboratory Inc.
                             </p>
 
-                            <p className="text-[8px] italic text-gray-700 ">
+                            <p className="text-[10px] italic text-gray-700 ">
                                 Puer Sanctus VI Bldg., Cors. Rosario – Verbena Sts.,
                                 Brgy. 33, Bacolod City, 6100
                             </p>
@@ -135,7 +135,7 @@ function MedicalCertificatePreview({ form, doctorId }: { form: MedCertFormValues
                                 alt="Serviamus logo"
                                 width={48}
                                 height={48}
-                                className="h-13 w-13 rounded-full object-cover"
+                                className="h-17 w-17 rounded-full object-cover"
                                 priority
                                 unoptimized
                             />
@@ -165,7 +165,7 @@ function MedicalCertificatePreview({ form, doctorId }: { form: MedCertFormValues
                                 alt=""
                                 width={20}
                                 height={20}
-                                className="h-3 w-6"
+                                className="h-3 w-5"
                                 priority
                                 unoptimized
                             />
@@ -191,7 +191,7 @@ function MedicalCertificatePreview({ form, doctorId }: { form: MedCertFormValues
                 <div className="border-b border-blue-900"></div>
 
                 <div className="mt-6">
-                    <div className="text-[14px] text-black">
+                    <div className="text-[15px] text-black">
                         <div>To Whom it may concern:</div>
 
                         <br />
@@ -262,14 +262,14 @@ function MedicalCertificatePreview({ form, doctorId }: { form: MedCertFormValues
                 </div>
 
                 {/* LICENSE NUMBER */}
-                <div className="mt-17 flex justify-end items-end gap-2 text-[15px] text-gray-900">
+                <div className="mt-17 flex justify-end items-end gap-2 text-[14px] text-gray-900">
                     <span className="whitespace-nowrap"></span>
-                    <div className="w-75 border-b border-gray-600 min-h-[18px] px-1 text-center font-semibold">
+                    <div className="w-80 border-b border-gray-600 min-h-[18px] px-1 text-center font-semibold">
                         {doctorInfo?.name} {doctorInfo?.title}
                     </div>
                 </div>
                 <div className="flex justify-end items-end gap-2 text-[14px] text-gray-900">
-                    <div className="w-60 min-h-[18px] px-1 flex text-center gap-2">
+                    <div className="w-65 min-h-[18px] px-1 flex text-center gap-2">
                         <span className="font-normal whitespace-nowrap">
                             Lic. No.
                         </span>
@@ -283,7 +283,7 @@ function MedicalCertificatePreview({ form, doctorId }: { form: MedCertFormValues
                         <span>{doctorInfo?.ptr_no ?? "—"}</span>
                     </div>
                 </div>
-                <div className="absolute bottom-3 left-0 w-full flex font-bold justify-center text-[12px] text-gray-900">
+                <div className="absolute bottom-3 left-0 w-full flex font-bold justify-center text-[13px] italic text-gray-900">
                     <span>NOT TO BE USED FOR LEGAL PURPOSES</span>
                 </div>
             </div>
@@ -315,7 +315,7 @@ function MedicalCertificatePreviewVer2({ form, doctorId }: { form: MedCertFormVa
                         fontFamily: "'Times New Roman', Times, serif",
                     }}
                 >
-                    <div className="grid grid-cols-[50px_1fr] items-center">
+                    <div className="grid grid-cols-[70px_1fr] items-center">
 
                         {/* LEFT LOGO */}
                         <div className="flex justify-center">
@@ -324,14 +324,14 @@ function MedicalCertificatePreviewVer2({ form, doctorId }: { form: MedCertFormVa
                                 alt="Serviamus logo"
                                 width={60}
                                 height={60}
-                                className="h-13 w-16 rounded-full object-cover"
+                                className="h-17 w-17 rounded-full object-cover"
                                 priority
                                 unoptimized
                             />
                         </div>
 
                         {/* CENTER INFO */}
-                        <div className="text-center leading-tight">
+                        <div className="text-center leading-tight pr-[40px]">
 
                             <p className="text-[19px] font-black text-red-600 uppercase scale-y-130">
                                 {doctorInfo?.name}
@@ -340,7 +340,7 @@ function MedicalCertificatePreviewVer2({ form, doctorId }: { form: MedCertFormVa
                                 Serviamus Medical Clinic and Laboratory Inc.
                             </p>
 
-                            <p className="text-[10px] italic text-gray-700">
+                            <p className="text-[11px] italic text-gray-700">
                                 Puer Sanctus VI Bldg., Cors. Rosario – Verbena Sts.,
                                 Brgy. 33, Bacolod City, 6100
                             </p>
@@ -373,7 +373,7 @@ function MedicalCertificatePreviewVer2({ form, doctorId }: { form: MedCertFormVa
                                 alt=""
                                 width={20}
                                 height={20}
-                                className="h-3 w-6"
+                                className="h-3 w-5"
                                 priority
                                 unoptimized
                             />
@@ -399,7 +399,7 @@ function MedicalCertificatePreviewVer2({ form, doctorId }: { form: MedCertFormVa
                 <div className="border-b border-blue-900"></div>
 
                 <div className="mt-6">
-                    <div className="text-[14px] text-black">
+                    <div className="text-[15px] text-black">
                         <div>To Whom it may concern:</div>
 
                         <br />
@@ -472,12 +472,12 @@ function MedicalCertificatePreviewVer2({ form, doctorId }: { form: MedCertFormVa
                 {/* LICENSE NUMBER */}
                 <div className="mt-17 flex justify-end items-end gap-2 text-[15px] text-gray-900">
                     <span className="whitespace-nowrap"></span>
-                    <div className="w-75 border-b border-gray-600 min-h-[18px] px-1 text-center font-semibold">
+                    <div className="w-90 border-b border-gray-600 min-h-[18px] px-1 text-center font-semibold">
                         {doctorInfo?.name} {doctorInfo?.title}
                     </div>
                 </div>
                 <div className="flex justify-end items-end gap-2 text-[14px] text-gray-900">
-                    <div className="w-60 min-h-[18px] px-1 flex text-center gap-2">
+                    <div className="w-70 min-h-[18px] px-1 flex text-center gap-2">
                         <span className="font-normal whitespace-nowrap">
                             Lic. No.
                         </span>
@@ -491,7 +491,7 @@ function MedicalCertificatePreviewVer2({ form, doctorId }: { form: MedCertFormVa
                         <span>{doctorInfo?.ptr_no ?? "—"}</span>
                     </div>
                 </div>
-                <div className="absolute bottom-3 left-0 w-full flex font-bold justify-center text-[12px] text-gray-900">
+                <div className="absolute bottom-3 left-0 w-full flex font-bold justify-center text-[13px] italic text-gray-900">
                     <span>NOT TO BE USED FOR LEGAL PURPOSES</span>
                 </div>
             </div>
@@ -505,9 +505,9 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
     const { data: doctorInfo } = useGetDoctorById(doctorId);
 
     return (
-        <div className="print-document bg-gray-100 flex items-center justify-center font-serif">
+        <div className="print-document bg-gray-100 flex items-start justify-center font-serif">
             <div
-                className="relative print-page paper-b6 bg-white border border-gray-300 flex flex-col"
+                className="relative paper-b6 bg-white border border-gray-300 flex flex-col"
                 style={{ fontFamily: "'Times New Roman', Times, serif" }}>
                 {/* HEADER */}
                 <div
@@ -516,7 +516,7 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
                         fontFamily: "'Times New Roman', Times, serif",
                     }}
                 >
-                    <div className="grid grid-cols-[50px_1fr_50px] items-center">
+                    <div className="grid grid-cols-[70px_1fr_70px] items-center">
 
                         {/* LEFT LOGO */}
                         <div className="flex justify-center">
@@ -525,7 +525,7 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
                                 alt="Serviamus logo"
                                 width={60}
                                 height={60}
-                                className="h-15 rounded-full object-cover"
+                                className="h-18 w-18 rounded-full object-cover"
                                 priority
                                 unoptimized
                             />
@@ -534,21 +534,21 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
                         {/* CENTER INFO */}
                         <div className="text-center leading-tight">
 
-                            <p className="text-[19px] font-black text-red-600 uppercase">
+                            <p className="text-[22px] scale-y-[1.5] font-bold text-red-600 uppercase">
                                 {doctorInfo?.name}
                             </p>
-                            <p className="text-[7px] font-black uppercase tracking-wider leading-snug">
+                            <p className="text-[10px] text-black uppercase tracking-tight leading-snug">
                                 FAMILY AND COMMUNITY MEDICINE
                             </p>
-                            <p className="text-[7px] font-black uppercase tracking-wider leading-snug">
+                            <p className="text-[10px] text-black uppercase tracking-tight leading-snug">
                                 FELLOW AND DIPLOMATE OF THE PHILIPPINE ACADEMY OF FAMILY PHYSICIAN
                             </p>
 
-                            <p className="text-[11px] font-bold uppercase text-blue-900 tracking-wide">
+                            <p className="text-[14px] font-bold uppercase text-blue-900 tracking-tight">
                                 Serviamus Medical Clinic and Laboratory Inc.
                             </p>
 
-                            <p className="text-[8px] italic text-gray-700 ">
+                            <p className="text-[10px] italic text-gray-700 ">
                                 Puer Sanctus VI Bldg., Cors. Rosario – Verbena Sts.,
                                 Brgy. 33, Bacolod City, 6100
                             </p>
@@ -562,7 +562,7 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
                                 alt="Serviamus logo"
                                 width={48}
                                 height={48}
-                                className="h-13 w-13 rounded-full object-cover"
+                                className="h-17 w-17 rounded-full object-cover"
                                 priority
                                 unoptimized
                             />
@@ -592,7 +592,7 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
                                 alt=""
                                 width={20}
                                 height={20}
-                                className="h-3 w-6"
+                                className="h-3 w-5"
                                 priority
                                 unoptimized
                             />
@@ -647,7 +647,7 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
                 {/* Rx SYMBOL + WRITING AREA */}
                 <div className="mt-6 flex-1">
                     <div
-                        className="text-5xl italic text-gray-900 leading-none mb-2"
+                        className="text-5xl italic text-red-600 leading-none mb-2"
                         style={{ fontFamily: "'Palatino Linotype', Palatino, serif" }}
                     >
                         &#x211E;
@@ -659,12 +659,12 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
                             <div key={index} className="mb-4">
 
                                 {/* MED NAME */}
-                                <div className="font-semibold text-black">
+                                <div className="font-semibold text-black text-[17px]">
                                     {index + 1}. {m.medicine_name} {m.strength && `(${m.strength})`}
                                 </div>
 
                                 {/* RX LINE (classic doctor style) */}
-                                <div className="ml-4 text-[13px] leading-relaxed text-black">
+                                <div className="ml-4 text-[14px] leading-relaxed text-black">
                                     <div>
                                         Sig: {m.dose} {m.route} {m.frequency}
                                     </div>
@@ -704,12 +704,12 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
                 {/* LICENSE NUMBER */}
                 <div className="mt-17 flex justify-end items-end gap-2 text-[15px] text-gray-900">
                     <span className="whitespace-nowrap"></span>
-                    <div className="w-75 border-b border-gray-600 min-h-[18px] px-1 text-center font-semibold">
-                        {doctorInfo?.name} {doctorInfo?.title}
+                    <div className="w-90 border-b border-gray-600 min-h-[18px] px-1 text-center font-semibold">
+                        {doctorInfo?.name.toUpperCase()} {doctorInfo?.title?.toUpperCase()}
                     </div>
                 </div>
                 <div className="flex justify-end items-end gap-2 text-[14px] text-gray-900">
-                    <div className="w-60 min-h-[18px] px-1 flex text-center gap-2">
+                    <div className="w-70 min-h-[11px] px-1 flex text-center gap-2">
                         <span className="font-normal whitespace-nowrap">
                             Lic. No.
                         </span>
@@ -746,7 +746,7 @@ function MedicalRxPreviewVer2({ form, doctorId }: { form: PrescriptionValues, do
                         fontFamily: "'Times New Roman', Times, serif",
                     }}
                 >
-                    <div className="grid grid-cols-[50px_1fr] items-center">
+                    <div className="grid grid-cols-[70px_1fr] items-center flex justi">
 
                         {/* LEFT LOGO */}
                         <div className="flex justify-center">
@@ -755,23 +755,23 @@ function MedicalRxPreviewVer2({ form, doctorId }: { form: PrescriptionValues, do
                                 alt="Serviamus logo"
                                 width={60}
                                 height={60}
-                                className="h-13 w-16 rounded-full object-cover"
+                                className="h-17 w-17 rounded-full object-cover"
                                 priority
                                 unoptimized
                             />
                         </div>
 
                         {/* CENTER INFO */}
-                        <div className="text-center leading-tight">
+                        <div className="text-center leading-tight pr-[40px]">
 
-                            <p className="text-[19px] font-black text-red-600 uppercase scale-y-130">
+                            <p className="text-[22px] scale-y-[1.5] font-bold text-red-600 uppercase">
                                 {doctorInfo?.name}
                             </p>
                             <p className="text-[13px] font-bold uppercase text-blue-900 scale-y-180 tracking-wide">
                                 Serviamus Medical Clinic and Laboratory Inc.
                             </p>
 
-                            <p className="text-[10px] italic text-gray-700">
+                            <p className="text-[12px] italic text-gray-700 tracking-tight">
                                 Puer Sanctus VI Bldg., Cors. Rosario – Verbena Sts.,
                                 Brgy. 33, Bacolod City, 6100
                             </p>
@@ -804,7 +804,7 @@ function MedicalRxPreviewVer2({ form, doctorId }: { form: PrescriptionValues, do
                                 alt=""
                                 width={20}
                                 height={20}
-                                className="h-3 w-6"
+                                className="h-3 w-5"
                                 priority
                                 unoptimized
                             />
@@ -923,12 +923,12 @@ function MedicalRxPreviewVer2({ form, doctorId }: { form: PrescriptionValues, do
                 {/* LICENSE NUMBER */}
                 <div className="mt-17 flex justify-end items-end gap-2 text-[15px] text-gray-900">
                     <span className="whitespace-nowrap"></span>
-                    <div className="w-75 border-b border-gray-600 min-h-[18px] px-1 text-center font-semibold">
-                        {doctorInfo?.name} {doctorInfo?.title}
+                    <div className="w-90 border-b border-gray-600 min-h-[18px] px-1 text-center font-semibold">
+                        {doctorInfo?.name.toUpperCase()} {doctorInfo?.title?.toUpperCase()}
                     </div>
                 </div>
                 <div className="flex justify-end items-end gap-2 text-[14px] text-gray-900">
-                    <div className="w-60 min-h-[18px] px-1 flex text-center gap-2">
+                    <div className="w-70 min-h-[11px] px-1 flex text-center gap-2">
                         <span className="font-normal whitespace-nowrap">
                             Lic. No.
                         </span>
@@ -947,12 +947,37 @@ function MedicalRxPreviewVer2({ form, doctorId }: { form: PrescriptionValues, do
     );
 }
 
+const SectionHeader = ({
+    title,
+}: {
+    title: string;
+}) => (
+    <div className="bg-blue-100 border-b border-black px-2 py-1 font-bold text-sm">
+        {title}
+    </div>
+);
+
+const CheckboxItem = ({
+    checked,
+    label,
+}: {
+    checked?: boolean;
+    label: string;
+}) => (
+    <span className="flex items-center gap-2">
+        <span className="w-4 text-center">
+            {checked ? "☑" : "☐"}
+        </span>
+        <span>{label}</span>
+    </span>
+);
+
 function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) {
     return (
         <div className="print-document bg-gray-100 flex items-center justify-center">
             {/* LONG BOND PAPER */}
             <div
-                className="print-page paper-legal bg-white text-black mx-auto p-6 print:p-2 w-[1016px] print:w-full">
+                className="print-page paper-legal bg-white w-full">
                 <div
                     className="result-header border-b border-slate-300 pb-3"
                     style={{
@@ -987,7 +1012,7 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
                             </p>
 
                             <div className="flex justify-center mt-3">
-                                <h2 className="mt-2 text-[11px] font-bold uppercase border-b border-black inline-block">
+                                <h2 className="mt-2 text-[12px] font-bold tracking-[0.1em] text-amber-700! uppercase border-b border-black inline-block">
                                     Patient&apos;s Record
                                 </h2>
                             </div>
@@ -1093,10 +1118,7 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
 
                 {/* HISTORY OF PRESENT ILLNESS */}
                 <div className="mt-4 border border-black">
-                    <div className="bg-gray-100 border-b border-black p-2 font-bold text-sm">
-                        History of Present Illness:
-                    </div>
-
+                    <SectionHeader title="History of Present Illness:" />
                     <div className="h-45 p-4">
                         <div className="space-y-4 text-sm">
 
@@ -1109,35 +1131,46 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
                 <div className="grid grid-cols-2 mt-4 border border-black">
                     {/* LEFT */}
                     <div className="border-r border-black">
-                        <div className="px-2 py-1 bg-gray-100 border-b border-black font-bold text-sm">
-                            Past Medical History
-                        </div>
+                        <SectionHeader title="Past Medical History" />
 
-                        <div className="p-4 space-y-1 text-md print:text-sm">
-                            <span className="flex gap-3"><p>{form.pmh_allergy ? "✔" : "•"}</p> FDA</span>
-                            <span className="flex gap-3"><p>{form.pmh_admission ? "✔" : "•"}</p>Admission</span>
-                            <span className="flex gap-3"><p>{form.pmh_others ? "✔" : "•"}</p>Others:</span>
-                            <span className="flex w-full pl-5 border-b border-gray-400 min-h-[20px] text-sm">
+                        <div className="p-4 space-y-2 text-sm">
+                            <CheckboxItem
+                                checked={form.pmh_allergy}
+                                label="FDA"
+                            />
+
+                            <CheckboxItem
+                                checked={form.pmh_admission}
+                                label="Admission"
+                            />
+
+                            <CheckboxItem
+                                checked={form.pmh_others}
+                                label="Others"
+                            />
+
+                            <div className="pl-6 border-b border-slate-400 min-h-[20px]">
                                 {form.pmh_others_text || "-"}
-                            </span>
+                            </div>
                         </div>
                     </div>
 
                     {/* RIGHT */}
                     <div>
-                        <div className="px-2 py-1 bg-gray-100 border-b border-black font-bold text-sm">
-                            Family History
-                        </div>
+                        <SectionHeader title="Family History" />
+                        <div className="p-4 pb-4">
+                            <div className=" grid grid-cols-2 space-y-2 text-sm">
+                                <CheckboxItem checked={form.fh_htn} label="Hypertension" />
+                                <CheckboxItem checked={form.fh_dm} label="DM" />
+                                <CheckboxItem checked={form.fh_ba} label="BA" />
+                                <CheckboxItem checked={form.fh_cancer} label="Cancer" />
+                                <CheckboxItem checked={form.fh_others} label="Others" />
+                            </div>
 
-                        <div className="p-4 space-y-1 text-sm">
-                            <span className="flex gap-3"><p className="text-md">{form.fh_htn ? "✔" : "•"}</p> Hypertension</span>
-                            <span className="flex gap-3"><p className="text-md">{form.fh_dm ? "✔" : "•"}</p> DM</span>
-                            <span className="flex gap-3"><p className="text-md">{form.fh_ba ? "✔" : "•"}</p> BA</span>
-                            <span className="flex gap-3"><p className="text-md">{form.fh_cancer ? "✔" : "•"}</p> Cancer</span>
-                            <span className="flex gap-3"><p className="text-md">{form.fh_others ? "✔" : "•"}</p> Others:</span>
-                            <span className="flex pl-5 border-b border-gray-400 min-h-[20px] text-sm">
+
+                            <div className="pl-6 border-b border-slate-400 min-h-[20px]">
                                 {form.fh_others_text || "-"}
-                            </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1146,17 +1179,22 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
                 <div className="grid grid-cols-2 mt-4 border border-t-0 border-black">
                     {/* LEFT */}
                     <div className="border-r border-black">
-                        <div className="px-2 py-1 bg-gray-100 border-b border-black font-bold text-sm">
-                            OB-Gyne History
-                        </div>
-
+                        <SectionHeader title="OB-Gyne History" />
                         <div className="p-4 text-sm space-y-1 ">
                             <div className="text-sm">
                                 <p>G P ( {form.ob_score} )</p>
 
                                 <div className="ml-4 mt-2 space-y-1 text-sm">
-                                    <span className="flex gap-3"><p>{form.ob_nvsd ? "✔" : "•"}</p> NVSD</span>
-                                    <span className="flex gap-3"><p>{form.ob_cs ? "✔" : "•"}</p> CS</span>
+
+                                    <CheckboxItem
+                                        checked={form.ob_nvsd}
+                                        label="NVSD"
+                                    />
+
+                                    <CheckboxItem
+                                        checked={form.ob_cs}
+                                        label="CS"
+                                    />
                                 </div>
                             </div>
 
@@ -1183,29 +1221,18 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
 
                     {/* RIGHT */}
                     <div>
-                        <div className="px-2 py-1 bg-gray-100 border-b border-black font-bold text-sm">
-                            Personal & Social History
-                        </div>
+                        <SectionHeader title="Personal & Social History" />
+                        <div className="p-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                            <CheckboxItem checked={form.cigarette_use} label="Cigarette Use" />
+                            <CheckboxItem checked={form.exercise} label="Exercise" />
 
-                        <div className="ml-4 mt-2 space-y-1 text-sm">
-                            {(() => {
-                                const psFields = [
-                                    { label: "Cigarette use", value: form.cigarette_use },
-                                    { label: "Alcohol Beverage use", value: form.alcohol_use },
-                                    { label: "Illicit Drug use", value: form.drug_use },
-                                    { label: "Exercise", value: form.exercise },
-                                    { label: "Good Hygiene Practices", value: form.hygiene_prac },
-                                    { label: "Coffee consumption", value: form.coffee_cons },
-                                    { label: "Soda consumption", value: form.soda_cons },
-                                ];
+                            <CheckboxItem checked={form.alcohol_use} label="Alcohol Use" />
+                            <CheckboxItem checked={form.hygiene_prac} label="Good Hygiene" />
 
-                                return psFields.map(({ label, value }) => (
-                                    <span key={label} className="flex gap-3">
-                                        <p>{value ? "✔" : "•"}</p>
-                                        {label}:
-                                    </span>
-                                ));
-                            })()}
+                            <CheckboxItem checked={form.drug_use} label="Illicit Drug Use" />
+                            <CheckboxItem checked={form.coffee_cons} label="Coffee Consumption" />
+
+                            <CheckboxItem checked={form.soda_cons} label="Soda Consumption" />
                         </div>
                         <div className="px-4 space-y-1 text-sm">
                             {(() => {
@@ -1240,10 +1267,7 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
 
                         {/* PHYSICAL EXAM */}
                         <div>
-                            <div className="bg-gray-100 border border-black p-2 font-bold text-sm">
-                                Physical and Neurologic Examination
-                            </div>
-
+                            <SectionHeader title="Physical and Neurologic Examination" />
                             <div
                                 className=" whitespace-pre-wrap break-words p-3 border-x border-b border-black text-sm"
                                 style={{
@@ -1256,10 +1280,7 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
 
                         {/* ASSESSMENT */}
                         <div>
-                            <div className="bg-blue-100 border border-black p-2 font-bold text-sm">
-                                Assessment
-                            </div>
-
+                            <SectionHeader title="Assessment" />
                             <div
                                 className=" whitespace-pre-wrap break-words p-3 border-x border-b border-black text-sm"
                                 style={{
@@ -1272,10 +1293,7 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
 
                         {/* PLANS */}
                         <div>
-                            <div className="bg-blue-100 border border-black p-2 font-bold text-sm">
-                                Plans
-                            </div>
-
+                            <SectionHeader title="Plans" />
                             <div
                                 className=" whitespace-pre-wrap break-words p-3 border-x border-b border-black text-sm"
                                 style={{
@@ -1288,14 +1306,10 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
 
                         {/* FAMILY ASSESSMENT */}
                         <div>
-                            <div className="bg-blue-100 border border-black p-2 font-bold text-sm">
-                                Family Assessment Tools
-                            </div>
-
+                            <SectionHeader title="Family Assessment Tools" />
                             <div className="border-x border-black p-2 font-semibold text-sm">
                                 Genogram Family Map
                             </div>
-
                             <div
                                 className=" border-x border-b border-black p-3 text-sm"
                                 style={{

@@ -55,7 +55,7 @@ export default function Header() {
 
   return (
     <header
-      className="h-14 flex items-center px-6 gap-4 sticky top-0 z-30 font-['DM_Sans']"
+      className="h-14 flex items-center px-6 gap-4 sticky top-0 z-40 font-['DM_Sans']"
       style={{
         background: "linear-gradient(90deg, #172338 0%, #0a1c38 100%)",
         borderBottom: "1px solid rgba(255,255,255,0.07)",

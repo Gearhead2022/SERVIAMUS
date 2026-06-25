@@ -2,7 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import MedicalFormPreview from "../NestedModal/ModalPreview/MedicalFormPreview";
-import { RequestProps } from "@/types/ConsultationTypes";
+import { RequestProps } from "@/types/RequestTypes";
 import { MedCertFormValues, PrescriptionValues, RegisterConsultationFormValues } from "@/schemas/consultation.schema";
 
 type Props = {
@@ -38,8 +38,10 @@ export default function ConsultResultPreview({
             ? "temp-1"
             : "default";
 
+    // console.log('modals', form)
+
     return (
-        <div className={`consult-print-sheet space-y-5 bg-slate-100 p-5 print:bg-white print:p-0 ${type === "med-cert" ? "page-b6" : "page-a4"}`}>
+        <div className={`consult-print-sheet  bg-slate-100 print:bg-white print:p-0 ${type === "med-cert" ? "page-b6" : "page-a4"}`}>
             <div className="rounded-2xl border border-[#d7e7e3] bg-white p-4 print:hidden">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>

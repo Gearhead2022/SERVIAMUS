@@ -137,6 +137,13 @@ export default function BillingReceiptDocument({ receipt }: Props) {
   const breakdown = getReceiptBreakdown(receipt);
   const totalDue = Math.max(receipt.subtotal - receipt.discount, 0);
 
+  console.log("RECEIPT", {
+    subtotal: receipt.subtotal,
+    discount: receipt.discount,
+    amountPaid: receipt.amountPaid,
+    breakdown: receipt.breakdown,
+  });
+
   return (
     <div className="mx-auto w-full max-w-[6.8in] rounded-[20px] bg-white p-5 text-sm shadow-xl">
       <header className="border-b border-slate-300 pb-4">
@@ -246,7 +253,7 @@ export default function BillingReceiptDocument({ receipt }: Props) {
 
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
           <div className="space-y-2">
-            <SummaryRow label="Subtotal" value={formatCurrency(receipt.subtotal)} />
+            <SummaryRow label="Total Due" value={formatCurrency(receipt.subtotal)} />
             {receipt.discount > 0 ? (
               <SummaryRow
                 label="Discount"
@@ -254,10 +261,10 @@ export default function BillingReceiptDocument({ receipt }: Props) {
                 negative
               />
             ) : null}
-            <div className="border-t border-slate-200 pt-2">
-              <SummaryRow label="Total Due" value={formatCurrency(totalDue)} emphasis />
+            <div className="border-t border-slate-200 pt-2 p-2 bg-rose-100">
+              <SummaryRow label="Amount Due" value={formatCurrency(totalDue)} emphasis />
             </div>
-            <div className="border-t border-slate-200 pt-2">
+            <div className="border-t border-slate-200 pt-2 bg-green-100 p-2">
               <SummaryRow label="Amount Paid" value={formatCurrency(receipt.amountPaid)} emphasis />
             </div>
           </div>

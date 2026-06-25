@@ -53,3 +53,13 @@ export const updateBillingStatus = async (
   const res = await api.put(`/api/billing/${billing_id}`, { status });
   return res.data.data;
 };
+
+
+export const updateBillingDiscount = async (
+  billing_id: number,
+  discount: number,
+  discount_reason?: string | null,
+) => {
+  const res = await api.patch(`/api/billing/${billing_id}/discount`, { status, discount, discount_reason });
+  return toFrontendBilling(res.data.data);
+};

@@ -24,13 +24,13 @@ const sectionFields = {
     { label: "Transparency", name: "transparency" },
   ],
   chemical: [
-    { label: "pH", name: "ph_result" },
+    { label: "pH REACTION", name: "ph_result" },
     { label: "Specific Gravity", name: "spec_grav_result" },
     { label: "Protein", name: "protein" },
     { label: "Nitrite", name: "nitrite" },
     { label: "Glucose", name: "glucose" },
     { label: "Ketones", name: "ketones" },
-    { label: "Leukocytes", name: "leukocytes" },
+    { label: "OTHERS: Leukocytes", name: "leukocytes" },
     { label: "Blood", name: "blood" },
   ],
   microscopic: [
@@ -126,6 +126,14 @@ export default function UrinalysisModal({
         placeholder="Additional findings"
         {...register("others")}
         error={errors.others?.message}
+      />
+
+
+      <Input
+        label="Remarks"
+        placeholder="Lab Remarks"
+        {...register("remarks")}
+        error={errors.remarks?.message}
       />
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">

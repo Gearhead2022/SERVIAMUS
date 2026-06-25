@@ -18,7 +18,7 @@ const PatientCard = ({ patient, onClick }: PatientCardProps) => {
       <div className="p-5">
         {/* Avatar + status */}
         <div className="flex items-start justify-between mb-4">
-          <div className="relative bg-gray-900/90 p-1 rounded-[100%]">
+          <div className="relative bg-gray-200/90 p-1 rounded-[100%]">
             {patient.imageUrl ? (
               <Image
                 src={patient.imageUrl}

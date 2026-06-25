@@ -14,5 +14,6 @@ export interface PatientProps {
    imageUrl?: string;
    religion?: string;
    birth_date?: string;
+   last_medical_assistance_year?: string;
 
 }

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useLogin } from "@/hooks/useLogin";
 import { loginSchema } from "@/schemas/auth.schema";
 import { z } from "zod";
+import Image from "next/image";
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
@@ -53,7 +54,7 @@ export default function POSLogin() {
 
         {/* Photo */}
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-center [mask-image:linear-gradient(to_right,black_0%,black_50%,rgba(0,0,0,.7)_75%,transparent_90%)]"
           style={{ backgroundImage: "url('/images/serviamus.jpeg')" }}
         />
 
@@ -79,7 +80,7 @@ export default function POSLogin() {
           {/* Top: logo */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-none flex items-center justify-center shadow-lg shadow-white/50">
-              <img src="../images/serviamus2.png" alt="" />
+              <Image src="/images/serviamus2.png" height={200} width={200} alt="" />
             </div>
             <div>
               <p className="text-white text-sm font-semibold tracking-wide">Serviamus</p>
@@ -156,7 +157,7 @@ export default function POSLogin() {
         {/* Mobile logo */}
         <div className="flex lg:hidden items-center gap-3 mb-12">
           <div className="w-20 h-20 rounded-2xl bg-none flex items-center justify-center">
-            <img src="../images/serviamus.jpeg" className="rounded-[100%]" alt="" />
+            <Image src="/images/serviamus.jpeg" height={10} width={10} className="rounded-[100%]" alt="" />
           </div>
           <span className="font-['DM_Serif_Display'] text-white text-[3rem]">Serviamus
             <br /><p className="text-sm">Clinic & Laboratory Management</p>
@@ -168,7 +169,7 @@ export default function POSLogin() {
 
           {/* Heading */}
           <div className="mb-10">
-         
+
             <h2 className="font-['DM_Serif_Display'] text-white text-[1.5rem] leading-tight">
               Welcome back...
             </h2>
@@ -192,11 +193,10 @@ export default function POSLogin() {
                   type="text"
                   {...register("username")}
                   placeholder="Enter your username"
-                  className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder:text-white/40 outline-none transition-all ${
-                    errors.username
-                      ? "bg-[#c8102e]/10 border border-[#c8102e]/50 focus:border-[#c8102e] focus:shadow-[0_0_0_3px_rgba(200,16,46,0.12)]"
-                      : "bg-white/[0.05] border border-white/[0.08] focus:border-white/25 focus:bg-white/[0.08] focus:shadow-[0_0_0_3px_rgba(255,255,255,0.04)]"
-                  }`}
+                  className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder:text-white/40 outline-none transition-all ${errors.username
+                    ? "bg-[#c8102e]/10 border border-[#c8102e]/50 focus:border-[#c8102e] focus:shadow-[0_0_0_3px_rgba(200,16,46,0.12)]"
+                    : "bg-white/[0.05] border border-white/[0.08] focus:border-white/25 focus:bg-white/[0.08] focus:shadow-[0_0_0_3px_rgba(255,255,255,0.04)]"
+                    }`}
                 />
               </div>
               <FieldError message={errors.username?.message} />
@@ -215,11 +215,10 @@ export default function POSLogin() {
                   type={showPassword ? "text" : "password"}
                   {...register("password")}
                   placeholder="••••••••"
-                  className={`w-full pl-10 pr-12 py-3 rounded-xl text-sm text-white placeholder:text-white/40 outline-none transition-all ${
-                    errors.password
-                      ? "bg-[#c8102e]/10 border border-[#c8102e]/50 focus:border-[#c8102e] focus:shadow-[0_0_0_3px_rgba(200,16,46,0.12)]"
-                      : "bg-white/[0.05] border border-white/[0.08] focus:border-white/25 focus:bg-white/[0.08] focus:shadow-[0_0_0_3px_rgba(255,255,255,0.04)]"
-                  }`}
+                  className={`w-full pl-10 pr-12 py-3 rounded-xl text-sm text-white placeholder:text-white/40 outline-none transition-all ${errors.password
+                    ? "bg-[#c8102e]/10 border border-[#c8102e]/50 focus:border-[#c8102e] focus:shadow-[0_0_0_3px_rgba(200,16,46,0.12)]"
+                    : "bg-white/[0.05] border border-white/[0.08] focus:border-white/25 focus:bg-white/[0.08] focus:shadow-[0_0_0_3px_rgba(255,255,255,0.04)]"
+                    }`}
                 />
                 <button
                   type="button"
@@ -263,11 +262,11 @@ export default function POSLogin() {
                 ) : (
                   <>
                     Sign In
-                    <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform"  />
+                    <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
                   </>
                 )}
               </button>
-              </div>
+            </div>
           </form>
         </div>
       </div>

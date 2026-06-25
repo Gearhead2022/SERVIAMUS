@@ -36,6 +36,7 @@ export type BillingRecord = {
   tests: string[];
   totalPrice: number;
   discount: number;
+  discountReason?: string | null;
   breakdown: BillingBreakdownItem[];
   status: BillingStatus;
   isPaid: boolean;
@@ -91,7 +92,44 @@ export interface PaymentProps {
   payment_id?: number;
   billing_id: number;
   amount: number;
+  discount: number;
+  discount_reason: string;
   method: PaymentMethod;
   reference_no?: string;
   payment_date?: string;
+}
+
+export type PaymentStatus = "PAID" | "REFUNDED" | "VOIDED";
+export type SortKey = "date_desc" | "date_asc" | "amount_desc" | "amount_asc";
+
+export interface PaymentRecord {
+  paymentId: number;
+  billingId: number;
+
+  billingCode: string;
+
+  patientName: string;
+  patientCode: string;
+  requestedDate: string;
+  breakdown: BillingBreakdownItem[];
+
+  requestType: BillingRequestType;
+  requestedBy: string;
+  totalPrice: number;
+
+  amount: number;
+  discount: number;
+  discountReason?: string | null;
+
+  method: PaymentMethod;
+
+  referenceNo?: string | null;
+
+  paidAt: string;
+
+  status: PaymentStatus;
+  amountPaid: number;
+  paymentMethod?: PaymentMethod | null;
+
+  billing: BillingRecord;
 }

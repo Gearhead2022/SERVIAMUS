@@ -59,12 +59,12 @@ export default function ModalHeader({
   const getSizeClass = (): string => {
     switch (sizeModal) {
       case "2xlarge": return "w-[92vw] max-w-7xl h-auto max-h-[90vh]";
-      case "xlarge":  return "w-[90vw] max-w-6xl h-auto max-h-[85vh]";
-      case "large":   return "w-[78vw] max-w-4xl h-auto max-h-[80vh]";
-      case "medium":  return "w-[90vw] max-w-2xl h-auto max-h-[75vh]";
-      case "small":   return "w-[92vw] max-w-sm  h-auto max-h-[60vh]";
-      case "auto":    return "w-[92vw] max-w-3xl h-auto";
-      default:        return "w-[90vw] max-w-4xl h-auto max-h-[85vh]";
+      case "xlarge": return "w-[90vw] max-w-6xl h-auto max-h-[85vh]";
+      case "large": return "w-[78vw] max-w-4xl h-auto max-h-[80vh]";
+      case "medium": return "w-[90vw] max-w-2xl h-auto max-h-[75vh]";
+      case "small": return "w-[92vw] max-w-sm  h-auto max-h-[60vh]";
+      case "auto": return "w-[92vw] max-w-3xl h-auto";
+      default: return "w-[90vw] max-w-4xl h-auto max-h-[85vh]";
     }
   };
 
@@ -79,9 +79,9 @@ export default function ModalHeader({
         backdropFilter: "blur(5px)",
         WebkitBackdropFilter: "blur(5px)",
       }}
-      onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
-      }}
+    // onClick={(e) => {
+    //   if (e.target === overlayRef.current) onClose();
+    // }}
     >
       <div
         className={`relative flex flex-col bg-white rounded-2xl overflow-hidden shadow-[0_24px_64px_rgba(15,34,68,0.22)] ${getSizeClass()}`}
@@ -173,14 +173,6 @@ export default function ModalHeader({
                 color: "rgba(255,255,255,0.45)",
                 background: "transparent",
                 border: "1px solid rgba(255,255,255,0.1)",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)";
-                (e.currentTarget as HTMLButtonElement).style.color = "white";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.45)";
               }}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

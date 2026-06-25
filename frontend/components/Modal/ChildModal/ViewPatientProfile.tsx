@@ -74,61 +74,6 @@ const ViewPatientProfile: React.FC<{
 
     return (
         <div className="font-['DM_Sans'] bg-white">
-
-            {/* ── Identity strip — avatar + quick pills ── */}
-            <div
-                className="relative px-6 py-5 flex items-center gap-4 overflow-hidden"
-                style={{
-                    background: "linear-gradient(135deg, #0f2244 0%, #1a3560 55%, #0e7c7b 100%)",
-                }}
-            >
-                {/* decorative blobs */}
-                <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full pointer-events-none"
-                    style={{ background: "rgba(255,255,255,0.04)" }} />
-                <div className="absolute -bottom-10 left-4 w-40 h-40 rounded-full pointer-events-none"
-                    style={{ background: "rgba(14,124,123,0.15)" }} />
-
-                {/* avatar */}
-                <div
-                    className="relative z-10 w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold text-white flex-shrink-0"
-                    style={{
-                        background: "rgba(255,255,255,0.14)",
-                        border: "1.5px solid rgba(255,255,255,0.22)",
-                        fontFamily: "'DM Serif Display', serif",
-                    }}
-                >
-                    {initials}
-                </div>
-
-                {/* name + pills */}
-                <div className="relative z-10">
-                    <p
-                        className="text-[17px] font-bold text-white leading-tight"
-                        style={{ fontFamily: "'DM Serif Display', serif" }}
-                    >
-                        {patient.name}
-                    </p>
-                    <p className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>
-                        #{patient.patient_code}
-                    </p>
-                    <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-                        <Pill color="rgba(255,255,255,0.9)" bg={sexColor.bg + "33"}>
-                            <Heart size={9} style={{ color: "rgba(255,255,255,0.8)" }} />
-                            <span className="capitalize" style={{ color: "rgba(255,255,255,0.9)" }}>{patient.sex}</span>
-                        </Pill>
-                        <Pill color="rgba(255,255,255,0.9)" bg="rgba(255,255,255,0.12)">
-                            {patient.age} yrs old
-                        </Pill>
-                        {patient.religion && (
-                            <Pill color="rgba(255,255,255,0.85)" bg="rgba(255,255,255,0.09)">
-                                <Cross size={8} style={{ color: "rgba(255,255,255,0.7)" }} />
-                                {patient.religion}
-                            </Pill>
-                        )}
-                    </div>
-                </div>
-            </div>
-
             {/* ── Section label ── */}
             <div
                 className="px-6 py-2.5 flex items-center gap-3"

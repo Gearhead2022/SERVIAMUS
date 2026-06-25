@@ -9,21 +9,21 @@ import AppToast from "../components/CustomToast";
 type EntityType = "request" | "consultation" | "lab" | "billing";
 
 type NotificationData = {
-  type: "NEW_REQUEST" | "APPROVED" | "REJECTED" | "SYSTEM";
-  title: string;
-  message: string;
-  entity?: EntityType;
-  entity_id?: number;
-  is_read?: boolean;
+    type: "NEW_REQUEST" | "APPROVED" | "REJECTED" | "SYSTEM";
+    title: string;
+    message: string;
+    entity?: EntityType;
+    entity_id?: number;
+    is_read?: boolean;
 };
 
 type NotificationHandler = (data: NotificationData) => void;
 
 const ENTITY_QUERY_MAP: Record<EntityType, ReadonlyArray<readonly string[]>> = {
-  request: [["request"], ["lab"], ["queue"], ["billing"], ["labRequests"]],
-  consultation: [["consultation"]],
-  lab: [["lab"]],
-  billing: [["billing"], ["lab"]],
+    request: [["request"], ["lab"], ["queue"], ["billing"], ["labRequests"]],
+    consultation: [["consultation"]],
+    lab: [["lab"]],
+    billing: [["billing"], ["lab"]],
 };
 
 export default function useSocket(onNotification?: NotificationHandler) {
@@ -63,7 +63,7 @@ export default function useSocket(onNotification?: NotificationHandler) {
 
         socket.on("consultation:updated", () => {
             // console.log("request:updated RECEIVED");
-            queryClient.invalidateQueries({ queryKey: ["consultation-print"] });
+            queryClient.invalidateQueries({ queryKey: ["consultation"] });
         });
 
         // Single source of truth event

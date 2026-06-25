@@ -1,33 +1,85 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { consultationResults, createPrescription, fetchAllConsultationRequest, getAllPatientConsultationList, getAllPatientMedCertList, getConsultationById, getConsultationPrint, getConsultationRecord, getConsultationRecordhistory, getConsultationRxPrint, getDoctorInfo, getLabRequestByName, getMedicalCertificatePrint, getMedicalCertificateRecordhistory, getPatientPrescription, getPrescriptionRecordhistory, getRequestPerWeek, getStatisticsRecord, medicalCertificateResult, updateStatus } from "@/services/consultation.services";
+import { consultationResults, createPrescription, fetchAllConsultationRequest, getAllPatientConsultationList, getAllPatientMedCertList, getConsultationById, getConsultationPrint, getConsultationRecord, getConsultationRecordhistory, getConsultationRxPrint, getDoctorInfo, getLaboratoryRecordHistory, getLabRequestByName, getMedicalCertificatePrint, getMedicalCertificateRecordhistory, getPatientPrescription, getPrescriptionRecordhistory, getRequestPerWeek, getStatisticsRecord, medicalCertificateResult, updateStatus } from "@/services/consultation.services";
 import SweetAlert from "@/utils/SweetAlert";
-import { ConsultationResultProps, Status, RequestProps, PrescriptionProps, ConsultationProps, MedicalCertificateProps, RequestTypes, LabRequestItems, ConsultationPrintDTO } from "@/types/ConsultationTypes";
+import { ConsultationResultProps, Status, PrescriptionProps, ConsultationProps, MedicalCertificateProps, RequestTypes, LabRequestItems, ConsultationHistoryRecordsProps, medCertHistoryRecordsProps, ConsultationRequestProps, ConsultationWithRequestProps } from "@/types/ConsultationTypes";
 import { PatientProps } from "@/types/PatientTypes";
 import { getRequestData } from "@/services/request.services";
+import { MedCertFormValues, patientConsultationSchema, PrescriptionValues } from "@/schemas/consultation.schema";
+import z from "zod";
+import { RegisterPayload } from "@/types/AuthTypes";
+import { LaboratoryItems, LaboratoryProps, PaginationMeta, RequestProps } from "@/types/RequestTypes";
+import { PatientLabRequestResponse } from "@/types/LabTypes";
 
-interface ConsultationHistoryItem {
+export interface ConsultationHistoryItem {
   consultation: ConsultationResultProps;
   patient: PatientProps;
   request: RequestProps;
+  consultationRequest: ConsultationRequestProps;
+  prescription: PrescriptionProps;
 }
 
-interface PrescriptionHistoryItem {
+export interface PrescriptionHistoryItem {
   prescription: PrescriptionProps;
   patient: PatientProps;
   request: RequestProps;
-  consultation: ConsultationProps;
+  consultation: ConsultationWithRequestProps;
 }
 
-interface MedicalCertificateHistoryItem {
+export interface MedicalCertificateHistoryItem {
   certificate: MedicalCertificateProps;
   patient: PatientProps;
   request: RequestProps;
 }
 
-type ModifRequestTypes = Exclude<RequestTypes, 'LABORATORY'>;
-import { MedCertFormValues, patientConsultationSchema, PrescriptionValues } from "@/schemas/consultation.schema";
-import z from "zod";
-import { RegisterPayload } from "@/types/AuthTypes";
+export interface LaboratoryHistoryItem {
+  laboratory: LaboratoryProps,
+  patient: PatientProps,
+  request: RequestProps,
+  tests: LaboratoryItems[],
+  lab: PatientLabRequestResponse
+}
+
+export interface BillingStats {
+  total: number;
+  pending: number;
+  completed: number;
+  revenue: number;
+}
+
+
+export interface PaymentStats {
+  total: number;
+  completed: number;
+  revenue: number;
+}
+
+export interface RequestStats {
+  total: number;
+  waiting: number;
+  serving: number;
+  completed: number;
+  cancelled: number;
+}
+
+export interface TableRequestProps<T, TStats> {
+  data: T[];
+  stats?: TStats;
+  pagination: PaginationMeta;
+}
+
+export type HistoryParams = {
+  page: number;
+  limit: number;
+  search: string;
+  status: string;
+  type?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  sort?: string;
+  method?: string;
+};
+
+// type ModifRequestTypes = Exclude<RequestTypes, 'LABORATORY'>;
 type RegisterConsultationFormValues = z.infer<typeof patientConsultationSchema>;
 
 export const consultationKeys = {
@@ -56,7 +108,7 @@ export const useConsultaion = () => {
         "Patient request registered successfully"
       );
       queryClient.invalidateQueries({ queryKey: ['consultation'] });
-      queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['request'] });
       queryClient.invalidateQueries({ queryKey: ['queue'] });
     },
 
@@ -69,13 +121,10 @@ export const useConsultaion = () => {
   });
 };
 
-export const useGetAllRequest = (
-  search: string,
-  req_types: ModifRequestTypes[]
-) => {
-  return useQuery<RequestProps[]>({
-    queryKey: [...consultationKeys.lists(), search, req_types],
-    queryFn: () => fetchAllConsultationRequest(search, req_types),
+export const useGetAllRequest = (param: HistoryParams) => {
+  return useQuery<TableRequestProps<RequestProps, RequestStats>>({
+    queryKey: [...consultationKeys.lists(), param],
+    queryFn: () => fetchAllConsultationRequest(param.page, param.limit, param.search, param.status, param.type ?? 'ALL', param.dateFrom, param.dateTo, param.sort),
   });
 };
 
@@ -143,7 +192,7 @@ export const usePrescription = () => {
         "Prescription saved successfully"
       );
       queryClient.invalidateQueries({ queryKey: ['consultation'] });
-      queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['request'] });
       queryClient.invalidateQueries({ queryKey: ['queue'] });
     },
 
@@ -157,14 +206,14 @@ export const usePrescription = () => {
 };
 
 export const useAllConsultationRecords = (param: { patient_id: number, search: string }) => {
-  return useQuery<ConsultationResultProps[]>({
+  return useQuery<ConsultationHistoryRecordsProps[]>({
     queryKey: ["consultation", "consult", param.patient_id, param.search],
     queryFn: () => getAllPatientConsultationList(param.patient_id, param.search),
   });
 };
 
 export const useAllMedCertRecords = (param: { patient_id: number, search: string }) => {
-  return useQuery<MedicalCertificateProps[]>({
+  return useQuery<medCertHistoryRecordsProps[]>({
     queryKey: ["consultation", "medcert", param.patient_id, param.search],
     queryFn: () => getAllPatientMedCertList(param.patient_id, param.search),
   });
@@ -177,26 +226,34 @@ export const useConsultationPrescription = (consultation_id: number) => {
   });
 };
 
-export const useConsultationRecordsHistory = () => {
-  return useQuery<ConsultationHistoryItem[]>({
-    queryKey: ['consultation', 'consultation-history'],
-    queryFn: getConsultationRecordhistory,
+export const useConsultationRecordsHistory = (param: HistoryParams) => {
+  return useQuery<TableRequestProps<ConsultationHistoryItem, RequestStats>>({
+    queryKey: ['consultation', 'consultation-history', param],
+    queryFn: () => getConsultationRecordhistory(param.page, param.limit, param.search, param.status, param.dateFrom, param.dateTo, param.sort),
   });
 };
 
-export const usePrescriptionRecordsHistory = () => {
-  return useQuery<PrescriptionHistoryItem[]>({
-    queryKey: ['consultation', 'prescription-history'],
-    queryFn: getPrescriptionRecordhistory,
+export const usePrescriptionRecordsHistory = (param: HistoryParams) => {
+  return useQuery<TableRequestProps<PrescriptionHistoryItem, RequestStats>>({
+    queryKey: ['consultation', 'prescription-history', param],
+    queryFn: () => getPrescriptionRecordhistory(param.page, param.limit, param.search, param.status, param.dateFrom, param.dateTo, param.sort),
   });
 };
 
-export const useMedicalCertificateRecordsHistory = () => {
-  return useQuery<MedicalCertificateHistoryItem[]>({
-    queryKey: ['consultation', 'medical-history'],
-    queryFn: getMedicalCertificateRecordhistory,
+export const useMedicalCertificateRecordsHistory = (param: HistoryParams) => {
+  return useQuery<TableRequestProps<MedicalCertificateHistoryItem, RequestStats>>({
+    queryKey: ['consultation', 'medical-history', param],
+    queryFn: () => getMedicalCertificateRecordhistory(param.page, param.limit, param.search, param.status, param.dateFrom, param.dateTo, param.sort),
   });
 };
+
+export const useLaboratoryRecordHistory = (param: HistoryParams) => {
+  return useQuery<TableRequestProps<LaboratoryHistoryItem, RequestStats>>({
+    queryKey: ['consultation', 'laboratory-history', param],
+    queryFn: () => getLaboratoryRecordHistory(param.page, param.limit, param.search, param.status, param.dateFrom, param.dateTo, param.sort),
+  });
+};
+
 
 export const useMedicalCertificateResult = () => {
   const queryClient = useQueryClient();
@@ -245,6 +302,7 @@ export const useConsultationById = (cons_id: number) => {
   return useQuery<ConsultationProps>({
     queryKey: consultationKeys.records(cons_id),
     queryFn: () => getConsultationById(cons_id),
+    enabled: !!cons_id,
   });
 };
 
@@ -265,7 +323,7 @@ export const useGetLabRequestByName = (name: string, patient_id: number) => {
 
 export const useConsultationPrint = (req_id: number) => {
   return useQuery<RegisterConsultationFormValues>({
-    queryKey: ["consultation-print", req_id],
+    queryKey: ["consultation", "consultation-print", req_id],
     queryFn: () => getConsultationPrint(req_id),
     enabled: !!req_id,
   });
@@ -273,7 +331,7 @@ export const useConsultationPrint = (req_id: number) => {
 
 export const useGetDoctorById = (doctorId: number) => {
   return useQuery<RegisterPayload>({
-    queryKey: ["patient", doctorId],
+    queryKey: ["consultation", doctorId],
     queryFn: () => getDoctorInfo(doctorId),
     enabled: !!doctorId,
   });

@@ -6,6 +6,12 @@ import {
   LabTemplateKey,
 } from "@/types/LabTypes";
 
+type ReferenceValue = {
+  label?: string;
+  conventional: string;
+  si: string;
+};
+
 type SerologyTemplateConfig = {
   defaultMethod?: string;
   defaultSpecimen?: string;
@@ -15,6 +21,7 @@ type SerologyTemplateConfig = {
   resultLabel?: string;
   resultPlaceholder?: string;
   showDayOfFever?: boolean;
+  specimenPlaceHolder?: string;
 };
 
 type SingleChemistryTemplateConfig = {
@@ -24,6 +31,7 @@ type SingleChemistryTemplateConfig = {
   fieldLabel: string;
   fieldName: string;
   showMealFields?: boolean;
+  referenceValues: ReferenceValue[];
 };
 
 type OgttPhaseConfig = {
@@ -35,6 +43,7 @@ type OgttPhaseConfig = {
 type OgttTemplateConfig = {
   defaultTestType: string;
   phases: OgttPhaseConfig[];
+  referenceValues: ReferenceValue[];
 };
 
 export type ClinicalChemistryRow = {
@@ -42,17 +51,21 @@ export type ClinicalChemistryRow = {
   fieldName: string;
   label: string;
   showMealFields?: boolean;
+  referenceValues?: ReferenceValue[];
 };
 
 export type ChemistryPanelFieldName =
   | "chloride"
   | "ionized_calcium"
   | "potassium"
-  | "sodium";
+  | "sodium"
+  | "ionized_calcium_conv";
 
 export type ChemistryPanelRow = {
   fieldName: ChemistryPanelFieldName;
   label: string;
+  unit?: string;
+  referenceValues?: string;
 };
 
 export type LabTemplateDefinition = {
@@ -71,7 +84,7 @@ type LabTemplateRequestContext = Pick<LabRequest, "category" | "schemaKey" | "te
 const createSingleChemistryTemplate = (
   label: string,
   fieldName: string,
-  options?: Omit<SingleChemistryTemplateConfig, "fieldLabel" | "fieldName">
+  options?: Omit<SingleChemistryTemplateConfig, "fieldLabel" | "fieldName">,
 ): LabTemplateDefinition => ({
   apiCategory: "clinical-chemistry",
   key: "single-chemistry",
@@ -79,6 +92,7 @@ const createSingleChemistryTemplate = (
   singleChemistry: {
     fieldLabel: label,
     fieldName,
+    referenceValues: [],
     ...options,
   },
 });
@@ -89,51 +103,130 @@ const clinicalChemistryRows: ClinicalChemistryRow[] = [
     fieldName: "FBS",
     conversionFieldName: "FBS_conv",
     showMealFields: true,
+    referenceValues: [
+      {
+        conventional: "75-115",
+        si: "4.13-6.33",
+      },
+    ],
   },
   {
     label: "RBS (Random Blood Sugar)",
     fieldName: "RBS",
     conversionFieldName: "RBS_conv",
     showMealFields: true,
+    referenceValues: [
+      {
+        conventional: "75-115",
+        si: "4.13-6.33",
+      },
+    ],
+
   },
   {
     label: "BUN (Blood Urea Nitrogen)",
     fieldName: "BUN",
     conversionFieldName: "BUN_conv",
+    referenceValues: [
+      {
+        conventional: "5-24",
+        si: "2.78-8.57",
+      },
+    ],
   },
   {
     label: "Creatinine",
     fieldName: "creatinine",
     conversionFieldName: "creatinine_conv",
+    referenceValues: [
+      {
+        conventional: "0.6-1.4",
+        si: "53.04-123.76",
+      },
+    ],
   },
   {
     label: "Uric Acid",
     fieldName: "uric_acid",
     conversionFieldName: "uric_acid_conv",
+    referenceValues: [
+      {
+        conventional: "2.5-7.0",
+        si: "0.15-0.41",
+      },
+    ],
   },
   {
     label: "Total Cholesterol",
     fieldName: "cholesterol",
     conversionFieldName: "cholesterol_conv",
+    referenceValues: [
+      {
+        conventional: "150-220",
+        si: "3.9-5.72",
+      },
+    ],
   },
   {
     label: "HDL Cholesterol",
     fieldName: "hdl_cholesterol",
     conversionFieldName: "hdl_cholesterol_conv",
+    referenceValues: [
+      {
+        conventional: "30-85",
+        si: "0.78-2.21",
+      },
+    ],
   },
   {
     label: "LDL Cholesterol",
     fieldName: "ldl_cholesterol",
     conversionFieldName: "ldl_cholesterol_conv",
+    referenceValues: [
+      {
+        label: "Suspicious :",
+        conventional: "150",
+        si: "3.9",
+      },
+      {
+        label: "Elevated :",
+        conventional: "190",
+        si: "4.9",
+      },
+    ],
   },
   {
     label: "Triglycerides",
     fieldName: "triglycerides",
     conversionFieldName: "triglycerides_conv",
+    referenceValues: [
+      {
+        label: "Male :",
+        conventional: "60-165",
+        si: "0.68-1.88",
+      },
+      {
+        label: "Female :",
+        conventional: "40=140",
+        si: "0.46-1.60",
+      },
+    ],
   },
   {
     label: "SGPT",
     fieldName: "sgpt",
+    referenceValues: [
+      {
+        label: "Male : Up to",
+        conventional: "40",
+        si: "",
+      },
+      {
+        label: "Female : Up to",
+        conventional: "31",
+        si: "",
+      },
+    ],
   },
 ];
 
@@ -141,40 +234,42 @@ const clinicalChemistryMatchers: Array<{
   fieldName: ClinicalChemistryRow["fieldName"];
   matchers: string[];
 }> = [
-  { fieldName: "FBS", matchers: ["fbs", "fasting blood sugar"] },
-  { fieldName: "RBS", matchers: ["rbs", "random blood sugar"] },
-  { fieldName: "BUN", matchers: ["bun", "blood urea nitrogen", "urea"] },
-  { fieldName: "creatinine", matchers: ["creatinine"] },
-  { fieldName: "uric_acid", matchers: ["uric acid", "uricacid"] },
-  { fieldName: "cholesterol", matchers: ["total cholesterol", "cholesterol"] },
-  { fieldName: "hdl_cholesterol", matchers: ["hdl cholesterol", "hdl"] },
-  { fieldName: "ldl_cholesterol", matchers: ["ldl cholesterol", "ldl"] },
-  { fieldName: "triglycerides", matchers: ["triglycerides", "triglyceride"] },
-  {
-    fieldName: "sgpt",
-    matchers: ["sgpt", "serum glutamic pyruvic transaminase"],
-  },
-];
+    { fieldName: "FBS", matchers: ["fbs", "fasting blood sugar"] },
+    { fieldName: "RBS", matchers: ["rbs", "random blood sugar"] },
+    { fieldName: "BUN", matchers: ["bun", "blood urea nitrogen", "urea"] },
+    { fieldName: "creatinine", matchers: ["creatinine"] },
+    { fieldName: "uric_acid", matchers: ["uric acid", "uricacid"] },
+    { fieldName: "hdl_cholesterol", matchers: ["hdl cholesterol", "hdl"] },
+    { fieldName: "ldl_cholesterol", matchers: ["ldl cholesterol", "ldl"] },
+    { fieldName: "cholesterol", matchers: ["total cholesterol", "cholesterol"] },
+    { fieldName: "triglycerides", matchers: ["triglycerides", "triglyceride"] },
+    {
+      fieldName: "sgpt",
+      matchers: ["sgpt", "serum glutamic pyruvic transaminase"],
+    },
+  ];
 
 const chemistryPanelRows: ChemistryPanelRow[] = [
-  { fieldName: "sodium", label: "Sodium" },
-  { fieldName: "potassium", label: "Potassium" },
-  { fieldName: "chloride", label: "Chloride" },
-  { fieldName: "ionized_calcium", label: "Ionized Calcium" },
+  { fieldName: "sodium", label: "Sodium (Na)", unit: "mmol/L", referenceValues: "135-150" },
+  { fieldName: "potassium", label: "Potassium (K)", unit: "mmol/L", referenceValues: "3.5-5.0" },
+  { fieldName: "chloride", label: "Chloride (Cl)", unit: "mmol/L", referenceValues: "94-110" },
+  { fieldName: "ionized_calcium", label: "Ionized Calcium (lCa )", unit: "mmol/L", referenceValues: "1.10-1.35" },
+  { fieldName: "ionized_calcium_conv", label: "Ionized Calcium Converted", unit: "mg/dL", referenceValues: "4.4-5.4" },
 ];
 
 const chemistryPanelMatchers: Array<{
   fieldName: ChemistryPanelRow["fieldName"];
   matchers: string[];
 }> = [
-  { fieldName: "sodium", matchers: ["sodium"] },
-  { fieldName: "potassium", matchers: ["potassium"] },
-  { fieldName: "chloride", matchers: ["chloride"] },
-  {
-    fieldName: "ionized_calcium",
-    matchers: ["ionized calcium", "ionized ca", "calcium ionized"],
-  },
-];
+    { fieldName: "sodium", matchers: ["sodium"] },
+    { fieldName: "potassium", matchers: ["potassium"] },
+    { fieldName: "chloride", matchers: ["chloride"] },
+    {
+      fieldName: "ionized_calcium",
+      matchers: ["ionized calcium", "ionized ca", "calcium ionized", "ionized"],
+    },
+    { fieldName: "ionized_calcium_conv", matchers: ["ionized_calcium_conv"] },
+  ];
 
 const ogttFastingPhase: OgttPhaseConfig = {
   conversionFieldName: "FBS_conv",
@@ -226,46 +321,122 @@ const templateBySchemaKey: Partial<Record<LabSchemaKey, LabTemplateDefinition>> 
     conversionFieldName: "FBS_conv",
     conversionLabel: "mmol/L",
     showMealFields: true,
+    referenceValues: [
+      {
+        conventional: "75-115",
+        si: "4.13-6.33",
+      },
+    ],
   }),
   RBS: createSingleChemistryTemplate("Random Blood Sugar (RBS)", "RBS", {
     conversionFactor: 0.055,
     conversionFieldName: "RBS_conv",
     conversionLabel: "mmol/L",
     showMealFields: true,
+    referenceValues: [
+      {
+        conventional: "75-115",
+        si: "4.13-6.33",
+      },
+    ],
   }),
   BUN: createSingleChemistryTemplate("Urea (BUN)", "BUN", {
     conversionFactor: 0.357,
     conversionFieldName: "BUN_conv",
     conversionLabel: "mmol/L",
-  }),
-  uricacid: createSingleChemistryTemplate("Uric Acid", "uric_acid", {
-    conversionFactor: 0.059,
-    conversionFieldName: "uric_acid_conv",
-    conversionLabel: "mmol/L",
-  }),
+    referenceValues: [
+      {
+        conventional: "5-24",
+        si: "2.78-8.57",
+      },
+    ],
+  },
+  ),
+  uricacid: createSingleChemistryTemplate("Uric Acid", "uric_acid",
+    {
+      conversionFactor: 0.059,
+      conversionFieldName: "uric_acid_conv",
+      conversionLabel: "mmol/L",
+      referenceValues: [
+        {
+          conventional: "2.5-7.0",
+          si: "0.15-0.41",
+        },
+      ],
+    },
+  ),
   totalcholesterol: createSingleChemistryTemplate("Total Cholesterol", "cholesterol", {
     conversionFactor: 0.026,
     conversionFieldName: "cholesterol_conv",
     conversionLabel: "mmol/L",
+    referenceValues: [
+      {
+        conventional: "150-220",
+        si: "3.9-5.72",
+      },
+    ],
   }),
   HDL: createSingleChemistryTemplate("HDL-Cholesterol", "hdl_cholesterol", {
     conversionFactor: 0.026,
     conversionFieldName: "hdl_cholesterol_conv",
     conversionLabel: "mmol/L",
+    referenceValues: [
+      {
+        conventional: "30-85",
+        si: "0.78-2.21",
+      },
+    ],
   }),
   LDL: createSingleChemistryTemplate("LDL-Cholesterol", "ldl_cholesterol", {
     conversionFactor: 0.026,
     conversionFieldName: "ldl_cholesterol_conv",
     conversionLabel: "mmol/L",
+    referenceValues: [
+      {
+        label: "Suspicious",
+        conventional: "150",
+        si: "3.9",
+      },
+      {
+        label: "Elevated",
+        conventional: "190",
+        si: "4.9",
+      },
+    ],
   }),
   triglycerides: createSingleChemistryTemplate("Triglycerides", "triglycerides", {
     conversionFactor: 0.011,
     conversionFieldName: "triglycerides_conv",
     conversionLabel: "mmol/L",
+    referenceValues: [
+      {
+        label: "Male",
+        conventional: "60-165",
+        si: "0.68-1.88",
+      },
+      {
+        label: "Female",
+        conventional: "40=140",
+        si: "0.46-1.60",
+      },
+    ],
   }),
   SGPT: createSingleChemistryTemplate(
     "Serum Glutamic Pyruvic Transaminase",
-    "sgpt"
+    "sgpt", {
+    referenceValues: [
+      {
+        label: "Male",
+        conventional: "40",
+        si: "",
+      },
+      {
+        label: "Female",
+        conventional: "31",
+        si: "",
+      },
+    ],
+  }
   ),
   sodium: createSingleChemistryTemplate("Sodium", "sodium"),
   potassium: createSingleChemistryTemplate("Potassium", "potassium"),
@@ -286,26 +457,88 @@ const templateBySchemaKey: Partial<Record<LabSchemaKey, LabTemplateDefinition>> 
         ogttTwoHourPhase,
         ogttThreeHourPhase,
       ],
+      referenceValues: [
+        {
+          conventional: "95",
+          si: "5.23",
+        },
+        {
+          conventional: "180",
+          si: "9.90",
+        },
+        {
+          conventional: "155",
+          si: "8.53",
+        },
+        {
+          conventional: "140",
+          si: "7.70",
+        },
+      ],
     },
   },
   onehOGTT: {
     apiCategory: "clinical-chemistry",
     key: "ogtt",
-    label: "50G-OGTT (1H)",
+    label: "50G-OGTT",
     ogtt: {
       defaultTestType: "50G-OGTT",
       phases: [ogttOneHourPhase],
+      referenceValues: [
+        {
+          conventional: "140",
+          si: "7.7",
+        },
+      ],
     },
   },
-  twohOGTT: {
+  twohOGTT: { // non gestational
     apiCategory: "clinical-chemistry",
     key: "ogtt",
-    label: "75G-OGTT (2H)",
+    label: "75G-OGTT",
     ogtt: {
       defaultTestType: "75G-OGTT",
       phases: [ogttFastingPhase, ogttOneHourPhase, ogttTwoHourPhase],
+      referenceValues: [
+        {
+          conventional: "92",
+          si: "5.06",
+        },
+        {
+          conventional: "180",
+          si: "9.9",
+        },
+        {
+          conventional: "153",
+          si: "8.4",
+        },
+      ],
     },
   },
+  twohOGTTv2: { // gestational
+    apiCategory: "clinical-chemistry",
+    key: "ogtt",
+    label: "75G-OGTTv2",
+    ogtt: {
+      defaultTestType: "75G-OGTT",
+      phases: [ogttFastingPhase, ogttOneHourPhase, ogttTwoHourPhase],
+      referenceValues: [
+        {
+          conventional: "92",
+          si: "5.06",
+        },
+        {
+          conventional: "180",
+          si: "9.9",
+        },
+        {
+          conventional: "153",
+          si: "8.4",
+        },
+      ],
+    },
+  },
+
   FOBT: {
     apiCategory: "other",
     key: "fecal-occult-blood",
@@ -317,6 +550,7 @@ const templateBySchemaKey: Partial<Record<LabSchemaKey, LabTemplateDefinition>> 
     label: "Dengue NS1",
     serology: {
       defaultSpecimen: "Serum",
+      defaultMethod: "Qualitative Lateral Flow  Chromatographic Immuno Assay (Dengue NS1 antigens)",
       defaultTestName: "Dengue NS1",
       lockedFields: ["test"],
       requireDayOfFever: true,
@@ -327,9 +561,10 @@ const templateBySchemaKey: Partial<Record<LabSchemaKey, LabTemplateDefinition>> 
   hbsag: {
     apiCategory: "other",
     key: "serology",
-    label: "Hepatitis B Surface Antigen",
+    label: "Hepatitis B Surface Antigen (HBS Ag)",
     serology: {
       defaultSpecimen: "Serum",
+      defaultMethod: "Rapid Qualitative Immunochromatographic Assay",
       defaultTestName: "Hepatitis B Surface Antigen",
       lockedFields: ["test"],
       resultPlaceholder: "Enter HBsAg result",
@@ -341,6 +576,7 @@ const templateBySchemaKey: Partial<Record<LabSchemaKey, LabTemplateDefinition>> 
     label: "Syphilis",
     serology: {
       defaultSpecimen: "Serum",
+      defaultMethod: "Rapid Qualitative Immunochromatographic Assay",
       defaultTestName: "Syphilis",
       lockedFields: ["test"],
       resultPlaceholder: "Enter syphilis result",
@@ -352,9 +588,11 @@ const templateBySchemaKey: Partial<Record<LabSchemaKey, LabTemplateDefinition>> 
     label: "Pregnancy Test (Serum)",
     serology: {
       defaultSpecimen: "Serum",
-      defaultTestName: "Pregnancy Test",
+      defaultMethod: "Rapid Qualitative Immunochromatographic Assay",
+      defaultTestName: "Pregnancy Test (HCG)",
       lockedFields: ["specimen", "test"],
       resultPlaceholder: "Enter serum pregnancy test result",
+      specimenPlaceHolder: "Min. Detection level Serum/Plasma: 10mlU/mL"
     },
   },
   urinePT: {
@@ -363,9 +601,11 @@ const templateBySchemaKey: Partial<Record<LabSchemaKey, LabTemplateDefinition>> 
     label: "Pregnancy Test (Urine)",
     serology: {
       defaultSpecimen: "Urine",
-      defaultTestName: "Pregnancy Test",
+      defaultMethod: "Rapid Qualitative Immunochromatographic Assay",
+      defaultTestName: "Pregnancy Test (HCG)",
       lockedFields: ["specimen", "test"],
       resultPlaceholder: "Enter urine pregnancy test result",
+      specimenPlaceHolder: "Min. Detection level Urine: 25mlU/mL"
     },
   },
   hematology: {
@@ -395,6 +635,24 @@ const templateBySchemaKey: Partial<Record<LabSchemaKey, LabTemplateDefinition>> 
         ogttOneHourPhase,
         ogttTwoHourPhase,
         ogttThreeHourPhase,
+      ],
+      referenceValues: [
+        {
+          conventional: "<95",
+          si: "<5.23",
+        },
+        {
+          conventional: "<180",
+          si: "<9.98",
+        },
+        {
+          conventional: "<155",
+          si: "<8.59",
+        },
+        {
+          conventional: "<140",
+          si: "<7.77",
+        },
       ],
     },
   },
@@ -439,6 +697,15 @@ const resolveClinicalChemistryRowByTestName = (testName: string) => {
   const matchedFieldName = clinicalChemistryMatchers.find(({ matchers }) =>
     matchers.some((matcher) => normalizedTestName.includes(matcher))
   )?.fieldName;
+
+  // if (!matchedFieldName) {
+  //   console.warn(
+  //     "No chemistry matcher found for:",
+  //     normalizedTestName
+  //   );
+
+  //   return null;
+  // }
 
   if (!matchedFieldName) {
     return null;
@@ -592,6 +859,12 @@ export const resolveLabTemplate = (request: LabTemplateRequestContext): LabTempl
         conversionFactor: 88.4,
         conversionFieldName: "creatinine_conv",
         conversionLabel: "umol/L",
+        referenceValues: [
+          {
+            conventional: "0.6-1.4",
+            si: "53.04-123.76",
+          },
+        ],
       });
     }
 
@@ -679,7 +952,7 @@ export const resolveLabTemplate = (request: LabTemplateRequestContext): LabTempl
     (normalizedTestType.includes("75g") || normalizedTestType.includes("75 grams")) &&
     normalizedTestType.includes("ogtt")
   ) {
-    return templateBySchemaKey.twohOGTT ?? templateBySchemaKey.general!;
+    return templateBySchemaKey.twohOGTT ?? templateBySchemaKey.general!; // non gestational
   }
 
   if (normalizedTestType.includes("1h") && normalizedTestType.includes("ogtt")) {
@@ -687,7 +960,7 @@ export const resolveLabTemplate = (request: LabTemplateRequestContext): LabTempl
   }
 
   if (normalizedTestType.includes("2h") && normalizedTestType.includes("ogtt")) {
-    return templateBySchemaKey.twohOGTT ?? templateBySchemaKey.general!;
+    return templateBySchemaKey.twohOGTTv2 ?? templateBySchemaKey.general!; // gestational
   }
 
   if (normalizedTestType.includes("ogtt")) {
@@ -711,6 +984,12 @@ export const resolveLabTemplate = (request: LabTemplateRequestContext): LabTempl
       conversionFactor: 88.4,
       conversionFieldName: "creatinine_conv",
       conversionLabel: "umol/L",
+      referenceValues: [
+        {
+          conventional: "0.6-1.4",
+          si: "53.04-123.76",
+        },
+      ],
     });
   }
 

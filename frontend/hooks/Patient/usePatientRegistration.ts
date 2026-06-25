@@ -2,10 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createPatient, fetchAllPatient, fetchPatientById, updatePatient } from "@/services/patient.services";
 import SweetAlert from "@/utils/SweetAlert";
 import { getApiErrorMessage } from "@/utils/api-error";
-import { VitalSignProps } from "@/types/RequestTypes";
+import { CreateRequestProps, PaginationMeta, RequestProps, VitalSignProps } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
-import { getPrevVitalSigns, createRequest, getAllUsers as getAllRegisteredUsers } from "@/services/request.services";
+import { getPrevVitalSigns, createRequest, getAllUsers as getAllRegisteredUsers, fetchAllRequest, deleteRequest, updateRequest, getLastRecord } from "@/services/request.services";
 import { UsersProps } from "@/types/RequestTypes";
+
+const STAFF_REQUESTS_QUERY_KEY = ["request"] as const;
 
 export const useGetAllpatient = (search: string) => {
   return useQuery<PatientProps[]>({
@@ -51,20 +53,36 @@ export const useGetPrevVitalSigns = (patient_id?: number) => {
   });
 };
 
-
 export const useRequest = (closeModal: () => void) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: createRequest,
 
-    onSuccess: (data: Awaited<ReturnType<typeof createRequest>>) => {
-      if (data?.request?.req_type === "LABORATORY") {
+    onSuccess: async (data: Awaited<ReturnType<typeof createRequest>>) => {
+
+      if (data?.result?.req_type === "LABORATORY") {
         SweetAlert.successAlert(
           "Request Sent to Cashier",
           "Laboratory request has been successfully submitted and sent to the billing queue."
         );
-        queryClient.invalidateQueries({ queryKey: ["request"] });
+
+        const patientId = data?.result?.patient_id;
+
+        if (patientId) {
+          await queryClient.invalidateQueries({
+            queryKey: ["lab", "patient-requests", patientId],
+          });
+        }
+
+        await queryClient.invalidateQueries({
+          queryKey: ["lab"],
+        });
+
+        await queryClient.invalidateQueries({
+          queryKey: ["request"],
+        });
+
         closeModal();
       } else {
         SweetAlert.successAlert(
@@ -120,6 +138,123 @@ export const useGetPatientById = (patientId: number) => {
   return useQuery<PatientProps>({
     queryKey: ["patient", patientId],
     queryFn: () => fetchPatientById(patientId),
+    enabled: !!patientId,
+  });
+};
+
+export interface RequestListStats {
+  total: number;
+  waiting: number;
+  serving: number;
+  done: number;
+  cancelled: number;
+}
+
+export interface TableRequestProps<TStats> {
+  data: RequestProps[];
+  stats?: TStats;
+  pagination: PaginationMeta;
+}
+
+export const useGetAllRequests = (param: {
+  page: number,
+  limit: number,
+  search: string,
+  status: string,
+  type: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string,
+}
+) => {
+  return useQuery<TableRequestProps<RequestListStats>>({
+    queryKey: [...STAFF_REQUESTS_QUERY_KEY, param.page, param.limit, param.search, param.status, param.type, param.dateFrom, param.dateTo, param.sort],
+    queryFn: () => fetchAllRequest(param.page, param.limit, param.search, param.status, param.type, param.dateFrom, param.dateTo, param.sort),
+  });
+};
+
+export const useDeleteRequest = () => {
+
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request_id: number) =>
+      deleteRequest(request_id),
+
+    onSuccess: () => {
+      SweetAlert.successAlert(
+        "Success",
+        "Request deleted successfully"
+      );
+      queryClient.invalidateQueries({
+        queryKey: STAFF_REQUESTS_QUERY_KEY,
+      });
+    },
+  });
+};
+
+export const useUpdateRequest = (
+  closeModal: () => void
+) => {
+
+  const queryClient = useQueryClient();
+
+  return useMutation({
+
+    mutationFn: ({
+      request_id,
+      data,
+    }: {
+      request_id: number;
+      data: CreateRequestProps;
+    }) =>
+      updateRequest(
+        request_id,
+        data
+      ),
+
+    onSuccess: async (
+      data: Awaited<
+        ReturnType<
+          typeof updateRequest
+        >
+      >
+    ) => {
+
+      // console.log('from mutation', data);
+      if (data?.request?.req_type === "LABORATORY") {
+        SweetAlert.successAlert(
+          "Request Updated",
+          "Laboratory request has been successfully updated."
+        );
+
+      } else {
+        SweetAlert.successAlert(
+          "Success",
+          "Request updated successfully."
+        );
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["request"], });
+      closeModal();
+    },
+
+    onError: (error: unknown) => {
+      SweetAlert.errorAlert(
+        "Update Failed",
+        getApiErrorMessage(
+          error,
+          "Unable to update the request."
+        )
+      );
+    },
+  });
+};
+
+export const useLastRecord = (patientId: number) => {
+  return useQuery<RequestProps>({
+    queryKey: ["patient", patientId],
+    queryFn: () => getLastRecord(patientId),
     enabled: !!patientId,
   });
 };

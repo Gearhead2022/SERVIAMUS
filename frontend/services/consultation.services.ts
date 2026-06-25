@@ -1,7 +1,5 @@
 import api from "./axios";
-import { ConsultationResultProps, MedicalCertificateProps, PrescriptionProps, Status, RequestTypes } from "@/types/ConsultationTypes";
-
-type ModifRequestTypes = Exclude<RequestTypes, 'LABORATORY'>;
+import { ConsultationResultProps, MedicalCertificateProps, Status, RequestTypes, CreatePrescriptionPayload } from "@/types/ConsultationTypes";
 
 export const consultationResults = async (
   data: ConsultationResultProps
@@ -10,11 +8,26 @@ export const consultationResults = async (
   return res.data.data;
 };
 
-export const fetchAllConsultationRequest = async (search: string, req_types: ModifRequestTypes[]) => {
+export const fetchAllConsultationRequest = async (
+  page: number,
+  limit: number,
+  search: string,
+  status: string,
+  type: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string
+) => {
   const res = await api.get("/api/consultation/requestList", {
     params: {
+      page,
+      limit,
       search,
-      req_types: req_types.join(","),
+      status,
+      type,
+      dateFrom,
+      dateTo,
+      sort
     }
   }
   );
@@ -38,7 +51,7 @@ export const getStatisticsRecord = async () => {
   return res.data.data;
 };
 
-export const createPrescription = async (data: PrescriptionProps) => {
+export const createPrescription = async (data: CreatePrescriptionPayload) => {
   const res = await api.post(`/api/consultation/createPrescription`, data);
   return res.data.data;
 }
@@ -47,6 +60,7 @@ export const getAllPatientConsultationList = async (patient_id: number, search?:
   const res = await api.get(`/api/consultation/${patient_id}/getAllPatientConsultationRecords`, {
     params: { search }
   });
+  console.log('asdasdasd', res.data.data)
   return res.data.data;
 }
 
@@ -57,23 +71,106 @@ export const getAllPatientMedCertList = async (patient_id: number, search?: stri
   return res.data.data;
 }
 
+export const getAllPatientPrescriptionList = async (patient_id: number, search?: string) => {
+  const res = await api.get(`/api/consultation/${patient_id}/getAllPatientPrescriptionRecords`, {
+    params: { search }
+  });
+  return res.data.data;
+}
+
 export const getPatientPrescription = async (consultation_id: number) => {
   const res = await api.get(`/api/consultation/${consultation_id}/getPrescriptionRecord`);
   return res.data.data;
 }
 
-export const getConsultationRecordhistory = async () => {
-  const res = await api.get(`/api/consultation/consultationRecordHistory`);
+export const getConsultationRecordhistory = async (
+  page: number,
+  limit: number,
+  search: string,
+  status: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string) => {
+  const res = await api.get(`/api/consultation/consultationRecordHistory`, {
+    params: {
+      page,
+      limit,
+      search,
+      status,
+      dateFrom,
+      dateTo,
+      sort
+    }
+  });
   return res.data.data;
 }
 
-export const getPrescriptionRecordhistory = async () => {
-  const res = await api.get(`/api/consultation/prescriptionRecordHistory`);
+export const getPrescriptionRecordhistory = async (
+  page: number,
+  limit: number,
+  search: string,
+  status: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string
+) => {
+  const res = await api.get(`/api/consultation/prescriptionRecordHistory`, {
+    params: {
+      page,
+      limit,
+      search,
+      status,
+      dateFrom,
+      dateTo,
+      sort
+    }
+  });
   return res.data.data;
 }
 
-export const getMedicalCertificateRecordhistory = async () => {
-  const res = await api.get(`/api/consultation/medCertRecordHistory`);
+export const getMedicalCertificateRecordhistory = async (
+  page: number,
+  limit: number,
+  search: string,
+  status: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string
+) => {
+  const res = await api.get(`/api/consultation/medCertRecordHistory`, {
+    params: {
+      page,
+      limit,
+      search,
+      status,
+      dateFrom,
+      dateTo,
+      sort
+    }
+  });
+  return res.data.data;
+}
+
+export const getLaboratoryRecordHistory = async (
+  page: number,
+  limit: number,
+  search: string,
+  status: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string
+) => {
+  const res = await api.get(`/api/consultation/laboratoryRecordHistory`, {
+    params: {
+      page,
+      limit,
+      search,
+      status,
+      dateFrom,
+      dateTo,
+      sort
+    }
+  });
   return res.data.data;
 }
 

@@ -9,12 +9,14 @@ import {
   fetchPatientRecords,
   saveLabResult,
   updateLabRequestStatus,
+  fetchLabResultPreview,
 } from "@/services/lab.service";
 import {
   LabRequest,
   LabTestCatalogItem,
   LabUser,
   PatientLabRecordFilters,
+  PatientLabRequestResponse,
   PatientRecord,
   SaveLabResultPayload,
   UpdateLabRequestStatusPayload,
@@ -131,13 +133,21 @@ export const usePatientLabRecords = (
     enabled: typeof patientId === "number" && Number.isFinite(patientId) && patientId > 0,
   });
 
-export const usePatientLabRequests = (patientId?: number) =>
-  useQuery<LabRequest[]>({
+export const usePatientLabRequests = (
+  patientId?: number
+) =>
+  useQuery<PatientLabRequestResponse[]>({
     queryKey: patientId
       ? getPatientLabRequestsQueryKey(patientId)
       : [...LAB_PATIENT_REQUESTS_QUERY_KEY, "unknown"],
-    queryFn: () => fetchPatientLabRequests(patientId as number),
-    enabled: typeof patientId === "number" && Number.isFinite(patientId) && patientId > 0,
+
+    queryFn: () =>
+      fetchPatientLabRequests(patientId as number),
+
+    enabled:
+      typeof patientId === "number" &&
+      Number.isFinite(patientId) &&
+      patientId > 0,
   });
 
 export const useUpdateLabRequestStatus = () => {
@@ -179,6 +189,11 @@ export const useSaveLabResult = () => {
       queryClient.invalidateQueries({
         queryKey: [...LAB_PATIENT_RECORDS_QUERY_KEY, updatedRequest.rawPatientId],
       });
+
+      SweetAlert.successAlert(
+        "Success",
+        "Result is saved successfully"
+      );
     },
     onError: (error: unknown) => {
       SweetAlert.errorAlert(
@@ -188,3 +203,20 @@ export const useSaveLabResult = () => {
     },
   });
 };
+
+
+export const useLabResultPreview = (
+  labid?: number,
+  itemId?: number
+) =>
+  useQuery({
+    queryKey: ["lab-preview", labid, itemId],
+    queryFn: () =>
+      fetchLabResultPreview(
+        labid as number,
+        itemId
+      ),
+    enabled:
+      typeof labid === "number" &&
+      labid > 0,
+  });

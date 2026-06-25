@@ -12,6 +12,7 @@ import {
 } from "@/schemas/lab.schema";
 import { LabResultPayload } from "@/types/LabTypes";
 import { mergeLabFormDefaults } from "@/utils/lab";
+import Textarea from "@/components/ui/Textarea";
 
 type Props = {
   config?: {
@@ -23,6 +24,7 @@ type Props = {
     resultLabel?: string;
     resultPlaceholder?: string;
     showDayOfFever?: boolean;
+    specimenPlaceHolder?: string;
   };
   initialValues?: LabResultPayload | null;
   onSubmit: (form: SerologyFormValues) => void;
@@ -89,13 +91,20 @@ export default function SerologyResultModal({
             {...register("method")}
             error={errors.method?.message}
           />
-          <Input
-            label="Specimen"
-            placeholder="Enter specimen"
-            readOnly={lockedFields.has("specimen")}
-            {...register("specimen")}
-            error={errors.specimen?.message}
-          />
+          <div>
+            <Input
+              label="Specimen"
+              placeholder="Enter specimen"
+              readOnly={lockedFields.has("specimen")}
+              {...register("specimen")}
+              error={errors.specimen?.message}
+            />
+
+            <span className="mt-1 block text-xs text-slate-500">
+              {config?.specimenPlaceHolder}
+            </span>
+          </div>
+
           {config?.showDayOfFever ? (
             <Input
               label="Day of Fever"
@@ -122,6 +131,15 @@ export default function SerologyResultModal({
             error={errors.result?.message}
           />
         </div>
+      </div>
+      <div className="col-span-2">
+        <Textarea
+          label="Remarks"
+          rows={2}
+          placeholder="Enter additional remarks"
+          {...register("remarks")}
+          error={errors.remarks?.message}
+        />
       </div>
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">

@@ -270,14 +270,18 @@ export default function PrescriptionModal({ patient, consult, onClose, doctor, o
 
     const medicines = form.watch("medicines");
 
+
     const { fields, append, remove } = useFieldArray({
         control,
         name: "medicines",
     });
 
+    console.log('errors', form)
+
     const handlePreview = () => {
         const values = form.getValues();
         onPreview(values);
+        console.log('values', values)
     };
 
     const validMedicineCount = medicines.filter(

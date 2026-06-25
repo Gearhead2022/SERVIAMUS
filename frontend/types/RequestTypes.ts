@@ -1,3 +1,6 @@
+import { ConsultationProps, MedCertRequestProps, PrescriptionMedicine, Status } from "./ConsultationTypes";
+import { LabCategory, LabResultPayload, LabSchemaKey, RequestStatus } from "./LabTypes";
+import { PatientProps } from "./PatientTypes";
 
 export interface VitalSignProps {
   patient_id: number;
@@ -64,6 +67,8 @@ export interface UsersProps {
   license_no: string;
   title: string;
   ptr_no: string;
+  is_active: boolean;
+  created_at: string;
 }
 
 export interface PrintableLabRequestPayload {
@@ -76,3 +81,64 @@ export interface PrintableLabRequestPayload {
   requestedBy: string;
   tests: string[];
 }
+
+export interface RequestProps {
+  req_id: number;
+  patient_id: number;
+  request_code: string;
+  req_type: string;
+  status: Status;
+  req_date: string;
+  patient: PatientProps;
+  consult?: ConsultationRequestProps;
+  cert?: MedCertRequestProps;
+  prescription: PrescriptionMedicine;
+  laboratory: LaboratoryProps;
+}
+
+export interface ConsultationRequestProps {
+  cons_id: number;
+  req_id: number;
+  physician: number;
+  vs_id: number;
+  vitals: VitalSignProps;
+  consultation: ConsultationProps;
+}
+
+export interface LaboratoryProps {
+  id: number;
+  req_id: string;
+  req_by: string;
+  items: LaboratoryItems[];
+}
+
+export interface LaboratoryItems {
+  item_id: number;
+  laboratory_request_id: number;
+  test_id: number;
+  status: RequestStatus;
+  result_payload: LabResultPayload | null;
+  completed_at: string;
+  test: ItemsInfo;
+}
+
+export interface ItemsInfo {
+  test_id: number;
+  name: string;
+  category: LabCategory;
+  schema_key: LabSchemaKey;
+}
+
+export type PaginationMeta = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export type LabRecordGroupRequest =
+  | "clinical_chemistry"
+  | "clinical_microscopy"
+  | "hematology"
+  | "other"
+  | "serology";

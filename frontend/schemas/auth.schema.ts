@@ -32,12 +32,13 @@ export const registerSchema = z.object({
     .int()
     .positive("Please select a role"),
   license_no: z.string().optional(),
-  title: z.string().optional(), 
+  title: z.string().optional(),
   ptr_no: z.string().optional(),
+  is_active: z.boolean().default(true),
 }).refine(
   data => data.password === data.confirm_password,
   {
-    path: ["confirmPassword"],
+    path: ["confirm_password"],
     message: "Passwords do not match"
   }
 );

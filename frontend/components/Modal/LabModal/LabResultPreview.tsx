@@ -33,11 +33,11 @@ export default function LabResultPreview({
     <div className="lab-print-sheet space-y-5 bg-slate-100 p-5 print:bg-white print:p-0">
       <div className="rounded-2xl border border-[#d7e7e3] bg-white p-4 print:hidden">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
+          <div className="max-w-[50%] ">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5f8a83]">
               Result Preview
             </p>
-            <h3 className="mt-1 text-lg font-semibold text-[#143a35]">
+            <h3 className="mt-1 text-lg font-semibold text-[#143a35] truncate">
               {request.patientName} - {request.testType}
             </h3>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import PatientCard from "@/components/PatientCard";
 import PatientActionModal from "@/components/Modal/ChildModal/PatientActionModal";
 import ModalHeader from "@/components/Modal/ModalHeader";
@@ -13,17 +14,22 @@ import { useDebounce } from "use-debounce";
 import Button from "@/components/ui/Button";
 import { Plus, Search } from "lucide-react";
 import ViewPatientHistoryModal from "@/components/Modal/ChildModal/ViewPatientHistoryModal";
-import ViewPrescriptionModal from "@/components/Modal/NestedModal/ViewPrescriptionModal";
-import ViewConsultationModal from "@/components/Modal/NestedModal/ViewConsultationModal";
-import { ConsultationResultProps } from "@/types/ConsultationTypes";
 import EditPatientForm from "@/components/Modal/ChildModal/EditPatientForm";
 import { getApiErrorMessage } from "@/utils/api-error";
 import ViewPatientProfile from "@/components/Modal/ChildModal/ViewPatientProfile";
+import { canAddPatient } from "@/utils/permissions";
+import { MedCertFormValues, PrescriptionValues, RegisterConsultationFormValues } from "@/schemas/consultation.schema";
+import ConsultResultPreview from "@/components/Modal/ChildModal/ConsultationPreview";
+import { useRequestData } from "@/hooks/Consultation/useConsultation";
+import { LabRequest } from "@/types/LabTypes";
+import { openLabPrintPage } from "@/utils/lab-print";
+import LabResultPreview from "@/components/Modal/LabModal/LabResultPreview";
 
 const RegistrationPage = () => {
+  const { user } = useAuth();
   const [selectedPatient, setSelectedPatient] = useState<PatientProps | null>(null);
   const [activeAction, setActiveAction] = useState<
-    "consultation" | "laboratory" | "profile" | "edit" | "history" | "action" | "prescription" | "view_consultation" | null
+    "request" | "consultation" | "laboratory" | "profile" | "edit" | "history" | "action" | "prescription" | "view_consultation" | "certificate" | null
   >(null);
 
   const [addPatientOpen, setAddPatientOpen] = useState<boolean>(false);
@@ -36,30 +42,75 @@ const RegistrationPage = () => {
 
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
-
   const {
     data: patientList,
     error: patientListError,
     isLoading: patientListLoading,
   } = useGetAllpatient(debouncedSearch);
   const { data: prevVitalSigns, isLoading: vitalsLoading } = useGetPrevVitalSigns(patientId);
+  const [currentRequestId, setCurrentRequestId] = useState<number | null>(null);
 
-  const [selectedConsultationId, setSelectedConsultationId] = useState<number | null>(null);
-  const [selectedConsultationRecord, setSelectedConsultationRecord] = useState<ConsultationResultProps | null>(null);
+  const { data: currentRequest } = useRequestData(currentRequestId!); //feed current request info
+
+  const doctorId =
+    currentRequest?.consult?.physician ??
+    currentRequest?.cert?.physician ??
+    0;
+
+  const [selectedConsultationRecord, setSelectedConsultationRecord] = useState<RegisterConsultationFormValues | null>(null);
+  const [selectedMedCertRecord, setSelectedMedCertRecord] = useState<MedCertFormValues | null>(null);
+  const [selectedPrescriptionRecord, setSelectedPrescriptionRecord] = useState<PrescriptionValues | null>(null);
   const patientCount = patientList?.length ?? 0;
+
+  const [activeRecord, setActiveRecord] = useState<LabRequest | null>(null);
+
+  const [consultationResultPreview, setConsultationResultPreview] = useState<boolean>(false);
+  const [medCertPreview, setMedCertPreview] = useState<boolean>(false);
+  const [prescriptionPreview, setPrescriptionPreview] = useState<boolean>(false);
 
   const closeAll = () => {
     setSelectedPatient(null);
-    setActiveAction(null);
   };
 
   const closeNested = () => {
-    setActiveAction(null);
+    setActiveAction('action');
+  };
+
+  const closePreviewModal = () => {
+    setConsultationResultPreview(false);
+    setActiveRecord(null);
+  };
+
+  const handleViewConsultation = async (
+    requestId: number,
+    form: RegisterConsultationFormValues,
+  ) => {
+    setCurrentRequestId(requestId);
+    setSelectedConsultationRecord(form);
+    setConsultationResultPreview(true);
+  };
+
+  const handleViewMedicalCertificate = async (
+    requestId: number,
+    form: MedCertFormValues,
+  ) => {
+    setCurrentRequestId(requestId);
+    setSelectedMedCertRecord(form);
+    setMedCertPreview(true);
+  };
+
+  const handleViewPrescription = async (
+    requestId: number,
+    form: PrescriptionValues,
+  ) => {
+    setCurrentRequestId(requestId);
+    setSelectedPrescriptionRecord(form);
+    setPrescriptionPreview(true);
   };
 
   return (
     <>
-      <RoleGuard allowedRoles={["STAFF", "DOCTOR"]}>
+      <RoleGuard allowedRoles={["STAFF", "DOCTOR", "ADMIN"]}>
         {/* â”€â”€ Add Patient Modal â”€â”€ */}
         {addPatientOpen && (
           <ModalHeader showModal={true} title="Register New Patient" subtitle="Fill in the details below to register a patient" sizeModal="medium" onClose={() => setAddPatientOpen(false)}>
@@ -67,38 +118,42 @@ const RegistrationPage = () => {
           </ModalHeader>
         )}
 
-        {selectedPatient && activeAction === "consultation" && (
+        {selectedPatient && activeAction === "request" && (
           <ModalHeader showModal={true} title={modalTitle} subtitle="Fill in details below to create request" sizeModal="2xlarge" onClose={closeNested}>
-            <AddRequestForm patient={selectedPatient} vitals={prevVitalSigns ?? undefined} onClose={closeAll} />
+            <AddRequestForm patient={selectedPatient} vitals={prevVitalSigns ?? undefined} onClose={closeNested} />
           </ModalHeader>
         )}
 
         {selectedPatient && activeAction == "history" && (
-          <ModalHeader showModal={true} title={modalTitle} subtitle="asd" sizeModal="2xlarge" onClose={closeNested}>
-            <ViewPatientHistoryModal patient={selectedPatient} onViewPrescription={(id) => { setActiveAction("prescription"); setSelectedConsultationId(id); }} onViewConsultation={(c) => { setActiveAction("view_consultation"); setSelectedConsultationRecord(c); }} />
-          </ModalHeader>
-        )}
-
-        {selectedPatient && activeAction == "prescription" && (
-          <ModalHeader showModal={true} title={modalTitle} subtitle="" sizeModal="2xlarge" onClose={closeNested}>
-            <ViewPrescriptionModal patient={selectedPatient} prescription={selectedConsultationId}></ViewPrescriptionModal>
-          </ModalHeader>
-        )}
-
-        {selectedPatient && activeAction == "view_consultation" && (
-          <ModalHeader showModal={true} title={modalTitle} subtitle="" sizeModal="2xlarge" onClose={closeNested}>
-            <ViewConsultationModal patient={selectedPatient} record={selectedConsultationRecord}></ViewConsultationModal>
+          <ModalHeader showModal={true} title={"History Records"} subtitle="View previous consultations, laboratory records, and medical certificates." sizeModal="2xlarge" onClose={closeNested}>
+            <ViewPatientHistoryModal patient={selectedPatient}
+              onViewPrescription={(requestId, form) => {
+                setActiveAction("prescription");
+                handleViewPrescription(requestId, form);
+              }}
+              onViewConsultation={(requestId, form) => {
+                setActiveAction("view_consultation");
+                handleViewConsultation(requestId, form);
+              }}
+              onViewMedicalCertificate={(requestId, form) => {
+                setActiveAction("certificate");
+                handleViewMedicalCertificate(requestId, form)
+              }}
+              onViewLaboratoryTest={(record) => {
+                setActiveRecord(record);
+              }}
+            />
           </ModalHeader>
         )}
 
         {/* â”€â”€ Patient Action Modal â”€â”€ */}
         {selectedPatient && activeAction === "action" && !vitalsLoading && (
-          <ModalHeader showModal={true} title={"Patient Action manager"} subtitle="Select an action below to a patient" sizeModal="small" onClose={closeNested}>
+          <ModalHeader showModal={true} title={"Patient Action Manager"} subtitle="Select an action below to a patient" sizeModal="medium" onClose={closeAll}>
             <PatientActionModal
               patient={selectedPatient}
               onClose={closeAll}
               actionTitle={setModalTitle}
-              onRequestAction={() => { setActiveAction("consultation"); }}
+              onRequestAction={() => { setActiveAction("request"); }}
               onViewProfile={() => { setActiveAction("profile"); }}
               onEditPatient={() => { setActiveAction("edit"); }}
               onViewHistory={() => { setActiveAction("history"); }}
@@ -107,12 +162,123 @@ const RegistrationPage = () => {
         )}
 
         {/* â”€â”€ Page â”€â”€ */}
-
         {selectedPatient && activeAction == 'profile' && (
           <ModalHeader showModal={true} title={`${modalTitle}  — ${selectedPatient?.name}`} subtitle="" sizeModal="large" onClose={closeNested}>
             <ViewPatientProfile patient={selectedPatient} onClose={closeNested}></ViewPatientProfile>
           </ModalHeader >
         )}
+
+        {/* â”€â”€ Edit Patient Modal â”€â”€ */}
+        {selectedPatient && activeAction === "edit" && (
+          <ModalHeader
+            showModal={true}
+            title="Edit Patient"
+            subtitle="Update patient information"
+            sizeModal="medium"
+            onClose={closeNested}
+          >
+            <EditPatientForm patient={selectedPatient} onClose={closeAll} />
+          </ModalHeader>
+        )}
+
+        {currentRequest && consultationResultPreview && selectedConsultationRecord && (
+          <ModalHeader
+            showModal={true}
+            title={`Consultation Result Preview — ${selectedPatient?.name}`}
+            subtitle=""
+            meta={`${currentRequest.req_id} - ${selectedPatient?.patient_id}`}
+            sizeModal="2xlarge"
+            onClose={() => setConsultationResultPreview(false)}
+          >
+            <ConsultResultPreview
+              request={currentRequest}
+              form={selectedConsultationRecord}
+              backLabel="Back to Records"
+              onBack={() => setConsultationResultPreview(false)}
+              onDownloadPdf={() => { }}
+              onOpenPrintPage={() => { }}
+              type="consult-result"
+              doctorId={doctorId}
+              showDoneButton={false}
+            />
+          </ModalHeader>
+        )}
+
+        {currentRequest && medCertPreview && selectedMedCertRecord && (
+          <ModalHeader
+            showModal={true}
+            title={`Medical Certificate Preview — ${selectedPatient?.name}`}
+            subtitle=""
+            meta={`${currentRequest.req_id} - ${selectedPatient?.patient_id}`}
+            sizeModal="2xlarge"
+            onClose={() => setMedCertPreview(false)}
+          >
+            <ConsultResultPreview
+              request={currentRequest}
+              form={selectedMedCertRecord}
+              backLabel="Back to Records"
+              onBack={() => setMedCertPreview(false)}
+              onDownloadPdf={() => { }}
+              onOpenPrintPage={() => { }}
+              type="med-cert"
+              doctorId={doctorId}
+              showDoneButton={false}
+            />
+          </ModalHeader>
+        )}
+
+        {currentRequest && prescriptionPreview && selectedPrescriptionRecord && (
+          <ModalHeader
+            showModal={true}
+            title={`Prescription Preview — ${selectedPatient?.name}`}
+            subtitle=""
+            meta={`${currentRequest.req_id} - ${selectedPatient?.patient_id}`}
+            sizeModal="2xlarge"
+            onClose={() => setPrescriptionPreview(false)}
+          >
+            <ConsultResultPreview
+              request={currentRequest}
+              form={selectedPrescriptionRecord}
+              backLabel="Back to Records"
+              onBack={() => setPrescriptionPreview(false)}
+              onDownloadPdf={() => { }}
+              onOpenPrintPage={() => { }}
+              type="prescription"
+              doctorId={doctorId}
+              showDoneButton={false}
+            />
+          </ModalHeader>
+        )}
+
+        {activeRecord?.resultPayload ? (
+          <ModalHeader
+            showModal={true}
+            title={`Laboratory Result Preview — ${activeRecord.patientName}`}
+            subtitle={activeRecord.testType}
+            meta={`${activeRecord.id} - ${activeRecord.patientId}`}
+            sizeModal="2xlarge"
+            onClose={closePreviewModal}
+          >
+            <LabResultPreview
+              request={activeRecord}
+              form={activeRecord.resultPayload}
+              backLabel="Back to Records"
+              showPassToDoctor={false}
+              onBack={closePreviewModal}
+              onDownloadPdf={() =>
+                openLabPrintPage(activeRecord.labId, {
+                  autoDownload: true,
+                })
+              }
+              onOpenPrintPage={() =>
+                openLabPrintPage(activeRecord.labId, {
+                  autoPrint: true,
+                })
+              }
+            />
+          </ModalHeader>
+        ) : null}
+
 
         {/* ── Page ── */}
         <div
@@ -122,12 +288,12 @@ const RegistrationPage = () => {
           }}
         >
           {/* Top bar */}
-          <div className="border-b border-white/10 px-8 py-5 flex items-center justify-between">
+          <div className="border-b border-white/10 px-8 py-5 flex items-center">
             <div>
-              <h1 className="font-['DM_Serif_Display'] text-2xl text-black tracking-wide">
+              <h1 className="font-['DM_Serif_Display'] text-3xl text-black tracking-wide mb-1">
                 Patient Registry
               </h1>
-              <p className="text-black/40 text-xs mt-0.5">
+              <p className="text-black/40 text-sm">
                 {patientListLoading
                   ? "Loading patientsâ€¦"
                   : patientListError
@@ -135,11 +301,10 @@ const RegistrationPage = () => {
                     : `${patientCount} patient${patientCount !== 1 ? "s" : ""} found`}
               </p>
             </div>
-            <Button icon={<Plus />} iconPosition="left" variant="addPatient" type="button" onClick={() => setAddPatientOpen(true)}>Add Patient</Button>
           </div>
 
           {/* Search bar */}
-          <div className="px-8 py-5">
+          <div className="px-8 pb-5 flex justify-between items-center">
             <div className="relative max-w-sm">
               <Search className="text-black/40 absolute mt-2 ml-2" />
               <input
@@ -149,6 +314,11 @@ const RegistrationPage = () => {
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-black/10 border border-black/15 rounded-xl pl-10 pr-4 py-2.5 text-sm text-black placeholder-black/30 outline-none focus:bg-black/15 focus:border-black/30 transition"
               />
+            </div>
+            <div className="relative max-w-sm">
+              {canAddPatient(user?.roles) && (
+                <Button icon={<Plus />} iconPosition="left" variant="addPatient" type="button" onClick={() => setAddPatientOpen(true)}>Add Patient</Button>
+              )}
             </div>
           </div>
 
@@ -182,14 +352,14 @@ const RegistrationPage = () => {
               </div>
             ) : patientCount === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-white/30" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <div className="w-16 h-16 rounded-2xl bg-white/30 flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-black/100" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round"
                       d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                   </svg>
                 </div>
-                <p className="text-white/50 font-semibold text-sm">No patients found</p>
-                <p className="text-white/25 text-xs mt-1">
+                <p className="text-black/70 font-semibold text-sm">No patients found</p>
+                <p className="text-black/55 text-xs mt-1">
                   {search ? "Try a different search term." : "Add a patient to get started."}
                 </p>
                 {!search && (
@@ -217,98 +387,7 @@ const RegistrationPage = () => {
             )}
           </div>
         </div>
-        {/* â”€â”€ View Profile Modal â”€â”€ */}
-        {selectedPatient && activeAction === "profile" && (
-          <ModalHeader
-            showModal={true}
-            title="Patient Profile"
-            subtitle={selectedPatient.name}
-            sizeModal="medium"
-            onClose={closeNested}
-          >
-            <div className="p-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Full Name</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Patient ID</p>
-                    <p className="text-sm font-semibold text-gray-900">#{selectedPatient.patient_code}</p>
-                  </div>
-                  {selectedPatient.philhealth_id && (
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase">PhilHealth ID</p>
-                      <p className="text-sm font-semibold text-gray-900">{selectedPatient.philhealth_id}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Age</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.age} years</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Sex</p>
-                    <p className="text-sm font-semibold text-gray-900 capitalize">{selectedPatient.sex}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Address</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.address}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Contact Number</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedPatient.contact_number}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Birth Date</p>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {selectedPatient.birth_date
-                        ? new Date(selectedPatient.birth_date).toLocaleDateString()
-                        : "â€”"}
-                    </p>
-                  </div>
-                  {selectedPatient.religion && (
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase">Religion</p>
-                      <p className="text-sm font-semibold text-gray-900">{selectedPatient.religion}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </ModalHeader>
-        )}
-
-        {/* â”€â”€ Edit Patient Modal â”€â”€ */}
-        {selectedPatient && activeAction === "edit" && (
-          <ModalHeader
-            showModal={true}
-            title="Edit Patient"
-            subtitle="Update patient information"
-            sizeModal="medium"
-            onClose={closeNested}
-          >
-            <EditPatientForm patient={selectedPatient} onClose={closeAll} />
-          </ModalHeader>
-        )}
       </RoleGuard>
-
-
-        {/* ── Edit Patient Modal ── */}
-        {
-          selectedPatient && activeAction === 'edit' && (
-            <ModalHeader
-              showModal={true}
-              title="Edit Patient"
-              subtitle="Update patient information"
-              sizeModal="medium"
-              onClose={closeNested}
-            >
-              <EditPatientForm patient={selectedPatient} onClose={closeAll} />
-            </ModalHeader>
-          )
-        }
-      </RoleGuard >
     </>
   );
 };

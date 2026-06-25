@@ -123,6 +123,9 @@ export default function ClinicalChemistryModal({
   const showMealFields = visibleRows.some(
     (row) => row.name === "FBS" || row.name === "RBS"
   );
+  // console.log('field names', fieldNames)
+
+  // console.log('in form', visibleRows)
   const {
     control,
     register,
@@ -227,6 +230,15 @@ export default function ClinicalChemistryModal({
           ))}
         </div>
       ) : null}
+
+      <div className="mt-4">
+        <Input
+          label="Remarks"
+          placeholder="Enter ogtt remarks"
+          {...register("remarks")}
+          error={errors.remarks?.message}
+        />
+      </div>
 
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
         <Button type="button" variant="secondary" onClick={onCancel}>

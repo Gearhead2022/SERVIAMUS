@@ -26,12 +26,13 @@ export function normalizePrescriptionDefaults(
 ): PrescriptionValues {
     return {
         patient_id: patient?.patient_id ?? 0,
-        cons_id: consult?.consultation_id ?? 0,
+        consultation_id: consult?.consultation_id ?? 0,
 
         // IMPORTANT: DO NOT force doctor here
         doctor_id: doctor?.user_id ?? 0,
 
         gen_notes: prescription?.gen_notes ?? "",
+        issued_date: new Date().toISOString() ?? "",
 
         medicines: prescription?.medicines?.length
             ? prescription.medicines.map(m => ({

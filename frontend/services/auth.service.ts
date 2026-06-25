@@ -1,5 +1,5 @@
 import api from "./axios";
-import { AuthUser, RegisterPayload, Role } from "../types/AuthTypes";
+import { AuthUser, RegisterPayload, Role, UpdateUserPayload } from "../types/AuthTypes";
 
 /* =====================
    API CALLS
@@ -28,6 +28,19 @@ export const registerUser = async (
   data: RegisterPayload
 ) => {
   const res = await api.post("/authentication/register", data);
+  return res.data.data;
+};
+
+export const editUser = async (
+  user_id: number,
+  data: UpdateUserPayload
+) => {
+  const res = await api.patch(`api/request/${user_id}/updateUser`, data);
+  return res.data.data;
+};
+
+export const deleteUser = async (user_id: number) => {
+  const res = await api.delete(`/api/request/${user_id}/deleteUser`);
   return res.data.data;
 };
 
