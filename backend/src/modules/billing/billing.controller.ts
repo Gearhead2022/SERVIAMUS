@@ -2,13 +2,12 @@
 
 import { Request, Response } from "express";
 import {
-  getBillingByRequestId,
-  getBillingById,
   createPayment,
   updateBillingStatus,
   getAllBillings,
   payBilling,
   getAllPayment,
+  updateBillingDiscount,
 } from "./billing.services";
 import { getIO } from "../../socket";
 import { createNotification, resolveUsersByRoleNames } from "../notification/notification.services";
@@ -54,57 +53,37 @@ const notifyLaboratoryPaymentReady = async (billing: {
   });
 };
 
-export const getBillingByRequestIdController = async (req: Request, res: Response) => {
-  try {
-    const req_id = Array.isArray(req.params.req_id) ? req.params.req_id[0] : req.params.req_id;
-    const requestId = parseInt(req_id, 10);
+// for applying discount
 
-    if (isNaN(requestId)) {
+export const updateBillingDiscountController =
+  async (req: Request, res: Response) => {
+    try {
+
+      const billing_id = Number(
+        req.params.billing_id
+      );
+
+      const updated =
+        await updateBillingDiscount({
+          billing_id,
+          discount: Number(req.body.discount),
+          discount_reason:
+            req.body.discount_reason ?? null,
+        });
+
+      return res.status(200).json({
+        success: true,
+        data: updated,
+      });
+
+    } catch (error: any) {
       return res.status(400).json({
         success: false,
-        message: "Invalid request ID",
+        message: error.message,
       });
     }
+  };
 
-    const billing = await getBillingByRequestId(requestId);
-
-    return res.status(200).json({
-      success: true,
-      data: billing,
-    });
-  } catch (error: any) {
-    return res.status(404).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-export const getBillingByIdController = async (req: Request, res: Response) => {
-  try {
-    const billing_id = Array.isArray(req.params.billing_id) ? req.params.billing_id[0] : req.params.billing_id;
-    const billingId = parseInt(billing_id, 10);
-
-    if (isNaN(billingId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid billing ID",
-      });
-    }
-
-    const billing = await getBillingById(billingId);
-
-    return res.status(200).json({
-      success: true,
-      data: billing,
-    });
-  } catch (error: any) {
-    return res.status(404).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
 // For Payment
 export const createPaymentController = async (req: Request, res: Response) => {
   try {
@@ -187,6 +166,9 @@ export const updateBillingStatusController = async (req: Request, res: Response)
 };
 export const getAllBillingsController = async (req: Request, res: Response) => {
   try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+
     const search =
       typeof req.query.search === "string" && req.query.search.trim() !== ""
         ? req.query.search.trim()
@@ -197,9 +179,23 @@ export const getAllBillingsController = async (req: Request, res: Response) => {
         ? req.query.status
         : undefined;
 
+    const dateFrom =
+      typeof req.query.dateFrom === "string" && req.query.dateFrom !== ""
+        ? req.query.dateFrom
+        : undefined;
+
+    const dateTo =
+      typeof req.query.dateTo === "string" && req.query.dateTo !== ""
+        ? req.query.dateTo
+        : undefined;
+
+    const sort =
+      typeof req.query.sort === "string" && req.query.sort !== ""
+        ? req.query.sort
+        : undefined;
+
     const billings = await getAllBillings(
-      search,
-      status as BillingFilter
+      page, limit, search, status as BillingFilter, dateFrom, dateTo, sort
     );
 
     return res.status(200).json({
@@ -251,6 +247,9 @@ export const payBillingController = async (req: Request, res: Response) => {
 
 export const getAllpaymentsController = async (req: Request, res: Response) => {
   try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+
     const search =
       typeof req.query.search === "string" && req.query.search.trim() !== ""
         ? req.query.search.trim()
@@ -288,6 +287,8 @@ export const getAllpaymentsController = async (req: Request, res: Response) => {
 
 
     const billings = await getAllPayment(
+      page,
+      limit,
       search,
       status as BillingFilter,
       method as PaymentMethod,

@@ -1,19 +1,15 @@
-import { request } from "express";
 import { prisma } from "../../config/prismaClient";
 import { MedicalCertificatePayload, PatientConsultationRecordsPayload, PrescriptionPayload, WeeklyTally } from "./consultation.types";
-import { QueueStatus, RequestStatus, RequestType } from "@prisma/client";
+import { RequestStatus, RequestType } from "@prisma/client";
 import { mapRequestToQueueStatus } from "./consultation.helper";
 import { Prisma } from "@prisma/client";
 import { hasQueueTable } from "../queue/queue.services";
 import { ensureBillingForRequest } from "./consultation.helper";
 import { getIO } from "../../socket";
-import { resolveNotificationUsers } from "../notification/notification.services";
 import { Status } from "../request/request.types";
 /**
  * CONSULTATION RECORDS
  */
-
-type ModifRequestTypes = Exclude<RequestType, 'LABORATORY'>;
 
 const requestUpdateRooms = [
   "role_ADMIN",
@@ -160,24 +156,32 @@ export const getAllRequests = async (
   sort?: string
 ) => {
 
-  const where: Prisma.RequestWhereInput = {};
+  const where: Prisma.RequestWhereInput = {
+    req_type: {
+      not: "LABORATORY",
+    },
+  };
+
+  const andConditions: Prisma.RequestWhereInput[] = [];
 
   // SEARCH
   if (search?.trim()) {
-    where.OR = [
-      {
-        patient: {
-          name: {
+    andConditions.push({
+      OR: [
+        {
+          patient: {
+            name: {
+              contains: search,
+            },
+          },
+        },
+        {
+          request_code: {
             contains: search,
           },
         },
-      },
-      {
-        request_code: {
-          contains: search,
-        },
-      },
-    ];
+      ],
+    });
   }
 
   if (status && status !== "ALL") {
@@ -185,23 +189,19 @@ export const getAllRequests = async (
   }
 
   if (req_type && req_type !== "ALL") {
-    where.req_type = req_type as ModifRequestTypes;
+    where.req_type = req_type as RequestType;
   }
 
-  // DATE FILTER
   if (dateFrom || dateTo) {
 
-    where.req_date = {};
+    const reqDate: Prisma.DateTimeFilter = {};
 
     if (dateFrom) {
-      where.req_date.gte =
-        new Date(dateFrom);
+      reqDate.gte = new Date(dateFrom);
     }
 
     if (dateTo) {
-
-      const endDate =
-        new Date(dateTo);
+      const endDate = new Date(dateTo);
 
       endDate.setHours(
         23,
@@ -210,17 +210,16 @@ export const getAllRequests = async (
         999
       );
 
-      where.req_date.lte =
-        endDate;
+      reqDate.lte = endDate;
     }
 
-  } else {
+    andConditions.push({
+      req_date: reqDate,
+    });
 
-    // DEFAULT TODAY FILTER
-    const today = new Date();
+  } else if (!status || status === "ALL") {
 
-    const startOfDay =
-      new Date(today);
+    const startOfDay = new Date();
 
     startOfDay.setHours(
       0,
@@ -229,20 +228,54 @@ export const getAllRequests = async (
       0
     );
 
-    const endOfDay =
-      new Date(today);
+    andConditions.push({
+      OR: [
+        {
+          req_date: {
+            gte: startOfDay,
+          },
+        },
+        {
+          status: {
+            in: [
+              "WAITING",
+              "SERVING",
+            ],
+          },
+        },
+      ],
+    });
+  }
 
-    endOfDay.setHours(
-      23,
-      59,
-      59,
-      999
+  // DATE FILTER
+  if (!dateFrom && !dateTo && (!status || status === "ALL")) {
+
+    const startOfDay = new Date();
+
+    startOfDay.setHours(
+      0,
+      0,
+      0,
+      0
     );
 
-    where.req_date = {
-      gte: startOfDay,
-      lte: endOfDay,
-    };
+    andConditions.push({
+      OR: [
+        {
+          req_date: {
+            gte: startOfDay,
+          },
+        },
+        {
+          status: {
+            in: [
+              "WAITING",
+              "SERVING",
+            ],
+          },
+        },
+      ],
+    });
   }
 
   // SORTING
@@ -283,6 +316,67 @@ export const getAllRequests = async (
       break;
   }
 
+  if (andConditions.length) {
+    where.AND = andConditions;
+  }
+
+  const [
+    total,
+    waiting,
+    serving,
+    completed,
+    cancelled,
+  ] = await Promise.all([
+    prisma.request.count({
+      where,
+    }),
+
+    prisma.request.count({
+      where: {
+        AND: [
+          where,
+          {
+            status: "WAITING",
+          },
+        ],
+      },
+    }),
+
+    prisma.request.count({
+      where: {
+        AND: [
+          where,
+          {
+            status: "SERVING",
+          },
+        ],
+      },
+    }),
+
+    prisma.request.count({
+      where: {
+        AND: [
+          where,
+          {
+            status: "DONE",
+          },
+        ],
+      },
+    }),
+
+    prisma.request.count({
+      where: {
+        AND: [
+          where,
+          {
+            status: "CANCELED",
+          },
+        ],
+      },
+    }),
+
+  ]);
+
   const requests =
     await prisma.request.findMany({
 
@@ -305,7 +399,15 @@ export const getAllRequests = async (
         patient: {
           select: {
             patient_id: true,
+            patient_code: true,
             name: true,
+            address: true,
+            contact_number: true,
+            birth_date: true,
+            sex: true,
+            age: true,
+            religion: true,
+            philhealth_id: true,
           },
         },
 
@@ -327,6 +429,16 @@ export const getAllRequests = async (
             vs_id: true,
             doctor: true,
             consultations: true,
+            vitals: {
+              select: {
+                bp: true,
+                temp: true,
+                cr: true,
+                rr: true,
+                wt: true,
+                ht: true,
+              }
+            }
           },
         },
 
@@ -343,13 +455,16 @@ export const getAllRequests = async (
       },
     });
 
-  const total =
-    await prisma.request.count({
-      where,
-    });
-
   return {
     data: requests,
+
+    stats: {
+      total,
+      waiting,
+      serving,
+      completed,
+      cancelled,
+    },
 
     pagination: {
       total,
@@ -370,7 +485,7 @@ export const requestAction = async (
       where: { req_id: requestId },
     });
 
-    const userIds = await resolveNotificationUsers(result);
+    // const userIds = await resolveNotificationUsers(result);
 
     const io = getIO();
 
@@ -520,7 +635,7 @@ export const createPresciptions = async (payload: PrescriptionPayload) => {
   return prisma.$transaction(async (tx) => {
     const prescription = await tx.prescription.create({
       data: {
-        consultation_id: payload.cons_id,
+        consultation_id: payload.consultation_id,
         patient_id: payload.patient_id,
         doctor_id: payload.doctor_id,
         gen_notes: payload.gen_notes,
@@ -549,6 +664,8 @@ export const createPresciptions = async (payload: PrescriptionPayload) => {
   });
 };
 
+// STAFF DOCTOR HISTORY
+
 export const getAllPatientConsultationRecord = async (
   patient_id: number,
   search?: string
@@ -559,11 +676,11 @@ export const getAllPatientConsultationRecord = async (
 
       ...(search && {
         OR: [
-          { chief_complaint: { contains: search, mode: "insensitive" } },
-          { hist_illness: { contains: search, mode: "insensitive" } },
-          { examination: { contains: search, mode: "insensitive" } },
-          { assessment: { contains: search, mode: "insensitive" } },
-          { plans: { contains: search, mode: "insensitive" } },
+          { chief_complaint: { contains: search } },
+          { hist_illness: { contains: search } },
+          { examination: { contains: search } },
+          { assessment: { contains: search } },
+          { plans: { contains: search } },
         ],
       }),
     },
@@ -571,7 +688,18 @@ export const getAllPatientConsultationRecord = async (
     orderBy: { consultation_id: "desc" },
 
     include: {
+      patient: true,
       vitals: true,
+      consultRequest: {
+        include: {
+          request: true,
+        },
+      },
+      prescriptions: {
+        include: {
+          medicines: true,
+        },
+      },
     },
   });
 
@@ -579,25 +707,33 @@ export const getAllPatientConsultationRecord = async (
     where: { patient_id },
   });
 
-  return consultations.map((c) => ({
-    consultation_id: c.consultation_id,
-    consultation_date: c.consultation_date,
-    chief_complaint: c.chief_complaint,
-    hist_illness: c.hist_illness,
-    examination: c.examination,
-    assessment: c.assessment,
-    plans: c.plans,
-    follow_up_date: c.follow_up_date,
+  const pota = consultations.map((c) => ({
+    consultation: {
+      name: c.patient.name,
+      consultation_id: c.consultation_id,
+      consultation_date: c.consultation_date,
+      chief_complaint: c.chief_complaint,
+      hist_illness: c.hist_illness,
+      examination: c.examination,
+      assessment: c.assessment,
+      plans: c.plans,
+      follow_up_date: c.follow_up_date,
 
-    bp: c.vitals?.bp,
-    temp: c.vitals?.temp,
-    cr: c.vitals?.cr,
-    rr: c.vitals?.rr,
-    wt: c.vitals?.wt,
-    ht: c.vitals?.ht,
+      bp: c.vitals?.bp,
+      temp: c.vitals?.temp,
+      cr: c.vitals?.cr,
+      rr: c.vitals?.rr,
+      wt: c.vitals?.wt,
+      ht: c.vitals?.ht,
 
-    ...baseline,
+      ...baseline,
+    },
+    prescription: c.prescriptions?.[0] ?? null,
+    consultationRequest: c.consultRequest
   }));
+  // console.log('ywaw', pota)
+
+  return pota;
 };
 
 export const getAllPatientMedCertRecord = async (
@@ -610,22 +746,34 @@ export const getAllPatientMedCertRecord = async (
 
       ...(search && {
         OR: [
-          { purpose: { contains: search, mode: "insensitive" } },
+          { purpose: { contains: search } },
         ],
       }),
     },
 
     orderBy: { med_cert_id: "desc" },
+
+    include: {
+      patient: true,
+      med_cert_request: {
+        include: {
+          request: true
+        }
+      },
+    }
   });
 
   return certificates.map((c) => ({
-    med_cert_id: c.med_cert_id,
-    mcr_id: c.mcr_id,
-    patient_id: c.patient_id,
-    purpose: c.purpose,
-    impression: c.impression,
-    recommendation: c.recommendation,
-    result_date: c.result_date,
+    medCert: {
+      med_cert_id: c.med_cert_id,
+      mcr_id: c.mcr_id,
+      patient_id: c.patient_id,
+      purpose: c.purpose,
+      impression: c.impression,
+      recommendation: c.recommendation,
+      result_date: c.result_date,
+    },
+    medCertRequest: c.med_cert_request
   }));
 };
 
@@ -710,7 +858,7 @@ export const consultationRecordHistory = async (
   status?: string,
   dateFrom?: string,
   dateTo?: string,
-  sort?: string
+  sort?: string,
 ) => {
 
   const where: Prisma.ConsultationWhereInput = {};
@@ -792,6 +940,63 @@ export const consultationRecordHistory = async (
     }
   }
 
+  const [
+    total,
+    waiting,
+    serving,
+    completed,
+    cancelled,
+  ] = await Promise.all([
+
+    prisma.consultation.count({
+      where,
+    }),
+
+    prisma.consultation.count({
+      where: {
+        ...where,
+        consultRequest: {
+          request: {
+            status: "WAITING",
+          },
+        },
+      },
+    }),
+
+    prisma.consultation.count({
+      where: {
+        ...where,
+        consultRequest: {
+          request: {
+            status: "SERVING",
+          },
+        },
+      },
+    }),
+
+    prisma.consultation.count({
+      where: {
+        ...where,
+        consultRequest: {
+          request: {
+            status: "DONE",
+          },
+        },
+      },
+    }),
+
+    prisma.consultation.count({
+      where: {
+        ...where,
+        consultRequest: {
+          request: {
+            status: "CANCELED",
+          },
+        },
+      },
+    }),
+  ]);
+
   // SORTING
   let orderBy:
     Prisma.ConsultationOrderByWithRelationInput =
@@ -850,6 +1055,21 @@ export const consultationRecordHistory = async (
         consultRequest: {
           include: {
             request: true,
+
+            doctor: {
+              select: {
+                user_id: true,
+                name: true,
+                title: true,
+                license_no: true,
+                ptr_no: true,
+              },
+            },
+          },
+        },
+        prescriptions: {
+          include: {
+            medicines: true,
           },
         },
       },
@@ -918,6 +1138,8 @@ export const consultationRecordHistory = async (
       },
 
       patient: {
+        patient_id:
+          c.patient.patient_id,
         name:
           c.patient.name,
 
@@ -956,16 +1178,34 @@ export const consultationRecordHistory = async (
         status:
           c.consultRequest.request.status,
       },
+      consultationRequest: {
+        cons_id: c.consultRequest.cons_id,
+        vs_id: c.consultRequest.vs_id,
+        physician: c.consultRequest.physician,
+        doctor: c.consultRequest.doctor
+          ? {
+            user_id: c.consultRequest.doctor.user_id,
+            name: c.consultRequest.doctor.name,
+            title: c.consultRequest.doctor.title,
+            license_no: c.consultRequest.doctor.license_no,
+            ptr_no: c.consultRequest.doctor.ptr_no,
+          }
+          : null,
+      },
+      prescription: c.prescriptions[0]
 
     }));
 
-  const total =
-    await prisma.consultation.count({
-      where,
-    });
-
   return {
     data,
+
+    stats: {
+      total,
+      waiting,
+      serving,
+      completed,
+      cancelled,
+    },
 
     pagination: {
       total,
@@ -1044,6 +1284,71 @@ export const prescriptionRecordHistory = async (
       },
     };
   }
+
+  const [
+    total,
+    waiting,
+    serving,
+    completed,
+    cancelled,
+  ] = await Promise.all([
+
+    prisma.prescription.count({
+      where,
+    }),
+
+    prisma.prescription.count({
+      where: {
+        ...where,
+        consultation: {
+          consultRequest: {
+            request: {
+              status: "WAITING",
+            },
+          },
+        },
+      },
+    }),
+
+    prisma.prescription.count({
+      where: {
+        ...where,
+        consultation: {
+          consultRequest: {
+            request: {
+              status: "SERVING",
+            },
+          },
+        },
+      },
+    }),
+
+    prisma.prescription.count({
+      where: {
+        ...where,
+        consultation: {
+          consultRequest: {
+            request: {
+              status: "DONE",
+            },
+          },
+        },
+      },
+    }),
+
+    prisma.prescription.count({
+      where: {
+        ...where,
+        consultation: {
+          consultRequest: {
+            request: {
+              status: "CANCELED",
+            },
+          },
+        },
+      },
+    }),
+  ]);
 
   // DATE RANGE
   if (dateFrom || dateTo) {
@@ -1133,6 +1438,15 @@ export const prescriptionRecordHistory = async (
             consultRequest: {
               include: {
                 request: true,
+                doctor: {
+                  select: {
+                    user_id: true,
+                    name: true,
+                    title: true,
+                    license_no: true,
+                    ptr_no: true,
+                  },
+                },
               },
             },
           },
@@ -1197,6 +1511,8 @@ export const prescriptionRecordHistory = async (
       },
 
       patient: {
+        patient_id:
+          c.patient.patient_id,
         name:
           c.patient.name,
 
@@ -1283,17 +1599,30 @@ export const prescriptionRecordHistory = async (
         follow_up_date:
           c.consultation
             .follow_up_date,
+
+        doctor: c.consultation.consultRequest.doctor
+          ? {
+            user_id: c.consultation.consultRequest.doctor.user_id,
+            name: c.consultation.consultRequest.doctor.name,
+            title: c.consultation.consultRequest.doctor.title,
+            license_no: c.consultation.consultRequest.doctor.license_no,
+            ptr_no: c.consultation.consultRequest.doctor.ptr_no,
+          }
+          : null,
       },
 
     }));
 
-  const total =
-    await prisma.prescription.count({
-      where,
-    });
-
   return {
     data,
+
+    stats: {
+      total,
+      waiting,
+      serving,
+      completed,
+      cancelled,
+    },
 
     pagination: {
       total,
@@ -1368,6 +1697,65 @@ export const medicalCertificateRecordHistory = async (
       },
     };
   }
+
+  const [
+    total,
+    waiting,
+    serving,
+    completed,
+    cancelled,
+  ] = await Promise.all([
+
+    prisma.medicalCertificateResult.count({
+      where,
+    }),
+
+    prisma.medicalCertificateResult.count({
+      where: {
+        ...where,
+        med_cert_request: {
+          request: {
+            status: "WAITING",
+          },
+        },
+
+      },
+    }),
+
+    prisma.medicalCertificateResult.count({
+      where: {
+        ...where,
+        med_cert_request: {
+          request: {
+            status: "SERVING",
+          },
+        },
+      },
+    }),
+
+    prisma.medicalCertificateResult.count({
+      where: {
+        ...where,
+        med_cert_request: {
+          request: {
+            status: "DONE",
+          },
+        },
+      },
+    }),
+
+    prisma.medicalCertificateResult.count({
+      where: {
+        ...where,
+        med_cert_request: {
+          request: {
+            status: "CANCELED",
+          },
+        },
+      },
+    }),
+  ]);
+
 
   // DATE RANGE
   if (dateFrom || dateTo) {
@@ -1485,6 +1873,7 @@ export const medicalCertificateRecordHistory = async (
       },
 
       patient: {
+        patient_id: c.patient.patient_id,
         name:
           c.patient.name,
 
@@ -1536,13 +1925,16 @@ export const medicalCertificateRecordHistory = async (
 
     }));
 
-  const total =
-    await prisma.medicalCertificateResult.count({
-      where,
-    });
-
   return {
     data,
+
+    stats: {
+      total,
+      waiting,
+      serving,
+      completed,
+      cancelled,
+    },
 
     pagination: {
       total,
@@ -1553,6 +1945,432 @@ export const medicalCertificateRecordHistory = async (
     },
   };
 };
+
+const labRequestInclude = Prisma.validator<Prisma.LaboratoryRequestInclude>()({
+  request: {
+    select: {
+      req_id: true,
+      request_code: true,
+      patient_id: true,
+      req_date: true,
+      status: true,
+      req_type: true,
+      billing: {
+        select: {
+          billing_id: true,
+          billing_code: true,
+          total_price: true,
+          status: true,
+          payments: {
+            select: {
+              payment_date: true,
+            },
+            orderBy: [{ payment_date: "desc" }],
+            take: 1,
+          },
+        },
+      },
+      patient: {
+        select: {
+          patient_id: true,
+          patient_code: true,
+          name: true,
+          age: true,
+          sex: true,
+          address: true,
+        },
+      },
+    },
+  },
+  items: {
+    select: {
+      item_id: true,
+      status: true,
+      result_payload: true,
+      test: {
+        select: {
+          test_id: true,
+          name: true,
+          category: true,
+          schema_key: true,
+        },
+      },
+      processor: {
+        select: {
+          user_id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: [{ item_id: "asc" }],
+  },
+});
+
+export const laboratoryRecordHistory = async (
+  page: number = 1,
+  limit: number = 10,
+  search?: string,
+  status?: string,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string
+) => {
+  const where: Prisma.LaboratoryRequestWhereInput = {};
+
+  if (search?.trim()) {
+
+    where.OR = [
+
+      {
+        request: {
+          patient: {
+            name: {
+              contains: search,
+            },
+          },
+        },
+      },
+
+      {
+        request: {
+          request_code: {
+            contains: search,
+          },
+        },
+      },
+
+      {
+        items: {
+          some: {
+            test: {
+              name: {
+                contains: search,
+              },
+            },
+          },
+        },
+      },
+    ];
+  }
+
+  if (status && status !== "ALL") {
+
+    where.request = {
+      status:
+        status as Status,
+    };
+
+  } else {
+
+    where.request = {
+      status: {
+        in: [
+          "DONE",
+          "CANCELED",
+        ],
+      },
+    };
+  }
+
+  if (dateFrom || dateTo) {
+
+    where.request = {
+      ...where.request,
+
+      req_date: {
+
+        ...(dateFrom
+          ? {
+            gte:
+              new Date(dateFrom),
+          }
+          : {}),
+
+        ...(dateTo
+          ? {
+            lte:
+              new Date(
+                `${dateTo}T23:59:59.999`
+              ),
+          }
+          : {}),
+      },
+    };
+  }
+  let orderBy:
+    Prisma.LaboratoryRequestOrderByWithRelationInput =
+  {
+    id: "desc",
+  };
+
+  const [
+    total,
+    waiting,
+    serving,
+    completed,
+    cancelled,
+  ] = await Promise.all([
+
+    prisma.laboratoryRequest.count({
+      where,
+    }),
+
+    prisma.laboratoryRequest.count({
+      where: {
+        ...where,
+        request: {
+          status: "WAITING",
+        },
+      },
+    }),
+
+    prisma.laboratoryRequest.count({
+      where: {
+        ...where,
+        request: {
+          status: "SERVING",
+        },
+      },
+    }),
+
+    prisma.laboratoryRequest.count({
+      where: {
+        ...where,
+        request: {
+          req_type: "LABORATORY",
+          status: "DONE",
+        },
+      },
+    }),
+
+    prisma.laboratoryRequest.count({
+      where: {
+        ...where,
+        request: {
+          status: "CANCELED",
+        },
+      },
+    }),
+  ]);
+
+  switch (sort) {
+
+    case "date_asc":
+
+      orderBy = {
+        request: {
+          req_date: "asc",
+        },
+      };
+
+      break;
+
+    case "date_desc":
+
+      orderBy = {
+        request: {
+          req_date: "desc",
+        },
+      };
+
+      break;
+  }
+
+  const records =
+    await prisma.laboratoryRequest.findMany({
+
+      where,
+
+      skip:
+        (page - 1) * limit,
+
+      take:
+        limit,
+
+      orderBy,
+
+      include:
+        labRequestInclude,
+    });
+
+  const data =
+    records.map((r) => ({
+
+      lab: {
+        labId: r.id,
+
+        requestId:
+          r.request.req_id,
+
+        patientId:
+          r.request.patient.patient_id,
+
+        patientName:
+          r.request.patient.name,
+
+        requestCode:
+          r.request.request_code,
+
+        requestedDate:
+          r.request.req_date.toISOString(),
+
+        status:
+          r.request.status,
+
+        totalTests:
+          r.items.length,
+
+        completedTests:
+          r.items.filter(
+            item => item.status === "DONE"
+          ).length,
+
+        requestedBy:
+          r.req_by,
+
+        tests:
+          r.items.map(item => ({
+
+            item_id:
+              item.item_id,
+
+            status:
+              item.status,
+
+            result_payload:
+              item.result_payload,
+
+            test: {
+              test_id:
+                item.test.test_id,
+
+              name:
+                item.test.name,
+
+              category:
+                item.test.category,
+
+              schema_key:
+                item.test.schema_key,
+            },
+          })),
+      },
+
+
+      laboratory: {
+
+        lab_id:
+          r.id,
+
+        requested_by:
+          r.req_by,
+
+        total_tests:
+          r.items.length,
+
+        completed_tests:
+          r.items.filter(
+            item =>
+              item.status === "DONE"
+          ).length,
+      },
+
+      patient: {
+
+        patient_id:
+          r.request.patient.patient_id,
+
+        patient_code:
+          r.request.patient.patient_code,
+
+        name:
+          r.request.patient.name,
+
+        address:
+          r.request.patient.address,
+
+        age:
+          r.request.patient.age,
+
+        sex:
+          r.request.patient.sex,
+      },
+
+      request: {
+
+        req_id:
+          r.request.req_id,
+
+        patient_id:
+          r.request.patient_id,
+
+        req_date:
+          r.request.req_date,
+
+        request_code:
+          r.request.request_code,
+
+        req_type:
+          r.request.req_type,
+
+        status:
+          r.request.status,
+      },
+
+      tests:
+        r.items.map(item => ({
+
+          item_id:
+            item.item_id,
+
+          status:
+            item.status,
+
+          result_payload:
+            item.result_payload,
+
+          test: {
+
+            test_id:
+              item.test.test_id,
+
+            name:
+              item.test.name,
+
+            category:
+              item.test.category,
+
+            schema_key:
+              item.test.schema_key,
+          },
+        })),
+    }));
+
+  console.log('asd', total);
+
+  return {
+    data,
+
+    stats: {
+      total,
+      waiting,
+      serving,
+      completed,
+      cancelled,
+    },
+
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages:
+        Math.ceil(
+          total / limit
+        ),
+    },
+  };
+};
+
 // END HISTORY RECORDS
 
 export const createMedicalCertificate = async (payload: MedicalCertificatePayload) => {

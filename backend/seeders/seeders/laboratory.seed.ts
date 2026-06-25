@@ -114,9 +114,9 @@ export async function seedLaboratory(prisma: PrismaClient) {
             },
             {
                 test_id: 18,
-                name: "Sodium Potassium Chloride Ionized Calcium",
+                name: "Chloride",
                 category: "Clinical_Chemistry",
-                schema_key: "chemistry",
+                schema_key: "Chloride",
             },
             {
                 test_id: 19,
@@ -189,6 +189,12 @@ export async function seedLaboratory(prisma: PrismaClient) {
                 name: "Blood Typing",
                 category: "Hematology",
                 schema_key: "BT",
+            },
+            {
+                test_id: 31,
+                name: "Ionized Calcium",
+                category: "Clinical_Chemistry",
+                schema_key: "ionized",
             },
         ],
         skipDuplicates: true,

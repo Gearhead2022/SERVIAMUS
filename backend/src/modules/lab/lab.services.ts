@@ -1,10 +1,11 @@
 import { LaboratoryCategory, Prisma } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
 import { LabModuleError } from "./lab.errors";
-import { CreateLabRequestInput, SaveLabResultInput } from "./lab.types";
-import { createLaboratoryRequestWithItems } from "./lab.helpers";
+import { CreateLabRequestInput, LabResultPayload, SaveLabResultInput } from "./lab.types";
+import { createLaboratoryRequestWithItems, normalizeLabPayload } from "./lab.helpers";
 import { upsertStructuredLabResult } from "./lab.result-writers";
 import {
+  LabRecordGroup,
   normalizeLabForm,
   requestStatusFromItemStatuses,
   resolveApiLabCategory,
@@ -57,6 +58,7 @@ const labRequestInclude = Prisma.validator<Prisma.LaboratoryRequestInclude>()({
   request: {
     select: {
       req_id: true,
+      request_code: true,
       patient_id: true,
       req_date: true,
       status: true,
@@ -122,6 +124,33 @@ type LabWorkflowItemGroup = {
   items: LabRequestRecordItem[];
   primaryItem: LabRequestRecordItem;
 };
+
+// added by john
+
+interface LabPreviewRequest {
+  id: number;
+  laboratoryRequestId: number;
+  rawPatientId: number;
+  patientId: string;
+  patientName: string;
+  age: string;
+  sex: string;
+  address: string;
+  requestCode: string | null;
+  requestedAt: string;
+  requestedDate: string;
+  requestedBy: string;
+  status: string;
+  testType: string;
+  recordGroup: LabRecordGroup;
+  resultPayload: LabResultPayload;
+  completedAt: string;
+}
+
+interface LabPreviewResponse {
+  request: LabPreviewRequest;
+  form: LabResultPayload;
+}
 
 const normalizeRequestedBy = (value?: string | null) => {
   const trimmed = value?.trim();
@@ -721,10 +750,39 @@ export const getPatientLabRequestsService = async (patientId: number) => {
 
     return records
       .filter((record) => record.items.length > 0)
-      .flatMap(getDisplayItemsForRecord)
+      .map((record) => ({
+        labId: record.id,
+        requestId: record.request.req_id,
+        patientId: record.request.patient_id,
+        patientName: record.request.patient.name,
+        requestCode: record.request.request_code,
+        requestedDate: record.request.req_date,
+        status: record.request.status,
+        requestedBy: record.req_by,
+
+        tests: record.items.map((item) => ({
+          item_id: item.item_id,
+          result_payload: item.result_payload,
+          status: item.status,
+          test: {
+            test_id: item.test.test_id,
+            name: item.test.name,
+            category: item.test.category,
+            schema_key: item.test.schema_key
+          }
+
+        })),
+
+        totalTests: record.items.length,
+
+        completedTests: record.items.filter(
+          (item) => item.status === "DONE"
+        ).length,
+      }))
       .sort((left, right) => {
         const timeDiff =
-          new Date(right.requestedDate).getTime() - new Date(left.requestedDate).getTime();
+          new Date(right.requestedDate).getTime() -
+          new Date(left.requestedDate).getTime();
 
         if (timeDiff !== 0) {
           return timeDiff;
@@ -1017,4 +1075,110 @@ export const saveLabResultService = async ({
 
     return getDisplayItemById(tx, labId);
   });
+};
+
+
+export const getLabPreviewService = async (
+  labid: number,
+  itemId?: number
+): Promise<LabPreviewResponse> => {
+
+  const record =
+    await prisma.laboratoryRequest.findUnique({
+
+      where: {
+        id: labid,
+      },
+
+      include: {
+        request: {
+          include: {
+            patient: true,
+          },
+        },
+
+        items: {
+          include: {
+            test: true,
+          },
+        },
+      },
+    });
+
+  if (!record) {
+    throw new Error("Laboratory request not found.");
+  }
+
+  const selectedItem =
+    itemId
+      ? record.items.find(
+        (item) => item.item_id === itemId
+      )
+      : record.items.find(
+        (item) =>
+          item.result_payload &&
+          item.status === "DONE"
+      );
+
+  if (!selectedItem) {
+    throw new Error("Laboratory item not found.");
+  }
+
+  const requestedAtDate =
+    new Date(record.request.req_date);
+
+  const request: LabPreviewRequest = {
+
+    id: record.request.req_id,
+
+    laboratoryRequestId: record.id,
+
+    rawPatientId:
+      record.request.patient.patient_id,
+
+    patientId:
+      record.request.patient.patient_id.toString(),
+
+    patientName:
+      record.request.patient.name,
+
+    age: record.request.patient.age ? String(record.request.patient.age) : "",
+    sex: record.request.patient.sex,
+    address: record.request.patient.address,
+    requestedBy: record.req_by,
+    requestedAt: record.request.req_date.toISOString(),
+    requestedDate: record.request.req_date.toISOString(),
+
+    requestCode:
+      record.request.request_code,
+
+
+
+    status:
+      selectedItem.status.toLowerCase(),
+
+    testType:
+      selectedItem.test.name,
+
+    recordGroup:
+      selectedItem.test.category.toLowerCase() as LabRecordGroup,
+
+    resultPayload:
+      normalizeLabPayload(
+        selectedItem.result_payload
+      ),
+
+    completedAt:
+      selectedItem.completed_at?.toISOString() ?? "",
+  };
+
+  const response: LabPreviewResponse = {
+    request,
+    form: request.resultPayload,
+  };
+
+  // console.log("selectedItem", selectedItem);
+  // console.log("response", response);
+
+  return response;
 };

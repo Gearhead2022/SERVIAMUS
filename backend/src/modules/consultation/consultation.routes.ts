@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createConsultationResultController, createMedCertResultController, createPrescriptionController, getAllPatientConsultationController, getAllPatientMedCertController, getAllPatientRequestController, getConsultationRecordByIdController, getConsultationRecordHistoryController, getConsultationResultByIdController, getConsultationRxByIdController, getDoctorByIdController, getLabRequestByNameController, getMedicalCertificateByIdController, getMedicalCertificateRecordHistoryController, getPatientPrescriptionController, getPatientRecordController, getPrescriptionByRequestController, getPrescriptionRecordHistoryController, getStatisticsController, getWeeklyTallyController, updateRequestStatusController } from "./consultation.controller";
+import { createConsultationResultController, createMedCertResultController, createPrescriptionController, getAllPatientConsultationController, getAllPatientMedCertController, getAllPatientRequestController, getConsultationRecordByIdController, getConsultationRecordHistoryController, getConsultationResultByIdController, getConsultationRxByIdController, getDoctorByIdController, getLabRequestByNameController, getMedicalCertificateByIdController, getMedicalCertificateRecordHistoryController, getPatientPrescriptionController, getPatientRecordController, getPrescriptionByRequestController, getPrescriptionRecordHistoryController, getStatisticsController, getWeeklyTallyController, laboratoryRecordHistoryController, updateRequestStatusController } from "./consultation.controller";
 
 const router = Router();
 
@@ -46,6 +46,10 @@ router.get(
   getAllPatientMedCertController
 );
 
+// router.get(
+//   "/:id/getAllPatientPrescriptionRecords",
+//   getAllPatientPrescriptionController
+// );
 
 router.get(
   "/:id/getPrescriptionRecord",
@@ -73,6 +77,11 @@ router.get(
   "/medCertRecordHistory",
   getMedicalCertificateRecordHistoryController
 );
+
+router.get(
+  "/laboratoryRecordHistory",
+  laboratoryRecordHistoryController
+)
 
 router.post(
   "/medicalCertificateResult",

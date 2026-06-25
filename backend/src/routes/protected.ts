@@ -3,6 +3,7 @@
 import { Router } from "express";
 import { authenticate } from "../middlewares/auth.middleware";
 import LabRoutes from "../modules/lab/lab.routes";
+import AdminRoutes from "../modules/admin/admin.routes";
 import BillingRoutes from "../modules/billing/billing.routes";
 import RequestsRoutes from "../modules/request/request.routes";
 import PatientsRoutes from "../modules/patient/patient.routes";
@@ -25,6 +26,8 @@ router.use("/consultation", ConsultationRoutes); // Consultation related routes
 router.use("/queue", QueueRoutes);  // Queue management routes
 
 router.use("/lab", LabRoutes);  // Queue management routes
+
+router.use("/admin", AdminRoutes);  // Admin routes
 
 router.use("/notification", NotificationRoutes);  // Notidication routes
 

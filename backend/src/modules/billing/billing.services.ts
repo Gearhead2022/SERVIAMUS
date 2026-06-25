@@ -2,9 +2,12 @@
 
 import { PaymentMethod, Prisma, RequestType } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
-import { getLabTestPrice } from "./billing.helpers";
 import { BillingFilter } from "./billing.types";
 import { BillStatus } from "@prisma/client";
+import { UpdateBillingDiscountPayload } from "./billing.types";
+
+type ModifBillStatus = Exclude<BillStatus, 'PENDING'>;
+
 
 const billingPatientSelect = {
   patient_id: true,
@@ -33,6 +36,7 @@ const billingInclude = {
           items: {
             select: {
               item_id: true,
+              test_id: true,
               test: {
                 select: {
                   name: true,
@@ -66,6 +70,7 @@ type BillingRecord = Prisma.BillingGetPayload<{
             items: {
               select: {
                 item_id: true;
+                test_id: true;
                 test: {
                   select: {
                     name: true;
@@ -97,9 +102,10 @@ const buildBillingBreakdown = async (
 
     // GET ALL TEST IDS
     const testIds = items.map(
-      (item) => item.item_id
+      (item) => item.test_id
     );
 
+    // console.log('items', items)
     // GET SERVICES MATCHING TEST IDS
     const services = await prisma.services.findMany({
       where: {
@@ -114,7 +120,7 @@ const buildBillingBreakdown = async (
       // MATCH SERVICE USING reference_id === test_id
       const matchedService = services.find(
         (service) =>
-          service.reference_id === serviceLine.item_id
+          service.reference_id === serviceLine.test_id
       );
 
       const linePrice = Number(
@@ -233,18 +239,28 @@ const serializeBilling = async (billing: BillingRecord) => {
 };
 
 export const getAllBillings = async (
+  page: number = 1,
+  limit: number = 10,
   search?: string,
-  status?: BillingFilter
+  status?: BillingFilter,
+  dateFrom?: string,
+  dateTo?: string,
+  sort?: string
 ) => {
-  const where: Prisma.BillingWhereInput = {};
 
-  if (search) {
+  const where:
+    Prisma.BillingWhereInput = {};
+
+  // SEARCH
+  if (search?.trim()) {
+
     where.OR = [
       {
         billing_code: {
           contains: search,
         },
       },
+
       {
         request: {
           patient: {
@@ -254,6 +270,7 @@ export const getAllBillings = async (
           },
         },
       },
+
       {
         request: {
           patient: {
@@ -266,47 +283,152 @@ export const getAllBillings = async (
     ];
   }
 
-  if (status && status !== "ALL") {
-    where.status = status as BillStatus;
+  // STATUS
+  if (
+    status &&
+    status !== "ALL"
+  ) {
+
+    where.status =
+      status as BillStatus;
   }
 
-  const billings = await prisma.billing.findMany({
-    where,
-    include: billingInclude,
-    orderBy: { date: "desc" },
-  });
+  // DATE RANGE
+  if (dateFrom || dateTo) {
 
-  return await Promise.all(
-    billings.map(serializeBilling)
-  );
-};
+    where.date = {};
 
+    if (dateFrom) {
+      where.date.gte =
+        new Date(dateFrom);
+    }
 
+    if (dateTo) {
 
-export const getBillingByRequestId = async (req_id: number) => {
-  // const billing = await prisma.billing.findUnique({
-  //   where: { req_id },
-  //   include: billingInclude,
-  // });
+      const endDate =
+        new Date(dateTo);
 
-  // if (!billing) {
-  //   throw new Error("Billing not found");
-  // }
+      endDate.setHours(
+        23,
+        59,
+        59,
+        999
+      );
 
-  // return serializeBilling(billing);
-};
+      where.date.lte =
+        endDate;
+    }
+  }
 
-export const getBillingById = async (billing_id: number) => {
-  // const billing = await prisma.billing.findUnique({
-  //   where: { billing_id },
-  //   include: billingInclude,
-  // });
+  // SORTING
+  let orderBy:
+    Prisma.BillingOrderByWithRelationInput =
+  {
+    created_at: "desc",
+  };
 
-  // if (!billing) {
-  //   throw new Error("Billing not found");
-  // }
+  switch (sort) {
 
-  // return serializeBilling(billing);
+    case "date_asc":
+      orderBy = {
+        created_at: "asc",
+      };
+      break;
+
+    case "date_desc":
+      orderBy = {
+        created_at: "desc",
+      };
+      break;
+
+    case "amount_asc":
+      orderBy = {
+        total_price: "asc",
+      };
+      break;
+
+    case "amount_desc":
+      orderBy = {
+        total_price: "desc",
+      };
+      break;
+  }
+
+  const [
+    total,
+    pendingCount,
+    completedCount,
+    revenue
+  ] = await Promise.all([
+    prisma.billing.count(),
+
+    prisma.billing.count({
+      where: {
+        ...where,
+        status: "PENDING",
+      },
+    }),
+
+    prisma.billing.count({
+      where: {
+        ...where,
+        status: "DONE",
+      },
+    }),
+
+    prisma.billing.aggregate({
+      where: {
+        ...where,
+        status: "DONE",
+      },
+      _sum: {
+        total_price: true,
+      },
+    }),
+  ]);
+
+  const billings =
+    await prisma.billing.findMany({
+
+      where,
+
+      skip:
+        (page - 1) * limit,
+
+      take: limit,
+
+      orderBy,
+
+      include:
+        billingInclude,
+    });
+
+  const serialized =
+    await Promise.all(
+      billings.map(
+        serializeBilling
+      )
+    );
+
+  return {
+    data: serialized,
+    stats: {
+      total,
+      pending: pendingCount,
+      completed: completedCount,
+      revenue:
+        Number(
+          revenue._sum.total_price ?? 0
+        ),
+    },
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages:
+        Math.ceil(total / limit),
+    },
+  };
 };
 
 export const createPayment = async (
@@ -360,6 +482,45 @@ export const updateBillingStatus = async (
   });
 };
 
+export const updateBillingDiscount = async (
+  payload: UpdateBillingDiscountPayload
+) => {
+
+  const billing = await prisma.billing.findUnique({
+    where: {
+      billing_id: payload.billing_id,
+    },
+  });
+
+  if (!billing) {
+    throw new Error("Billing not found");
+  }
+
+  const totalPrice = Number(billing.total_price);
+
+  if (payload.discount < 0) {
+    throw new Error("Discount cannot be negative");
+  }
+
+  if (payload.discount > totalPrice) {
+    throw new Error(
+      "Discount cannot exceed total price"
+    );
+  }
+
+  const updatedBilling = await prisma.billing.update({
+    where: { billing_id: payload.billing_id },
+    data: {
+      discount: payload.discount,
+      discount_reason: payload.discount_reason,
+    },
+    include: billingInclude,
+  });
+
+  return await serializeBilling(updatedBilling);
+};
+
+
 export const payBilling = async (billing_id: number) => {
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const billing = await tx.billing.findUnique({
@@ -380,6 +541,8 @@ export const payBilling = async (billing_id: number) => {
 
 
 export const getAllPayment = async (
+  page: number = 1,
+  limit: number = 10,
   search?: string,
   status?: string,
   method?: string,
@@ -441,7 +604,7 @@ export const getAllPayment = async (
   const billingWhere: Prisma.BillingWhereInput = {};
 
   if (status && status !== "ALL") {
-    billingWhere.status = status as BillStatus;
+    billingWhere.status = 'DONE';
   }
 
   if (type && type !== "ALL") {
@@ -455,6 +618,12 @@ export const getAllPayment = async (
       is: billingWhere,
     };
   }
+
+  // console.log("billingWhere", billingWhere);
+  // console.log(
+  //   "hasBillingWhere",
+  //   Object.keys(billingWhere).length > 0
+  // );
 
   // DATE RANGE
   if (dateFrom || dateTo) {
@@ -494,22 +663,86 @@ export const getAllPayment = async (
       break;
   }
 
+  const [
+    total,
+    completedCount,
+    revenue,
+  ] = await Promise.all([
+    prisma.payment.count({
+      where,
+    }),
 
-
-  const payments = await prisma.payment.findMany({
-    where,
-    include: {
-      billing: {
-        include: billingInclude,
+    prisma.payment.count({
+      where: {
+        ...where,
+        billing: {
+          is: {
+            ...billingWhere,
+            status: "PENDING",
+          },
+        },
       },
-    },
-    orderBy,
-  });
+    }),
 
-  return await Promise.all(
-    payments.map(async (payment) => ({
-      ...payment,
-      billing: await serializeBilling(payment.billing),
-    }))
-  );
+    prisma.payment.aggregate({
+      where: {
+        ...where,
+        billing: {
+          is: {
+            ...billingWhere,
+            status: "DONE",
+          },
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    }),
+  ]);
+  const payments =
+    await prisma.payment.findMany({
+
+      where,
+
+      skip:
+        (page - 1) * limit,
+
+      take: limit,
+
+      orderBy,
+
+      include: {
+        billing: {
+          include: billingInclude,
+        }
+      }
+    });
+
+  // console.log("payments", payments);
+
+  const serialized =
+    await Promise.all(
+      payments.map(async (payment) => ({
+        ...payment,
+        billing: await serializeBilling(payment.billing),
+      }))
+    );
+
+  return {
+    data: serialized,
+    stats: {
+      total,
+      completed: completedCount,
+      revenue: Number(
+        revenue._sum.amount ?? 0
+      ),
+    },
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages:
+        Math.ceil(total / limit),
+    },
+  };
 };

@@ -17,6 +17,7 @@ import {
   saveLabResultService,
   searchPatientsService,
   updateLabRequestStatusService,
+  getLabPreviewService,
 } from "./lab.services";
 
 const labStatusValues = ["queued", "pending", "done"] as const;
@@ -357,5 +358,45 @@ export const saveLabResultController = async (req: Request, res: Response) => {
     });
   } catch (error) {
     return handleLabModuleError(res, error, "Failed to save the lab result.");
+  }
+};
+
+// added by john
+
+export const getLabPreviewController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const labid = Number(req.params.labid);
+
+    if (!Number.isFinite(labid) || labid <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid laboratory request id.",
+      });
+    }
+
+    const itemId = req.query.itemId
+      ? Number(req.query.itemId)
+      : undefined;
+
+    const data = await getLabPreviewService(
+      labid,
+      itemId
+    );
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message:
+        error?.message ??
+        "Unable to load laboratory preview.",
+    });
   }
 };

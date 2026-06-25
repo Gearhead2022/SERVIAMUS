@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getConsultationResultById, getConsultationRxById, getDoctorById, getLabRequestByName, getMedicalCertificateById, getPatientPrescription, getRequestsPerWeekday, getStatistics, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
+import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getConsultationResultById, getConsultationRxById, getDoctorById, getLabRequestByName, getMedicalCertificateById, getPatientPrescription, getRequestsPerWeekday, getStatistics, laboratoryRecordHistory, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
 import { RequestStatus, RequestType } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
 import { getIO } from "../../socket";
@@ -246,6 +246,57 @@ export const getAllPatientMedCertController = async (req: Request, res: Response
   }
 };
 
+// export const getAllPatientPrescriptionController = async (req: Request, res: Response) => {
+//   try {
+//     const patientId = Number(req.params.id);
+
+//     if (!patientId || isNaN(patientId)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid patient_id",
+//       });
+//     }
+
+//     const search =
+//       typeof req.query.search === "string" && req.query.search.trim() !== ""
+//         ? req.query.search.trim()
+//         : undefined;
+
+//     const certificates = await getAllPatientConsultationRecord(
+//       patientId,
+//       search
+//     );
+
+//     return res.status(200).json({
+//       success: true,
+//       data: certificates,
+//     });
+//   } catch (error: any) {
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message || "Something went wrong",
+//     });
+//   }
+// };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export const getPatientPrescriptionController = async (req: Request, res: Response) => {
   try {
     const consultationId = Number(req.params.id);
@@ -431,6 +482,50 @@ export const getMedicalCertificateRecordHistoryController = async (req: Request,
     });
   }
 };
+
+export const laboratoryRecordHistoryController = async (req: Request, res: Response) => {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+
+    const search =
+      typeof req.query.search === "string" && req.query.search.trim() !== ""
+        ? req.query.search.trim()
+        : undefined;
+
+    const status =
+      typeof req.query.status === "string" && req.query.status !== ""
+        ? req.query.status
+        : undefined;
+
+    const dateFrom =
+      typeof req.query.dateFrom === "string" && req.query.dateFrom !== ""
+        ? req.query.dateFrom
+        : undefined;
+
+    const dateTo =
+      typeof req.query.dateTo === "string" && req.query.dateTo !== ""
+        ? req.query.dateTo
+        : undefined;
+
+    const sort =
+      typeof req.query.sort === "string" && req.query.sort !== ""
+        ? req.query.sort
+        : undefined;
+
+    const prescriptions = await laboratoryRecordHistory(page, limit, search, status, dateFrom, dateTo, sort);
+
+    return res.status(200).json({
+      success: true,
+      data: prescriptions,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Something went wrong",
+    });
+  }
+};
 // END HISTORY & RECORDS
 
 export const createMedCertResultController = async (req: Request, res: Response) => {
@@ -450,28 +545,28 @@ export const createMedCertResultController = async (req: Request, res: Response)
 };
 
 export const getConsultationRecordByIdController = async (req: Request, res: Response) => {
-  // try {
-  //   const cons_id = Number(req.params.id);
+  try {
+    const cons_id = Number(req.params.id);
 
-  //   if (!cons_id || isNaN(cons_id)) {
-  //     return res.status(400).json({
-  //       success: false,
-  //       message: "Invalid cons_ids",
-  //     });
-  //   }
+    if (!cons_id || isNaN(cons_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid cons_ids",
+      });
+    }
 
-  //   const consultation = await getConsultationRecordById(cons_id);
+    const consultation = await getConsultationRecordById(cons_id);
 
-  //   return res.status(200).json({
-  //     success: true,
-  //     data: consultation,
-  //   });
-  // } catch (error: any) {
-  //   return res.status(500).json({
-  //     success: false,
-  //     message: error.message || "Something went wrong",
-  //   });
-  // }
+    return res.status(200).json({
+      success: true,
+      data: consultation,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Something went wrong",
+    });
+  }
 };
 
 export const getWeeklyTallyController = async (req: Request, res: Response) => {
@@ -586,7 +681,6 @@ export const getMedicalCertificateByIdController = async (req: Request, res: Res
   const req_id = Number(req.params.id);
   try {
     const data = await getMedicalCertificateById(req_id);
-    console.log('from backend', data)
     res.json(data);
   } catch (err: any) {
     res.status(500).json({

@@ -2,7 +2,7 @@ import { prisma } from "../../config/prismaClient";
 import { addToQueue } from "../queue/queue.services";
 import { createLaboratoryRequestWithItems } from "../lab/lab.helpers";
 import { splitLabTests } from "../lab/lab.utils";
-import { CreateRequestProps, Status } from "./request.types";
+import { CreateRequestProps, Status, UpdateUserPayload } from "./request.types";
 import { QueueStatus, RequestType } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
@@ -161,6 +161,8 @@ export const getAllRegisteredUsers = async () => {
         license_no: true,
         title: true,
         ptr_no: true,
+        is_active: true,
+        created_at: true
       }
     });
 
@@ -169,21 +171,21 @@ export const getAllRegisteredUsers = async () => {
 }
 
 export const getRequestData = async (request_id: number) => {
-  const today = new Date();
-  const startOfDay = new Date(today);
-  startOfDay.setHours(0, 0, 0, 0);
+  // const today = new Date();
+  // const startOfDay = new Date(today);
+  // startOfDay.setHours(0, 0, 0, 0);
 
-  const endOfDay = new Date(today);
-  endOfDay.setHours(23, 59, 59, 999);
+  // const endOfDay = new Date(today);
+  // endOfDay.setHours(23, 59, 59, 999);
 
   return prisma.$transaction(async (tx) => {
     const request = await tx.request.findFirst({
       where: {
         req_id: request_id,
-        req_date: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
+        // req_date: {
+        //   gte: startOfDay,
+        //   lte: endOfDay,
+        // },
       },
       include: {
         cert: {
@@ -191,7 +193,11 @@ export const getRequestData = async (request_id: number) => {
             certificate: true,
           },
         },
-        consult: true,
+        consult: {
+          include: {
+            vitals: true,
+          }
+        },
         patient: true,
       },
     });
@@ -286,6 +292,46 @@ export const getAllRequests = async (
     }
   }
 
+  const [
+    total,
+    waiting,
+    serving,
+    done,
+    cancelled,
+  ] = await Promise.all([
+    prisma.request.count({
+      where: requestWhere,
+    }),
+
+    prisma.request.count({
+      where: {
+        ...requestWhere,
+        status: "WAITING",
+      },
+    }),
+
+    prisma.request.count({
+      where: {
+        ...requestWhere,
+        status: "SERVING",
+      },
+    }),
+
+    prisma.request.count({
+      where: {
+        ...requestWhere,
+        status: "DONE",
+      },
+    }),
+
+    prisma.request.count({
+      where: {
+        ...requestWhere,
+        status: "CANCELED",
+      },
+    }),
+  ]);
+
   // SORTING
   let orderBy: Prisma.RequestOrderByWithRelationInput = {
     req_date: "desc",
@@ -374,17 +420,35 @@ export const getAllRequests = async (
           mcr_id: true,
           physician: true,
           purpose: true,
+          certificate: {
+            select: {
+              purpose: true,
+              result_date: true,
+              recommendation: true,
+            }
+          },
+          doctor: {
+            select: {
+              name: true,
+              license_no: true,
+              title: true,
+            }
+          }
         },
       },
     },
   });
 
-  const total = await prisma.request.count({
-    where: requestWhere,
-  });
-
   return {
     data: requests,
+
+    stats: {
+      total,
+      waiting,
+      serving,
+      done,
+      cancelled,
+    },
 
     pagination: {
       total,
@@ -628,7 +692,6 @@ export const updateRequest = async (
   payload: CreateRequestProps
 ) => {
 
-  console.log('services', payload.req_type)
   switch (payload.req_type) {
 
     case "CONSULTATION":
@@ -654,4 +717,227 @@ export const updateRequest = async (
         "Invalid request type"
       );
   }
+};
+
+// to get last record or last visit
+export const getLastRecord = async (
+  patient_id: number
+) => {
+  return prisma.$transaction(async (tx) => {
+    const request = await tx.request.findFirst({
+      where: {
+        patient_id,
+      },
+      orderBy: {
+        req_date: "desc",
+      },
+      skip: 1,
+    });
+
+    return request;
+  });
+};
+
+export const getAllUsers = async (
+  page: number = 1,
+  limit: number = 10,
+  search?: string,
+  sort?: string,
+  role?: string,
+) => {
+
+  const where: Prisma.UsersWhereInput = {
+    // is_active: true,
+  };
+
+  if (role && role !== "ALL") {
+    where.roles = {
+      some: {
+        role: {
+          role_name: role,
+        },
+      },
+    };
+  }
+
+  // SEARCH
+  if (search?.trim()) {
+
+    where.OR = [
+      {
+        username: {
+          contains: search,
+        },
+      },
+      {
+        name: {
+          contains: search,
+        },
+      },
+      {
+        license_no: {
+          contains: search,
+        },
+      },
+      {
+        title: {
+          contains: search,
+        },
+      },
+    ];
+  }
+
+  // SORTING
+  let orderBy: Prisma.UsersOrderByWithRelationInput = {
+    user_id: "desc",
+  };
+
+  switch (sort) {
+
+    case "name_asc":
+      orderBy = {
+        name: "asc",
+      };
+      break;
+
+    case "name_desc":
+      orderBy = {
+        name: "desc",
+      };
+      break;
+
+    case "date_asc":
+      orderBy = {
+        created_at: "asc",
+      };
+      break;
+
+    case "date_desc":
+      orderBy = {
+        created_at: "desc",
+      };
+      break;
+  }
+
+  const [data, total] =
+    await prisma.$transaction([
+
+      prisma.users.findMany({
+
+        where,
+
+        skip:
+          (page - 1) * limit,
+
+        take:
+          limit,
+
+        orderBy,
+
+        select: {
+          user_id: true,
+          username: true,
+          name: true,
+          license_no: true,
+          title: true,
+          ptr_no: true,
+          is_active: true,
+          created_at: true,
+          roles: {
+            select: {
+              role: true
+            }
+          },
+        },
+      }),
+
+      prisma.users.count({
+        where,
+      }),
+    ]);
+
+  // console.log(JSON.stringify(data, null, 2));
+
+  const transformedData = data.map((user) => ({
+    ...user,
+    role: user.roles?.[0]?.role ?? null,
+  }));
+
+  return {
+
+    data: transformedData,
+
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages:
+        Math.ceil(total / limit),
+    },
+  };
+};
+
+export const updateUser = async (
+  user_id: number,
+  data: UpdateUserPayload
+) => {
+  const existingUser = await prisma.users.findUnique({
+    where: { user_id },
+  });
+
+  if (!existingUser) {
+    throw new Error("User not found");
+  }
+
+  const updatedUser = await prisma.users.update({
+    where: { user_id },
+    data: {
+      name: data.name,
+      username: data.username,
+      title: data.title,
+      license_no: data.license_no,
+      ptr_no: data.ptr_no,
+      is_active: data.is_active,
+      roles: {
+        deleteMany: {},
+
+        create: {
+          role_id: data.role_id,
+        },
+      },
+    },
+    select: {
+      user_id: true,
+      name: true,
+      username: true,
+      roles: {
+        select: {
+          role_id: true,
+          role: {
+            select: {
+              role_name: true,
+            },
+          },
+        },
+      },
+      title: true,
+      license_no: true,
+      ptr_no: true,
+      is_active: true,
+      updated_at: true,
+    },
+  });
+
+  return updatedUser;
+};
+
+export const deleteUser = async (
+  userId: number,
+) => {
+
+  return prisma.users.delete({
+    where: {
+      user_id: userId,
+    },
+  });
 };

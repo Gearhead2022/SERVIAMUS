@@ -61,7 +61,7 @@ export interface PatientConsultationRecordsPayload {
 
 
 export interface PrescriptionPayload {
-    cons_id: number;
+    consultation_id: number;
     patient_id: number;
     doctor_id: number;
 

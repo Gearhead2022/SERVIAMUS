@@ -14,31 +14,26 @@ export async function seedUsers(prisma: PrismaClient) {
 
     const doctor1 = await prisma.users.create({
         data: {
-            name: "Dr. John Xyryl Pedrosa",
-            username: "doctor1",
-            password: await hash("doctor1"),
-        },
-    });
-
-    const doctor2 = await prisma.users.create({
-        data: {
-            name: "Dr. Kim Janrey Ramos MD. Phd",
-            username: "doctor2",
-            password: await hash("doctor2"),
+            name: "DR. JUNE PEARL T. SANSON",
+            username: "dr_sanson",
+            password: await hash("dr_sanson"),
+            title: "MD., DFM, DPADP",
+            ptr_no: "90501760",
+            license_no: "0107334"
         },
     });
 
     const staff1 = await prisma.users.create({
         data: {
-            name: "Maria Ortega",
-            username: "staff1",
-            password: await hash("staff1"),
+            name: "sample staff",
+            username: "staff",
+            password: await hash("staff"),
         },
     });
 
     const admin1 = await prisma.users.create({
         data: {
-            name: "John Rhee parreno",
+            name: "John Parreno",
             username: "admin",
             password: await hash("admin"),
         },
@@ -46,7 +41,7 @@ export async function seedUsers(prisma: PrismaClient) {
 
     const cashier1 = await prisma.users.create({
         data: {
-            name: "Romelo Panigon",
+            name: "sample cashier",
             username: "cashier1",
             password: await hash("cashier1"),
         },
@@ -56,10 +51,6 @@ export async function seedUsers(prisma: PrismaClient) {
         data: [
             {
                 user_id: doctor1.user_id,
-                role_id: roleMap["DOCTOR"],
-            },
-            {
-                user_id: doctor2.user_id,
                 role_id: roleMap["DOCTOR"],
             },
             {
@@ -77,5 +68,5 @@ export async function seedUsers(prisma: PrismaClient) {
         ]
     });
 
-    return { doctor1, doctor2, staff1, admin1 };
+    return { doctor1, staff1, admin1 };
 }

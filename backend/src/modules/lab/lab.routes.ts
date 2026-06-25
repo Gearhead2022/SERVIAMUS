@@ -12,6 +12,7 @@ import {
   saveLabResultController,
   searchPatientsController,
   updateLabRequestStatusController,
+  getLabPreviewController,
 } from "./lab.controller";
 
 const router = Router();
@@ -39,14 +40,14 @@ router.get(
 );
 router.get(
   "/patients/:patientId/records",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "STAFF"]),
   getPatientLabRecordsController
 );
 router.post("/requests", authorize(["ADMIN", "DOCTOR"]), createLabRequestController);
 router.get("/requests", authorize(["ADMIN", "LAB", "LABORATORY"]), getLabRequestsController);
 router.get(
   "/requests/:labId",
-  authorize(["ADMIN", "LAB", "LABORATORY", "STAFF"]),
+  authorize(["ADMIN", "LAB", "LABORATORY", "STAFF", "DOCTOR"]),
   getLabRequestByIdController
 );
 router.patch(
@@ -55,5 +56,12 @@ router.patch(
   updateLabRequestStatusController
 );
 router.post("/results", authorize(["ADMIN", "LAB", "LABORATORY"]), saveLabResultController);
+
+//added by john
+
+router.get(
+  "/preview/:labid",
+  getLabPreviewController
+);
 
 export default router;

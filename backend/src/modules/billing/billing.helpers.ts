@@ -1,44 +1,44 @@
 import { BillStatus, PaymentMethod, Prisma } from "@prisma/client";
 
-const DEFAULT_LAB_PRICE = 350;
+// const DEFAULT_LAB_PRICE = 350;
 
-const LAB_TEST_PRICING_RULES: Array<{
-  pattern: RegExp;
-  price: number;
-}> = [
-    {
-      pattern: /(cbc|blood count|hematology|blood typing)/i,
-      price: 250,
-    },
-    {
-      pattern: /urinalysis/i,
-      price: 180,
-    },
-    {
-      pattern: /(fecalysis|fecal|stool|parasit)/i,
-      price: 180,
-    },
-    {
-      pattern: /blood chemistry/i,
-      price: 550,
-    },
-    {
-      pattern: /(dengue|ns1|igg|igm|widal|serology)/i,
-      price: 420,
-    },
-    {
-      pattern: /(hba1c|hb a1c|glycated)/i,
-      price: 650,
-    },
-    {
-      pattern: /(ogtt|glucose load)/i,
-      price: 700,
-    },
-    {
-      pattern: /(sodium|potassium|chloride|ionized calcium)/i,
-      price: 480,
-    },
-  ];
+// const LAB_TEST_PRICING_RULES: Array<{
+//   pattern: RegExp;
+//   price: number;
+// }> = [
+//     {
+//       pattern: /(cbc|blood count|hematology|blood typing)/i,
+//       price: 250,
+//     },
+//     {
+//       pattern: /urinalysis/i,
+//       price: 180,
+//     },
+//     {
+//       pattern: /(fecalysis|fecal|stool|parasit)/i,
+//       price: 180,
+//     },
+//     {
+//       pattern: /blood chemistry/i,
+//       price: 550,
+//     },
+//     {
+//       pattern: /(dengue|ns1|igg|igm|widal|serology)/i,
+//       price: 420,
+//     },
+//     {
+//       pattern: /(hba1c|hb a1c|glycated)/i,
+//       price: 650,
+//     },
+//     {
+//       pattern: /(ogtt|glucose load)/i,
+//       price: 700,
+//     },
+//     {
+//       pattern: /(sodium|potassium|chloride|ionized calcium)/i,
+//       price: 480,
+//     },
+//   ];
 
 const toDecimal = (value: number) => new Prisma.Decimal(value.toFixed(2));
 
@@ -48,30 +48,48 @@ const buildBillingCode = (requestId: number) =>
 export const toApiBillingStatus = (status?: BillStatus | null) =>
   status === "DONE" ? "paid" : "unpaid";
 
-export const getLabTestPrice = (testName: string) => {
-  const normalizedName = testName.trim();
+// export const getLabTestPrice = (testName: string) => {
+//   const normalizedName = testName.trim();
 
-  for (const rule of LAB_TEST_PRICING_RULES) {
-    if (rule.pattern.test(normalizedName)) {
-      return rule.price;
-    }
-  }
+//   for (const rule of LAB_TEST_PRICING_RULES) {
+//     if (rule.pattern.test(normalizedName)) {
+//       return rule.price;
+//     }
+//   }
 
-  return DEFAULT_LAB_PRICE;
-};
+//   return DEFAULT_LAB_PRICE;
+// };
 
-export const calculateLabBillingTotal = (tests: string[]) =>
-  tests.reduce((total, testName) => total + getLabTestPrice(testName), 0);
+// export const calculateLabBillingTotal = (tests: string[]) =>
+//   tests.reduce((total, testName) => total + getLabTestPrice(testName), 0);
 
 export const ensureLabBillingForRequest = async (
   tx: Prisma.TransactionClient,
   input: {
     reqId: number;
     requestDate: Date;
-    tests: string[];
+    testIds: number[];
   }
 ) => {
-  const totalPrice = toDecimal(calculateLabBillingTotal(input.tests));
+
+  const services = await tx.services.findMany({
+    where: {
+      reference_id: {
+        in: input.testIds,
+      },
+    },
+    select: {
+      price: true,
+    },
+  });
+
+  const totalPrice = toDecimal(
+    services.reduce(
+      (sum, service) => sum + Number(service.price),
+      0
+    )
+  );
+
   const billingCode = buildBillingCode(input.reqId);
 
   const existingBilling = await tx.billing.findUnique({

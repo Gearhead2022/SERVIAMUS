@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { ensureLabBillingForRequest } from "../billing/billing.helpers";
 import { categorizeLabTest, splitLabTests, toSchemaKey } from "./lab.utils";
 import { prisma } from "../../config/prismaClient";
+import { LabResultPayload } from "./lab.types";
 
 type CreateLaboratoryRequestWithItemsInput = {
   reqId: number;
@@ -105,9 +106,36 @@ export const createLaboratoryRequestWithItems = async (
   await ensureLabBillingForRequest(tx, {
     reqId: request.req_id,
     requestDate: request.req_date,
-    tests: normalizedTests,
+    testIds: resolvedTests.map(
+      (test) => test.test_id
+    )
   });
 
   return laboratoryRequest;
 };
 
+// added by john
+
+export const normalizeLabPayload = (
+  payload: unknown
+): LabResultPayload => {
+
+  if (!payload) {
+    return {} as LabResultPayload;
+  }
+
+  if (typeof payload === "object") {
+    return payload as LabResultPayload;
+  }
+
+  if (typeof payload === "string") {
+
+    try {
+      return JSON.parse(payload) as LabResultPayload;
+    } catch {
+      return {} as LabResultPayload;
+    }
+  }
+
+  return {} as LabResultPayload;
+};

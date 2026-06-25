@@ -42,3 +42,17 @@ export interface UsersProps {
 }
 
 export type Status = "WAITING" | "SERVING" | "DONE" | "CANCELED";
+
+export interface RegisterPayload {
+  user_id?: number;
+  name: string;
+  username: string;
+  password: string;
+  role_id: number;
+  license_no?: string;
+  title?: string;
+  ptr_no?: string;
+  is_active: boolean;
+}
+
+export type UpdateUserPayload = Omit<RegisterPayload, 'password'>;

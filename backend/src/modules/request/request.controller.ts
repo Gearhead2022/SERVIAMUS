@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getPrevVitalSigns, createRequest, getAllRegisteredUsers, getRequestData, getAllRequests, deleteRequest, updateRequest } from "./request.services";
+import { getPrevVitalSigns, createRequest, getAllRegisteredUsers, getRequestData, getAllRequests, deleteRequest, updateRequest, getLastRecord, getAllUsers, updateUser, deleteUser } from "./request.services";
 import {
   createNotification,
   resolveNotificationUsers,
@@ -63,7 +63,7 @@ export const createRequestController = async (req: Request, res: Response) => {
       entity_id: request.result.req_id,
     });
 
-    console.log(request)
+    // console.log(request)
 
     const io = getIO();
 
@@ -251,6 +251,147 @@ export const updateRequestController = async (req: Request, res: Response) => {
     return res.status(400).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+export const getLastRecordRequestController = async (req: Request, res: Response) => {
+  try {
+    const patient_id = Number(req.params.patient_id);
+
+    if (!patient_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid requestId",
+      });
+    }
+
+    const result = await getLastRecord(patient_id);
+
+    return res.status(201).json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getAllUsersController = async (
+  req: Request,
+  res: Response
+) => {
+
+  try {
+
+    const page =
+      Number(req.query.page) || 1;
+
+    const limit =
+      Number(req.query.limit) || 10;
+
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search
+        : undefined;
+
+    const sort =
+      typeof req.query.sort === "string"
+        ? req.query.sort
+        : undefined;
+
+    const role =
+      typeof req.query.role === "string"
+        ? req.query.role
+        : undefined;
+
+    const users =
+      await getAllUsers(
+        page,
+        limit,
+        search,
+        sort,
+        role
+      );
+
+    return res.status(200).json({
+      success: true,
+      ...users,
+    });
+
+  } catch (error: any) {
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const updateUserController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const user_id = Number(req.params.user_id);
+
+    if (isNaN(user_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid User ID",
+      });
+    }
+
+    const updatedUser = await updateUser(
+      user_id,
+      req.body
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: updatedUser,
+      message: "Account updated successfully",
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong",
+    });
+  }
+};
+
+export const deleteUserController = async (req: Request, res: Response) => {
+  try {
+    const userId = Number(req.params.user_id);
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid requestId",
+      });
+    }
+
+    const user = await deleteUser(userId);
+
+    const io = getIO();
+
+    // io.to([...requestUpdateRooms]).emit("request:updated");
+
+    return res.status(201).json({
+      success: true,
+      data: user
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
     });
   }
 };

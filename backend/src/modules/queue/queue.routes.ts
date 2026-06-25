@@ -43,7 +43,7 @@ router.delete("/reset", authorize(["STAFF"]), async (req: Request, res: Response
     }
 
     await prisma.queue.deleteMany({});
-    
+
     return res.status(200).json({
       success: true,
       message: "All queues have been reset",
