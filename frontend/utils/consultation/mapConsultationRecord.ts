@@ -28,6 +28,7 @@ export function mapConsultationRecordToForm(
         assessment: consultation.assessment ?? "",
         plans: consultation.plans ?? "",
         follow_up_date: consultation.follow_up_date ? new Date(consultation.follow_up_date).toISOString().split("T")[0] : "",
+        is_follow_up: consultation.is_follow_up ?? false,
 
         // vitals (from your include: vitals)
         bp: consultation.bp ?? "",

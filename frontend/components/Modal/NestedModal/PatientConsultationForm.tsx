@@ -5,13 +5,11 @@ import { z } from "zod";
 import { patientConsultationSchema } from "@/schemas/consultation.schema";
 import { useForm, UseFormReturn, Path, UseFormRegister } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useConsultaion } from "@/hooks/Consultation/useConsultation";
 import { PatientProps } from "@/types/PatientTypes";
 import Button from "@/components/ui/Button";
 import { VitalSignProps } from "@/types/RequestTypes"
 import { ConsultationResultProps } from "@/types/ConsultationTypes";
 import { normalizeConsultationDefaults } from "@/utils/consultation/normalizeConsultationDefaults";
-import { mapConsultationToPrisma } from "@/utils/consultation/mapConsultationToPrisma";
 
 type RegisterConsultationFormValues = z.infer<typeof patientConsultationSchema>;
 

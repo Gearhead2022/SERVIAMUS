@@ -42,9 +42,8 @@ export const useGetQueueByType = (queue_type: "CONSULTATION" | "LABORATORY") => 
 
 export const useGetServingPatient = (queue_type: "CONSULTATION" | "LABORATORY") => {
   return useQuery({
-    queryKey: ["serving", queue_type],
+    queryKey: ["queue", "serving", queue_type],
     queryFn: () => getServingPatient(queue_type),
-    refetchInterval: 2000, // Auto-refresh every 2 seconds
   });
 };
 
@@ -55,9 +54,8 @@ export const useMoveToNextQueue = () => {
     mutationFn: (queue_type: "CONSULTATION" | "LABORATORY") =>
       moveToNextQueue(queue_type),
 
-    onSuccess: (data, queue_type) => {
-      queryClient.invalidateQueries({ queryKey: ["queue", queue_type] });
-      queryClient.invalidateQueries({ queryKey: ["serving", queue_type] });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["queue"] });
 
       if (data) {
         SweetAlert.successAlert(
@@ -98,8 +96,7 @@ export const useSkipQueue = () => {
 
 export const useGetAllQueues = () => {
   return useQuery({
-    queryKey: ["queue"],
+    queryKey: ["queue", "list"],
     queryFn: () => getAllQueues(),
-    refetchInterval: 2000,
   });
 };

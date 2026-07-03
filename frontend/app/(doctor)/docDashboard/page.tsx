@@ -12,7 +12,8 @@ import { useDebounce } from "use-debounce";
 import {
   useGetAllRequest, useRequestAction, useConsultationRecords,
   useStatisticsRecords, useRequestPerWeek, useConsultationById,
-  useMedicalCertificateResult
+  useMedicalCertificateResult,
+  useFollowupRecords
 } from "@/hooks/Consultation/useConsultation";
 import { usePatientLabRequests } from "@/hooks/Lab/useLab";
 import SweetAlert from "@/utils/SweetAlert";
@@ -30,7 +31,7 @@ import ConsultaitionPreview from "@/components/Modal/ChildModal/ConsultationPrev
 import { openConsultPrintPage } from "@/utils/consultation/consultPrint";
 import { useConsultaion, usePrescription, useGetDoctorById } from "@/hooks/Consultation/useConsultation";
 import { mapConsultationToPrisma } from "@/utils/consultation/mapConsultationToPrisma";
-import { MedCertFormValues, PrescriptionValues, RegisterConsultationFormValues } from "@/schemas/consultation.schema";
+import { MedCertFormValues, PrescriptionValues, RegisterConsultationFormValues, RegisterFollowupFormValues } from "@/schemas/consultation.schema";
 import { mapPrescriptionToPrisma } from "@/utils/consultation/mapRxToPrisma";
 import { mapMedCertToPrisma } from "@/utils/consultation/mapMedCertToPrisma";
 import Pagination from "@/components/Pagination";
@@ -41,6 +42,7 @@ import SummaryCards from "@/components/ui/SummaryCards";
 import ConsultationRequestViewModal from "@/components/Modal/ChildModal/ConsultationRequestViewModal";
 import LaboratoryRequestViewModal from "@/components/Modal/ChildModal/LaboratoryRequestViewModal";
 import CertificateRequestViewModal from "@/components/Modal/ChildModal/CertificateRequestViewModal";
+import FollowupConsultationForm from "@/components/Modal/NestedModal/FollowupConsultationForm";
 
 type RequestCardProps = {
   currentRequest: RequestProps;
@@ -51,13 +53,13 @@ type ConsultationCardProps = {
   currentRequest: RequestProps;
   onConsult: () => void;
   onPresc: () => void;
-  onDone: (reqId: number, status: Status, request: RequestProps, consultationId: number) => void;
+  onDone: (reqId: number, status: Status, request: RequestProps, consultationId: number, patient: PatientProps) => void;
 };
 
 type CertificateCardProps = {
   currentRequest: RequestProps;
   onMedical: () => void;
-  onDone: (reqId: number, status: Status, request: RequestProps, certificateId: number) => void;
+  onDone: (reqId: number, status: Status, request: RequestProps, certificateId: number, patient: PatientProps) => void;
 };
 
 const LAB_STATUS: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
@@ -181,7 +183,8 @@ function ConsultationActions({ currentRequest, onConsult, onPresc, onDone }: Con
             currentRequest?.req_id ?? 0,
             "DONE",
             currentRequest!,
-            Number(currentRequest.consult?.consultation.consultation_id)
+            Number(currentRequest.consult?.consultation.consultation_id),
+            currentRequest.patient
           )
         }
       >
@@ -204,7 +207,8 @@ function CertificateActions({ currentRequest, onMedical, onDone }: CertificateCa
             currentRequest?.req_id ?? 0,
             "DONE",
             currentRequest!,
-            Number(currentRequest.cert?.mcr_id)
+            Number(currentRequest.cert?.mcr_id),
+            currentRequest.patient
           )
         }
       >
@@ -235,7 +239,7 @@ const Dashboard = () => {
   const [addPrescriptionOpen, setAddPrescriptionOpen] = useState(false);
   const [addLaboratoryOpen, setAddLaboratoryOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [, setSelectedPatient] = useState<PatientProps | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<PatientProps | null>(null);
   const [currentRequestId, setCurrentRequestId] = useState<number | null>(null);
   const [consultationResultData, setConsultationResultData] = useState<RegisterConsultationFormValues | null>(null);
   const [consultationResultPreview, setConsultationResultPreview] = useState(false);
@@ -243,6 +247,8 @@ const Dashboard = () => {
   const [prescriptionPreview, setPrescriptionPreview] = useState(false);
   const [medCertData, setMedCertData] = useState<MedCertFormValues | null>(null);
   const [medCertPreview, setMedCertPreview] = useState(false);
+  const [followupFormData, setFollowupFormData] = useState<RegisterFollowupFormValues | null>(null);
+  const [followupPreview, setFollowupPreview] = useState(false);
 
   const { data, isLoading, refetch } = useGetAllRequest({
     page,
@@ -258,7 +264,7 @@ const Dashboard = () => {
   const requestList = data?.data ?? [];
   const meta = data?.pagination;
 
-  console.log('data returned', requestList)
+  // console.log('data returned', requestList)
 
   const { data: currentRequest } = useRequestData(currentRequestId!);
   const { data: WeeklyData } = useRequestPerWeek(['CONSULTATION', 'CERTIFICATE']);
@@ -356,10 +362,13 @@ const Dashboard = () => {
   });
 
   const { data: prevVitalSigns } = useGetPrevVitalSigns(currentPatient?.patient_id);
-  const { data: consultationRecords } = useConsultationRecords(currentPatient?.patient_id);
+  const { data: consultationRecords } = useConsultationRecords(currentPatient?.patient_id, currentRequestId!);
   const { data: patientLabRequests = [] } = usePatientLabRequests(currentPatient?.patient_id);
   const { data: doctorInfo } = useGetDoctorById(doctorId);
   const { data: consultationRecord } = useConsultationById(selectedConsultationId);
+
+  // added 07-01-26 - for followup records //
+  const { data: consultationFollowups } = useFollowupRecords(selectedConsultationId);
 
   const { mutateAsync: requestAction } = useRequestAction();
   const { mutateAsync: createConsultationResult, isSuccess: consultationSuccess } = useConsultaion();
@@ -380,13 +389,16 @@ const Dashboard = () => {
     setModalType(type);
     setModalView(true);
     setIsOpenModal(true);
+    setSelectedPatient(patient);
+    console.log('type in handeView handler', type);
   };
 
   const handleRequestAction = async (
     request_id: number,
     status: Status,
     request: RequestProps,
-    custom_id: number | undefined
+    custom_id: number | undefined,
+    patient: PatientProps
   ) => {
     const confirmed = await SweetAlert.confirmationAlert2(
       "Are you sure?",
@@ -400,9 +412,11 @@ const Dashboard = () => {
     if (status === "SERVING") {
       localStorage.setItem("request_id", String(request_id));
       localStorage.setItem(key, JSON.stringify(custom_id));
+      setSelectedRequest(request);
+      setCurrentPatient(patient);
       if (key === "cert_id") setSelectedCertificateId(custom_id);
       else setSelectedConsultationId(custom_id);
-      console.log('selected id', custom_id)
+      // console.log('selected id', custom_id)
       setCurrentRequestId(request_id);
     } else if (status === "CANCELED") {
       return;
@@ -418,6 +432,8 @@ const Dashboard = () => {
     localStorage.setItem("consult_id", JSON.stringify(consult));
     setCurrentRequestId(request.req_id);
     setSelectedConsultationId(consult);
+    setSelectedRequest(request);
+    setCurrentPatient(request.patient);
   };
 
   const handleActiveMedical = (request: RequestProps, cert?: number) => {
@@ -425,7 +441,15 @@ const Dashboard = () => {
     localStorage.setItem("cert_id", JSON.stringify(cert));
     setCurrentRequestId(request.req_id);
     setSelectedCertificateId(cert);
+    setSelectedRequest(request);
+    setCurrentPatient(request.patient);
   };
+
+  console.log('current request', consultationFollowups);
+  // console.log('current patient', currentPatient);
+  // console.log('selected request', selectedRequest);
+  // console.log('selected patient', selectedPatient);
+
 
   const getRelatedId = (info: RequestProps) =>
     info.req_type === "CONSULTATION" ? info.consult?.cons_id : info.cert?.mcr_id;
@@ -433,7 +457,7 @@ const Dashboard = () => {
   const handleAcceptRequest = (info: RequestProps, type: string) => {
     const relatedId = getRelatedId(info);
     if (!relatedId) return;
-    handleRequestAction(info.req_id, type as Status, info, relatedId);
+    handleRequestAction(info.req_id, type as Status, info, relatedId, info.patient);
   };
 
   const pendingLabCount = patientLabRequests.filter(
@@ -467,12 +491,21 @@ const Dashboard = () => {
     <RoleGuard allowedRoles={["DOCTOR"]}>
 
       {/* ── Modals ── */}
-      {addConsultationOpen && (
+      {addConsultationOpen && !currentRequest?.consult?.is_follow_up && (
         <ModalHeader showModal title="Patient Consultation Results" subtitle="Fill in the details below" sizeModal="xlarge" onClose={() => setAddConsultationOpen(false)}>
           <PatientConsultationForm patient={currentPatient} vitals={prevVitalSigns ?? undefined} consult={consultationRecords ?? undefined} cons_id={selectedConsultationId} onClose={() => setAddConsultationOpen(false)}
             onPreview={(data) => {
               setConsultationResultData(data);   // store form data
               setConsultationResultPreview(true); // open preview
+            }} />
+        </ModalHeader>
+      )}
+      {addConsultationOpen && currentRequest?.consult?.is_follow_up && (
+        <ModalHeader showModal title="Patient Consultation Results" subtitle="Fill in the details below" sizeModal="xlarge" onClose={() => setAddConsultationOpen(false)}>
+          <FollowupConsultationForm patient={currentPatient} vitals={prevVitalSigns ?? undefined} followups={consultationFollowups ?? undefined} cons_id={selectedConsultationId} onClose={() => setAddConsultationOpen(false)}
+            onPreview={(data) => {
+              setFollowupFormData(data);   // store form data
+              setFollowupPreview(true); // open preview
             }} />
         </ModalHeader>
       )}

@@ -17,24 +17,9 @@ import { getApiErrorMessage } from "@/utils/api-error";
 import SweetAlert from "@/utils/SweetAlert";
 import { BillingStats, HistoryParams, PaymentStats, TableRequestProps } from "../Consultation/useConsultation";
 
-const BILLINGS_QUERY_KEY = ["billing", "request", "lab", "consulation"];
-
-const mergeUpdatedBilling = (
-  currentBillings: BillingRecord[] | undefined,
-  updatedBilling: BillingRecord
-) => {
-  if (!currentBillings?.length) {
-    return [updatedBilling];
-  }
-
-  return currentBillings.map((billing) =>
-    billing.billingId === updatedBilling.billingId ? updatedBilling : billing
-  );
-};
-
 export const useBillings = (param: HistoryParams) =>
   useQuery<TableRequestProps<BillingRecord, BillingStats>>({
-    queryKey: ["billing", param],
+    queryKey: ["billing", "list", param],
     queryFn: () => fetchBillings(param.page, param.limit, param.search, param.status, param.type ?? 'ALL', param.dateFrom, param.dateTo, param.sort),
   });
 
@@ -49,11 +34,9 @@ export const usePayBilling = () => {
       billingId: number;
       method?: PaymentMethod;
     }) => payBillingDirect(billingId, method || "CASH"),
-    onSuccess: (updatedBilling) => {
-      queryClient.setQueryData<BillingRecord[]>(
-        BILLINGS_QUERY_KEY,
-        (currentBillings) => mergeUpdatedBilling(currentBillings, updatedBilling)
-      );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["billing"] });
+      queryClient.invalidateQueries({ queryKey: ["payment"] });
 
       SweetAlert.successAlert(
         "Payment Posted",
@@ -71,7 +54,7 @@ export const usePayBilling = () => {
 
 export const useGetBillingByRequestId = (req_id?: number) => {
   return useQuery({
-    queryKey: ["billing", req_id],
+    queryKey: ["billing", "request", req_id],
     queryFn: () => getBillingByRequestId(req_id!),
     enabled: !!req_id,
   });
@@ -79,7 +62,7 @@ export const useGetBillingByRequestId = (req_id?: number) => {
 
 export const useGetBillingById = (billing_id?: number) => {
   return useQuery({
-    queryKey: ["billing", billing_id],
+    queryKey: ["billing", "detail", billing_id],
     queryFn: () => getBillingById(billing_id!),
     enabled: !!billing_id,
   });
@@ -148,7 +131,7 @@ export const useUpdateBillingStatus = () => {
 
 export const useGetAllPayment = (param: HistoryParams) => {
   return useQuery<TableRequestProps<PaymentRecord, PaymentStats>>({
-    queryKey: ["billing", param],
+    queryKey: ["payment", "list", param],
     queryFn: () => fetchPayment(param.search, param.status, param.method, param.type, param.dateFrom, param.dateTo, param.sort),
     enabled: true,
   });
@@ -164,10 +147,6 @@ export const useUpdateBillingDiscount = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["billing"],
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: ["billing-details"],
       });
     },
 

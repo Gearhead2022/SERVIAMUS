@@ -41,8 +41,12 @@ export const updateStatus = async (requestId: number, status: Status) => {
   return res.data.data;
 }
 
-export const getConsultationRecord = async (patientId: number) => {
-  const res = await api.get(`/api/consultation/${patientId}/patientRecord`);
+export const getConsultationRecord = async (patientId: number, requestId: number) => {
+  const res = await api.get(`/api/consultation/${patientId}/patientRecord`, {
+    params: {
+      request_id: requestId
+    }
+  });
   return res.data.data;
 };
 
@@ -223,4 +227,16 @@ export const getConsultationRxPrint = async (req_id: number) => {
 export const getMedicalCertificatePrint = async (req_id: number) => {
   const res = await api.get(`/api/consultation/${req_id}/getMedicalCertificateById`);
   return res.data;
+}
+
+//added 07-91-26
+
+export const getFollowupRecords = async (cons_id: number) => {
+  const res = await api.get(`/api/consultation/${cons_id}/getFollowupRecords`);
+  return res.data.data;
+}
+
+export const getInitialConsultations = async (patient_id: number) => {
+  const res = await api.get(`/api/consultation/${patient_id}/consultation-cases`);
+  return res.data.data;
 }

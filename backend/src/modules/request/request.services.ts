@@ -5,6 +5,7 @@ import { splitLabTests } from "../lab/lab.utils";
 import { CreateRequestProps, Status, UpdateUserPayload } from "./request.types";
 import { QueueStatus, RequestType } from "@prisma/client";
 import { Prisma } from "@prisma/client";
+import { getWorkflowStatus } from "./request.helper";
 
 type NonCertificateRequestType = Exclude<RequestType, "CERTIFICATE">
 
@@ -85,6 +86,8 @@ export const createRequest = async (payload: CreateRequestProps) => {
         req_id: result.req_id,
         vs_id: vitals.vs_id,
         physician: payload.physician,
+        is_follow_up: payload.is_follow_up,
+        case_consultation_id: payload.consultation_id,
       },
     });
 
@@ -372,6 +375,7 @@ export const getAllRequests = async (
       req_date: true,
       req_type: true,
       status: true,
+      request_code: true,
 
       patient: {
         select: {
@@ -436,11 +440,24 @@ export const getAllRequests = async (
           }
         },
       },
+
+      billing: {
+        select: {
+          billing_id: true,
+          billing_code: true,
+          status: true,
+        }
+      }
     },
   });
 
+  const data = requests.map((request) => ({
+    ...request,
+    workflowStatus: getWorkflowStatus(request),
+  }));
+
   return {
-    data: requests,
+    data: data,
 
     stats: {
       total,

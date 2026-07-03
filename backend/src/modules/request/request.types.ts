@@ -30,6 +30,8 @@ export interface CreateRequestProps {
   test_id: number;
   purpose: string;
   created_at: string;
+  is_follow_up: boolean;
+  consultation_id: number | null;
 }
 
 export interface UsersProps {

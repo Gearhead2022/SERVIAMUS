@@ -86,10 +86,11 @@ model VitallSign {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  phr           ConsultationRecords[]
-  cons_req      ConsultationRequest[]
-  patient       Patients              @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
-  consultations Consultation[]
+  phr                   ConsultationRecords[]
+  cons_req              ConsultationRequest[]
+  patient               Patients               @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
+  consultations         Consultation[]
+  consultationFollowUps ConsultationFollowUp[]
 
   @@map("vital_signs")
 }
@@ -118,9 +119,14 @@ model Consultation {
   patient        Patients             @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
   vitals         VitallSign?          @relation(fields: [vs_id], references: [vs_id])
   consultRecords ConsultationRecords? @relation(fields: [phr_id], references: [phr_id])
-  consultRequest ConsultationRequest  @relation(fields: [cons_id], references: [cons_id], onDelete: Cascade)
+  // Initial consultation was created from this request
+  consultRequest ConsultationRequest  @relation("InitialConsultation", fields: [cons_id], references: [cons_id])
 
-  prescriptions Prescription[]
+  // Follow-ups belonging to this consultation
+  consultationFollowUps ConsultationFollowUp[] @relation("InitialConsultation")
+
+  prescriptions    Prescription[]
+  followupRequests ConsultationRequest[] @relation("FollowUpCase")
 
   @@index([patient_id])
   @@map("consultation")
@@ -186,6 +192,23 @@ enum Sex {
   female
 }
 
+model ConsultationFollowUp {
+  followup_id     Int      @id @default(autoincrement())
+  consultation_id Int
+  followup_date   DateTime
+  vs_id           Int?
+  impression      String?  @db.Text
+  instruction     String?  @db.Text
+  created_at      DateTime @default(now())
+
+  consult       Consultation   @relation("InitialConsultation", fields: [consultation_id], references: [consultation_id])
+  vitals        VitallSign?    @relation(fields: [vs_id], references: [vs_id])
+  prescriptions Prescription[]
+
+  @@index([followup_id])
+  @@map("consultation_follow_up")
+}
+
 model Request {
   req_id       Int           @id @default(autoincrement())
   request_code String?       @unique
@@ -222,15 +245,21 @@ enum RequestStatus {
 }
 
 model ConsultationRequest {
-  cons_id   Int @id @default(autoincrement())
-  req_id    Int @unique
-  vs_id     Int
-  physician Int
+  cons_id              Int     @id @default(autoincrement())
+  req_id               Int     @unique
+  vs_id                Int
+  case_consultation_id Int?
+  physician            Int
+  is_follow_up         Boolean @default(false)
 
-  request       Request        @relation(fields: [req_id], references: [req_id], onDelete: Cascade)
-  vitals        VitallSign     @relation(fields: [vs_id], references: [vs_id])
-  consultations Consultation[]
-  doctor        Users?         @relation("ConsultationRequestDoctor", fields: [physician], references: [user_id])
+  request      Request       @relation(fields: [req_id], references: [req_id], onDelete: Cascade)
+  vitals       VitallSign    @relation(fields: [vs_id], references: [vs_id])
+  doctor       Users?        @relation("ConsultationRequestDoctor", fields: [physician], references: [user_id])
+  // Used only for FOLLOW-UP requests
+  consultation Consultation? @relation("FollowUpCase", fields: [case_consultation_id], references: [consultation_id])
+
+  // Initial consultation created from this request
+  initialConsultation Consultation[] @relation("InitialConsultation")
 
   @@map("consultation_request")
 }
@@ -282,7 +311,9 @@ model Prescription {
   patient      Patients     @relation(fields: [patient_id], references: [patient_id])
   doctor       Users        @relation(fields: [doctor_id], references: [user_id])
 
-  medicines PrescriptionItem[]
+  medicines                       PrescriptionItem[]
+  consultationFollowUp            ConsultationFollowUp? @relation(fields: [consultationFollowUpFollowup_id], references: [followup_id])
+  consultationFollowUpFollowup_id Int?
 
   @@map("prescriptions")
 }

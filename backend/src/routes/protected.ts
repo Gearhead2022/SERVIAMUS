@@ -13,7 +13,7 @@ import NotificationRoutes from "../modules/notification/notification.route";
 
 const router = Router();
 
-router.use(authenticate);
+router.use('/api', authenticate);
 
 router.use("/billing", BillingRoutes); // Cashier billing routes
 

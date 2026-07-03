@@ -1,5 +1,5 @@
 import { prisma } from "../../config/prismaClient";
-import { MedicalCertificatePayload, PatientConsultationRecordsPayload, PrescriptionPayload, WeeklyTally } from "./consultation.types";
+import { FollowupConsultationProps, FollowupWithRelations, MedicalCertificatePayload, PatientConsultationRecordsPayload, PrescriptionPayload, WeeklyTally } from "./consultation.types";
 import { RequestStatus, RequestType } from "@prisma/client";
 import { mapRequestToQueueStatus } from "./consultation.helper";
 import { Prisma } from "@prisma/client";
@@ -220,27 +220,28 @@ export const getAllRequests = async (
   } else if (!status || status === "ALL") {
 
     const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
 
-    startOfDay.setHours(
-      0,
-      0,
-      0,
-      0
-    );
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
 
     andConditions.push({
       OR: [
+        {
+          status: {
+            in: ["WAITING", "SERVING"],
+          },
+        },
         {
           req_date: {
             gte: startOfDay,
           },
         },
         {
-          status: {
-            in: [
-              "WAITING",
-              "SERVING",
-            ],
+          status: "DONE",
+          updated_at: {
+            gte: startOfDay,
+            lte: endOfDay,
           },
         },
       ],
@@ -251,27 +252,28 @@ export const getAllRequests = async (
   if (!dateFrom && !dateTo && (!status || status === "ALL")) {
 
     const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
 
-    startOfDay.setHours(
-      0,
-      0,
-      0,
-      0
-    );
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
 
     andConditions.push({
       OR: [
+        {
+          status: {
+            in: ["WAITING", "SERVING"],
+          },
+        },
         {
           req_date: {
             gte: startOfDay,
           },
         },
         {
-          status: {
-            in: [
-              "WAITING",
-              "SERVING",
-            ],
+          status: "DONE",
+          updated_at: {
+            gte: startOfDay,
+            lte: endOfDay,
           },
         },
       ],
@@ -428,7 +430,7 @@ export const getAllRequests = async (
             physician: true,
             vs_id: true,
             doctor: true,
-            consultations: true,
+            initialConsultation: true,
             vitals: {
               select: {
                 bp: true,
@@ -529,10 +531,7 @@ export const requestAction = async (
   });
 };
 
-export const consultationRecords = async (patient_id: number) => {
-  const today = new Date();
-  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-  const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+export const consultationRecords = async (patient_id: number, request_id: number) => {
 
   return prisma.$transaction(async (tx) => {
 
@@ -544,12 +543,7 @@ export const consultationRecords = async (patient_id: number) => {
       where: {
         patient_id,
         consultRequest: {
-          request: {
-            req_date: {
-              gte: startOfDay,
-              lte: endOfDay,
-            }
-          }
+          req_id: request_id
         }
       },
       orderBy: { consultation_id: "desc" },
@@ -2513,7 +2507,7 @@ export const getConsultationResultById = async (req_id: number) => {
     select: {
       consult: {
         include: {
-          consultations: {
+          initialConsultation: {
             include: {
               patient: true,
               vitals: true,
@@ -2528,7 +2522,7 @@ export const getConsultationResultById = async (req_id: number) => {
   if (!record || !record.consult) return null;
 
   const consultation = record.consult;
-  const consultationData = consultation.consultations[0];
+  const consultationData = consultation.initialConsultation[0];
 
   if (!consultationData) return null;
 
@@ -2635,7 +2629,7 @@ export const getConsultationRxById = async (req_id: number) => {
     select: {
       consult: {
         include: {
-          consultations: {
+          initialConsultation: {
             include: {
               prescriptions: {
                 include: {
@@ -2650,13 +2644,13 @@ export const getConsultationRxById = async (req_id: number) => {
     },
   });
 
-  if (!record?.consult?.consultations?.length) {
+  if (!record?.consult?.initialConsultation?.length) {
     return null;
   }
 
   const consultation = record.consult;
 
-  const consultationData = consultation.consultations[0];
+  const consultationData = consultation.initialConsultation[0];
 
   if (!consultationData?.prescriptions?.length) {
     return null;
@@ -2723,4 +2717,148 @@ export const getMedicalCertificateById = async (req_id: number) => {
     result_date: certificateData.result_date
   };
 
+};
+
+export const getFollowupRecords = async (cons_id: number) => {
+  return prisma.$transaction(async (tx) => {
+
+    const consultationRequest = await tx.consultationRequest.findUnique({
+      where: { cons_id },
+    });
+
+    if (!consultationRequest) {
+      return null;
+    }
+    const consultationId = consultationRequest.case_consultation_id;
+
+    let consultation = null;
+
+    if (consultationId) {
+      consultation = await tx.consultation.findUnique({
+        where: {
+          consultation_id: consultationId,
+        },
+        include: {
+          vitals: true,
+          prescriptions: {
+            include: {
+              medicines: true,
+            },
+          }
+        },
+      });
+    }
+
+    if (!consultation) {
+      return null;
+    }
+
+    let baseline = null;
+
+    if (consultation.phr_id) {
+      baseline = await tx.consultationRecords.findUnique({
+        where: {
+          phr_id: consultation.phr_id,
+        },
+      });
+    }
+    let followups: FollowupWithRelations[] = [];
+
+    if (consultationId) {
+      followups = await tx.consultationFollowUp.findMany({
+        where: {
+          consultation_id: consultationId,
+        },
+        include: {
+          vitals: true,
+          consult: true,
+          prescriptions: {
+            include: {
+              medicines: true,
+            },
+          },
+        },
+        orderBy: {
+          followup_date: "asc",
+        },
+      });
+    }
+
+    return {
+      ...baseline,
+
+      initialConsultation: {
+        consultation_id: consultation.consultation_id,
+        consultation_date: consultation.consultation_date,
+        chief_complaint: consultation.chief_complaint,
+        hist_illness: consultation.hist_illness,
+        examination: consultation.examination,
+        assessment: consultation.assessment,
+        plans: consultation.plans,
+        follow_up_date: consultation.follow_up_date,
+
+        bp: consultation.vitals?.bp,
+        temp: consultation.vitals?.temp,
+        cr: consultation.vitals?.cr,
+        rr: consultation.vitals?.rr,
+        wt: consultation.vitals?.wt,
+        ht: consultation.vitals?.ht,
+        prescription: {
+          presc_id: consultation.prescriptions[0].presc_id,
+          consultation_id: consultation.prescriptions[0].consultation_id,
+          patient_id: consultation.prescriptions[0].patient_id,
+          doctor_id: consultation.prescriptions[0].doctor_id,
+          gen_notes: consultation.prescriptions[0].gen_notes,
+          issued_date: consultation.prescriptions[0].issued_date,
+          medicines: consultation.prescriptions[0].medicines.map((m) => ({
+            medicine_name: m.medicine_name,
+            strength: m.strength,
+            form: m.form,
+            dose: m.dose,
+            frequency: m.frequency,
+            route: m.route,
+            duration: m.duration,
+            quantity: m.quantity,
+            instruction: m.instruction,
+          })),
+        }
+      },
+
+      followups,
+    };
+  });
+};
+
+// get Initial consultation
+
+export const getInitialConsultations = async (patientId: number) => {
+  const data = await prisma.consultation.findMany({
+    where: {
+      patient_id: patientId
+    },
+    include: {
+      consultRequest: {
+        include: {
+          doctor: true
+        }
+      }
+    },
+    orderBy: {
+      created_at: 'desc'
+    }
+  });
+
+  return data.map((c) => {
+    return {
+      consultation_id: c.consultation_id,
+      consultation_date: c.consultation_date,
+      chief_complaint: c.chief_complaint,
+      hist_illness: c.hist_illness,
+      examination: c.examination,
+      assessment: c.assessment,
+      plans: c.plans,
+      follow_up_date: c.follow_up_date,
+      doctor: c.consultRequest.doctor,
+    }
+  })
 };

@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 
 export interface PatientConsultationRecordsPayload {
     phr_id: number;
@@ -100,3 +101,30 @@ export interface WeeklyTally {
     day: string;
     total: number;
 };
+
+export interface FollowupConsultationProps {
+    followup_id: number;
+    consultation_id: number;
+    followup_date: Date;
+    vs_id: number;
+    impression?: string;
+    instruction?: string;
+
+    vitals?: {
+        bp?: string;
+        temp?: string;
+        cr?: string;
+        rr?: string;
+        wt?: string;
+        ht?: string;
+    };
+
+}
+
+export type FollowupWithRelations =
+    Prisma.ConsultationFollowUpGetPayload<{
+        include: {
+            vitals: true;
+            consult: true;
+        };
+    }>;

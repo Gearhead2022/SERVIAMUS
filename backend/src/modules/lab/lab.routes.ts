@@ -14,8 +14,11 @@ import {
   updateLabRequestStatusController,
   getLabPreviewController,
 } from "./lab.controller";
+import { authenticate } from "../../middlewares/auth.middleware";
 
 const router = Router();
+
+router.use(authenticate);
 
 router.get("/users", authorize(["ADMIN", "LAB", "LABORATORY"]), getAllUsersController);
 router.get(

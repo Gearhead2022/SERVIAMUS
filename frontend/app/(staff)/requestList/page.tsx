@@ -35,11 +35,14 @@ const TYPE_META: Record<string, { label: string; icon: React.ElementType; color:
     LABORATORY: { label: "Laboratory", icon: TestTube2, color: "#7c4dab", bg: "#f3eefb", bar: "#7c4dab" },
 };
 
-const STATUS_META: Record<string, { label: string; dot: string; text: string; bg: string }> = {
-    WAITING: { label: "Waiting", dot: "#f59e0b", text: "#92400e", bg: "#fffbeb" },
-    SERVING: { label: "In Progress", dot: "#0e7c7b", text: "#065050", bg: "#e0f4f4" },
-    DONE: { label: "Done", dot: "#22c55e", text: "#166534", bg: "#f0fdf4" },
-    CANCELED: { label: "Cancelled", dot: "#94a3b8", text: "#475569", bg: "#f1f5f9" },
+const STATUS_META: Record<string, { label: string, dot: string, text: string, bg: string }> = {
+    REQUESTED: { label: "Requested", dot: "#f59e0b", text: "#92400e", bg: "#fffbeb", },
+    PAYMENT: { label: "For Payment", dot: "#2563eb", text: "#1d4ed8", bg: "#eff6ff", },
+    CONSULTATION: { label: "Consultation", dot: "#0891b2", text: "#155e75", bg: "#ecfeff", },
+    LABORATORY: { label: "Laboratory", dot: "#7c3aed", text: "#5b21b6", bg: "#f5f3ff", },
+    CERTIFICATION: { label: "Certification", dot: "#9333ea", text: "#6b21a8", bg: "#faf5ff", },
+    DONE: { label: "Completed", dot: "#22c55e", text: "#166534", bg: "#f0fdf4", },
+    CANCELED: { label: "Cancelled", dot: "#94a3b8", text: "#475569", bg: "#f1f5f9", },
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -63,13 +66,31 @@ function CardLabel({ children }: { children: React.ReactNode }) {
     );
 }
 
-function StatusBadge({ status }: { status: string }) {
-    const m = STATUS_META[status] ?? STATUS_META.WAITING;
+function StatusBadge({
+    status,
+}: {
+    status: string;
+}) {
+    const m = STATUS_META[status] ?? STATUS_META.REQUESTED;
+
     return (
-        <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold px-2.5 py-1 rounded-full"
-            style={{ background: m.bg, color: m.text }}>
-            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ background: m.dot, boxShadow: status === "SERVING" ? `0 0 0 2px ${m.dot}44` : "none" }} />
+        <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-semibold"
+            style={{
+                background: m.bg,
+                color: m.text,
+            }}
+        >
+            <span
+                className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                style={{
+                    background: m.dot,
+                    boxShadow:
+                        status === "PAYMENT"
+                            ? `0 0 0 2px ${m.dot}44`
+                            : "none",
+                }}
+            />
             {m.label}
         </span>
     );
@@ -206,7 +227,7 @@ const RequestsManagement = () => {
     const currentPatient = selectedRequest?.patient;
     const currentVitals = selectedRequest?.consult?.vitals;
 
-    // console.log('asd', doctorAssigned);
+    // console.log('asd', data);
 
     const SUMMARY = [
         { label: "Waiting", value: waitingCount, color: "#92400e", bg: "#fffbeb", icon: Clock },
@@ -243,6 +264,24 @@ const RequestsManagement = () => {
         setModalType('');
         setModalEdit(false);
         setModalView(false);
+    };
+
+    const canModifyRequest = (request: RequestProps) => {
+        if (request.status !== "WAITING") {
+            return false;
+        }
+
+        switch (request.req_type) {
+            case "LABORATORY":
+                return request.workflowStatus === "PAYMENT";
+
+            case "CONSULTATION":
+            case "CERTIFICATE":
+                return request.workflowStatus === "REQUESTED";
+
+            default:
+                return false;
+        }
     };
 
     return (
@@ -508,7 +547,7 @@ const RequestsManagement = () => {
                                 <table className="w-full text-sm">
                                     <thead className="sticky top-0 z-10">
                                         <tr style={{ background: "#f8f9fc", borderBottom: "1px solid #eef1f9" }}>
-                                            {["#", "Patient", "Type", "Date", "Status", "Actions"].map((h) => (
+                                            {["# | Request Code", "Patient", "Type", "Request Date", "Status", "Actions"].map((h) => (
                                                 <th key={h}
                                                     className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap"
                                                     style={{ color: "#8a99b8" }}>
@@ -535,7 +574,7 @@ const RequestsManagement = () => {
                                                     <p className="text-[11px] mt-1" style={{ color: "#b0bcd4" }}>Try adjusting your filters or search</p>
                                                 </td>
                                             </tr>
-                                        ) : requests.map((r, i) => {
+                                        ) : requests.map((r: RequestProps, i: number) => {
                                             const typeMeta = TYPE_META[r.req_type] ?? TYPE_META.CONSULTATION;
                                             const isSelected = selectedRequest?.req_id === r.req_id;
 
@@ -551,8 +590,8 @@ const RequestsManagement = () => {
                                                 >
                                                     {/* # */}
                                                     <td className="px-10 py-3.5">
-                                                        <span className="text-[11px] font-mono" style={{ color: "#c0ccd8" }}>
-                                                            {(page - 1) * rowsPerPage + i + 1}
+                                                        <span className="text-[11px] font-mono text-nowrap" style={{ color: "#030e1a" }}>
+                                                            {(page - 1) * rowsPerPage + i + 1} : {r.request_code}
                                                         </span>
                                                     </td>
 
@@ -597,26 +636,46 @@ const RequestsManagement = () => {
                                                     </td>
 
                                                     {/* Status */}
-                                                    <td className="px-4 py-3.5">
-                                                        <StatusBadge status={r.status} />
+                                                    <td className="px-4 py-3.5 text-nowrap">
+                                                        <StatusBadge status={r.workflowStatus} />
                                                     </td>
 
                                                     {/* Actions */}
                                                     <td className="px-4 py-3">
-                                                        {r.status?.toLowerCase() === "waiting" ? (
-                                                            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                                                <Button variant="acceptRequest" icon={<Pencil size={20} />} className="!text-[10px] !px-2 !py-1 !rounded-lg" onClick={() => [handleEdit(r, r.req_type)]}>
+                                                        {canModifyRequest(r) ? (
+                                                            <div
+                                                                className="flex items-center gap-1.5"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <Button
+                                                                    variant="acceptRequest"
+                                                                    icon={<Pencil size={20} />}
+                                                                    className="!text-[10px] !px-2 !py-1 !rounded-lg"
+                                                                    onClick={() => handleEdit(r, r.req_type)}
+                                                                >
                                                                     Edit
                                                                 </Button>
-                                                                <Button variant="declineRequest" icon={<Ban size={20} />} className="!text-[10px] !px-2 !py-1 !rounded-lg" onClick={() => handleRequestAction(r.req_id, "CANCELED")}>
+
+                                                                <Button
+                                                                    variant="declineRequest"
+                                                                    icon={<Ban size={20} />}
+                                                                    className="!text-[10px] !px-2 !py-1 !rounded-lg"
+                                                                    onClick={() => handleRequestAction(r.req_id, "CANCELED")}
+                                                                >
                                                                     Decline
                                                                 </Button>
-                                                                <Button variant="deleteRequest" icon={<Trash2 size={20} />} className="!text-[10px] !px-2 !py-1 !rounded-lg" onClick={() => handleDelete(r)}>
+
+                                                                <Button
+                                                                    variant="deleteRequest"
+                                                                    icon={<Trash2 size={20} />}
+                                                                    className="!text-[10px] !px-2 !py-1 !rounded-lg"
+                                                                    onClick={() => handleDelete(r)}
+                                                                >
                                                                     Delete
                                                                 </Button>
                                                             </div>
                                                         ) : (
-                                                            <span className="text-[11px]" style={{ color: "#c0ccd8" }}>—</span>
+                                                            <span className="text-[11px] text-slate-400">—</span>
                                                         )}
                                                     </td>
                                                     <td className="px-4 py-3">

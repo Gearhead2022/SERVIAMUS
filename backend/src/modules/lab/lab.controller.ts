@@ -21,34 +21,10 @@ import {
 } from "./lab.services";
 
 const labStatusValues = ["queued", "pending", "done"] as const;
-const labCategoryValues = [
-  "clinical-chemistry",
-  "hematology",
-  "parasitology",
-  "urinalysis",
-  "other",
-] as const;
-const labRecordGroupValues = [
-  "clinical-chemistry",
-  "clinical-microscopy",
-  "hematology",
-  "other",
-  "serology",
-] as const;
+const labCategoryValues = ["clinical-chemistry", "hematology", "parasitology", "urinalysis", "other"] as const;
+const labRecordGroupValues = ["clinical-chemistry", "clinical-microscopy", "hematology", "other", "serology"] as const;
 
-const labUpdateRooms = [
-  "role_ADMIN",
-  "role_DOCTOR",
-  "role_LAB",
-  "role_LABORATORY",
-  "role_CASHIER",
-] as const;
-const billingUpdateRooms = [
-  "role_ADMIN",
-  "role_CASHIER",
-  "role_LAB",
-  "role_LABORATORY",
-] as const;
+const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR"] as const;
 
 const emitLabUpdated = (payload: {
   labId?: number;
@@ -56,7 +32,7 @@ const emitLabUpdated = (payload: {
   reason: string;
   requestId?: number;
 }) => {
-  getIO().to([...labUpdateRooms]).emit("lab:updated", payload);
+  getIO().to([...WORKFLOW_ROOMS]).emit("lab:updated", payload);
 };
 
 const emitBillingUpdated = (payload: {
@@ -64,7 +40,7 @@ const emitBillingUpdated = (payload: {
   reason: string;
   requestId?: number;
 }) => {
-  getIO().to([...billingUpdateRooms]).emit("billing:updated", payload);
+  getIO().to([...WORKFLOW_ROOMS]).emit("billing:updated", payload);
 };
 
 export const getAllUsersController = async (_req: Request, res: Response) => {

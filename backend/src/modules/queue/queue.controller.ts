@@ -2,14 +2,7 @@
 
 import { Request, Response } from "express";
 import { prisma } from "../../config/prismaClient";
-import {
-  addToQueue,
-  getQueueByType,
-  getServingPatient,
-  moveToNextQueue,
-  skipQueue,
-  getAllQueues,
-} from "./queue.services";
+import { addToQueue, getQueueByType, getServingPatient, moveToNextQueue, skipQueue, getAllQueues } from "./queue.services";
 
 export const addToQueueController = async (req: Request, res: Response) => {
   try {

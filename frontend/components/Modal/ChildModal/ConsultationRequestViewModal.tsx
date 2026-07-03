@@ -138,7 +138,7 @@ const ViewConsultationModal: React.FC<ViewConsultationModalProps> = ({
     const consultation = request.consult?.consultation;
     const currentVitals = request.consult?.vitals;
 
-    console.log('patient', patient)
+    // console.log('patient', patient)
 
     const statusMeta = STATUS_MAP[request.status] ?? STATUS_MAP.WAITING;
     const StatusIcon = statusMeta.icon;

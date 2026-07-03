@@ -6,37 +6,20 @@ import { useState, type KeyboardEvent } from "react";
 import { z } from "zod";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
-import {
-  Controller,
-  FieldErrors,
-  FieldValues,
-  Path,
-  UseFormRegister,
-  useForm,
-  useWatch,
-} from "react-hook-form";
+import { Controller, FieldErrors, FieldValues, Path, UseFormRegister, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { requestSchema } from "@/schemas/request.schema";
-import {
-  PrintableLabRequestPayload,
-  UsersProps,
-  VitalSignProps,
-} from "@/types/RequestTypes";
+import { PrintableLabRequestPayload, UsersProps, VitalSignProps } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
 import { useRequest, useGetAllUsers, useLastRecord } from "@/hooks/Patient/usePatientRegistration";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Label from "@/components/ui/label";
-import {
-  File,
-  Plus,
-  SquareActivity,
-  TestTubeDiagonal,
-  X,
-} from "lucide-react";
+import { File, Plus, SquareActivity, TestTubeDiagonal, X } from "lucide-react";
 import { formatDate, todayPH } from "@/utils/Date";
 import SweetAlert from "@/utils/SweetAlert";
 import { openExternalLabRequestPrintPage } from "@/utils/lab-request-print";
+import { useGetInitialConsultations } from "@/hooks/Consultation/useConsultation";
 
 type RequestFormValues = z.infer<typeof requestSchema>;
 type Consultation = Extract<RequestFormValues, { req_type: "CONSULTATION" }>;
@@ -57,6 +40,13 @@ interface VitalKeyProps<T extends FieldValues> {
   teal?: boolean;
   readonly: boolean;
 }
+
+type InitialConsultOption = {
+  value: number;
+  label: string;
+  consultation_date: string | Date;
+  doctor: UsersProps;
+};
 
 const typeLabels = {
   CONSULTATION: "Consultation",
@@ -137,6 +127,7 @@ const RequestForm: React.FC<{
   const { mutateAsync: request, isPending } = useRequest(onClose);
   const { data: UserList } = useGetAllUsers();
   const { data: lastVisit } = useLastRecord(Number(patient.patient_id));
+  const { data: initialConsults } = useGetInitialConsultations(Number(patient.patient_id));
 
   const {
     register,
@@ -145,6 +136,7 @@ const RequestForm: React.FC<{
     clearErrors,
     getValues,
     trigger,
+    watch,
     formState: { errors },
   } = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
@@ -289,6 +281,7 @@ const RequestForm: React.FC<{
     {
       label: "Clinical Chemistry",
       options: [
+        { label: "Lipid Profile", value: "Lipid Profile" },
         { label: "Fasting Blood Sugar", value: "FBS" },
         { label: "Random Blood Sugar", value: "Random Blood Sugar" },
         { label: "Urea (BUN)", value: "Urea (BUN)" },
@@ -336,6 +329,15 @@ const RequestForm: React.FC<{
       ],
     },
   ];
+
+  const TEST_PRESETS: Record<string, string[]> = {
+    "Lipid Profile": [
+      "Total Cholesterol",
+      "HDL-Cholesterol",
+      "LDL-Cholesterol",
+      "Triglycerides",
+    ],
+  };
 
   const flatTestOptions = testOptions.flatMap((group) => group.options);
 
@@ -393,6 +395,16 @@ const RequestForm: React.FC<{
   );
 
   const typeIcon = icons[reqType] ?? defaultIcon;
+
+  const isFollowUp = watch("is_follow_up");
+
+  const initialConsultOptions: InitialConsultOption[] =
+    initialConsults?.map(c => ({
+      value: c.consultation_id,
+      label: c.chief_complaint,
+      consultation_date: c.consultation_date,
+      doctor: c.doctor,
+    })) ?? [];
 
   return (
     <div className="font-['DM_Sans']">
@@ -563,8 +575,63 @@ const RequestForm: React.FC<{
                 </p>
               )}
             </div>
-          </div>
+            <div className="mt-4 rounded-xl border border-[#dce3ef] bg-[#f7f8fc] px-4 py-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register("is_follow_up")}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0f2244] focus:ring-[#0f2244]"
+                />
 
+                <div>
+                  <p className="text-sm font-semibold text-[#1a2a45]">
+                    Follow-up Consultation
+                  </p>
+                  <p className="text-xs text-[#6b7da0]">
+                    Check this if the patient is returning for a scheduled follow-up consultation.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {isFollowUp && (
+              <Controller
+                control={control}
+                name="consultation_id"
+                render={({ field }) => (
+                  <Select
+                    options={initialConsultOptions}
+
+                    value={
+                      initialConsultOptions?.find(
+                        option => option.value === field.value
+                      ) ?? null
+                    }
+
+                    onChange={(selected) =>
+                      field.onChange(selected?.value ?? null)
+                    }
+
+                    formatOptionLabel={(option) => (
+                      <div>
+                        <div className="font-semibold">
+                          {option.label}
+                        </div>
+
+                        <div className="text-xs text-gray-500">
+                          Initial: {formatDate(option.consultation_date)}
+                        </div>
+
+                        <div className="text-xs text-gray-500">
+                          {option.doctor.name}
+                        </div>
+                      </div>
+                    )}
+                  />
+                )}
+              />
+            )}
+          </div>
         )}
         {/* GG Laboratory section */}
         {reqType === "LABORATORY" ? (
@@ -658,11 +725,18 @@ const RequestForm: React.FC<{
                     options={testOptions}
                     isMulti
                     onChange={(selected) => {
-                      const nextSelectedTests = selected.map((option) => option.value);
+                      let values = selected.map((option) => option.value);
 
-                      field.onChange(nextSelectedTests);
+                      values = values.flatMap((value) =>
+                        TEST_PRESETS[value] ?? [value]
+                      );
 
-                      if (nextSelectedTests.length || additionalLabTests.length) {
+                      // Remove duplicates
+                      values = [...new Set(values)];
+
+                      field.onChange(values);
+
+                      if (values.length || additionalLabTests.length) {
                         setPrintTestError("");
                         clearErrors("test");
                       }

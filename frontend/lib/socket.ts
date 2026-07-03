@@ -6,7 +6,7 @@ let socket: Socket | null = null;
 export const createSocket = () => {
     if (!socket) {
         socket = io(SOCKET_URL!, {
-            autoConnect: false,
+            autoConnect: true,
             withCredentials: true,
         });
     }

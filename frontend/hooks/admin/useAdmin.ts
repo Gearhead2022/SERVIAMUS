@@ -1,7 +1,6 @@
 import { getAllServices, getAllUsers, getDashboardStats, updateService } from "@/services/admin.services";
 import { Role } from "@/types/AuthTypes";
-import { PatientProps } from "@/types/PatientTypes";
-import { PaginationMeta, UsersProps } from "@/types/RequestTypes";
+import { PaginationMeta } from "@/types/RequestTypes";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import SweetAlert from "@/utils/SweetAlert";
 
@@ -63,7 +62,7 @@ export const useGetAllUsers = (
     params: UserFilters
 ) => {
     return useQuery<TableRequestProps<UsersProps2>>({
-        queryKey: ["users", params,],
+        queryKey: ["users", "list", params,],
         queryFn: () => getAllUsers(params),
     });
 };
@@ -72,7 +71,7 @@ export const useGetAllServices = (
     params: UserFilters
 ) => {
     return useQuery<TableRequestProps<ServiceRecord>>({
-        queryKey: ["services", params],
+        queryKey: ["services", "list", params],
         queryFn: () => getAllServices(params),
     });
 };

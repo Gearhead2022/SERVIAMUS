@@ -24,6 +24,7 @@ import { useRequestData } from "@/hooks/Consultation/useConsultation";
 import { LabRequest } from "@/types/LabTypes";
 import { openLabPrintPage } from "@/utils/lab-print";
 import LabResultPreview from "@/components/Modal/LabModal/LabResultPreview";
+import { openConsultPrintPage } from "@/utils/consultation/consultPrint";
 
 const RegistrationPage = () => {
   const { user } = useAuth();
@@ -78,7 +79,12 @@ const RegistrationPage = () => {
 
   const closePreviewModal = () => {
     setConsultationResultPreview(false);
+    setPrescriptionPreview(false);
+    setMedCertPreview(false);
     setActiveRecord(null);
+
+    // Return to History
+    setActiveAction("history");
   };
 
   const handleViewConsultation = async (
@@ -188,18 +194,31 @@ const RegistrationPage = () => {
             subtitle=""
             meta={`${currentRequest.req_id} - ${selectedPatient?.patient_id}`}
             sizeModal="2xlarge"
-            onClose={() => setConsultationResultPreview(false)}
+            onClose={closePreviewModal}
           >
             <ConsultResultPreview
               request={currentRequest}
               form={selectedConsultationRecord}
               backLabel="Back to Records"
-              onBack={() => setConsultationResultPreview(false)}
-              onDownloadPdf={() => { }}
-              onOpenPrintPage={() => { }}
+              onBack={closePreviewModal}
+              onDownloadPdf={() => {
+                openConsultPrintPage(currentRequest.req_id, {
+                  autoDownload: true,
+                  type: 'consult-result',
+                  patientName: selectedPatient?.name
+                })
+              }}
+              onOpenPrintPage={() => {
+                openConsultPrintPage(currentRequest.req_id, {
+                  autoPrint: true,
+                  type: 'consult-result',
+                  patientName: selectedPatient?.name
+                })
+              }}
               type="consult-result"
               doctorId={doctorId}
               showDoneButton={false}
+              onSubmitSuccess={true}
             />
           </ModalHeader>
         )}
@@ -211,18 +230,33 @@ const RegistrationPage = () => {
             subtitle=""
             meta={`${currentRequest.req_id} - ${selectedPatient?.patient_id}`}
             sizeModal="2xlarge"
-            onClose={() => setMedCertPreview(false)}
+            onClose={closePreviewModal}
           >
             <ConsultResultPreview
               request={currentRequest}
               form={selectedMedCertRecord}
               backLabel="Back to Records"
-              onBack={() => setMedCertPreview(false)}
-              onDownloadPdf={() => { }}
-              onOpenPrintPage={() => { }}
+              onBack={closePreviewModal}
+              onDownloadPdf={() => {
+                openConsultPrintPage(currentRequest.req_id, {
+                  autoDownload: true,
+                  doctorId,
+                  type: 'med-cert',
+                  patientName: selectedPatient?.name,
+                })
+              }}
+              onOpenPrintPage={() => {
+                openConsultPrintPage(currentRequest.req_id, {
+                  autoPrint: true,
+                  doctorId,
+                  type: 'med-cert',
+                  patientName: selectedPatient?.name
+                })
+              }}
               type="med-cert"
               doctorId={doctorId}
               showDoneButton={false}
+              onSubmitSuccess={true}
             />
           </ModalHeader>
         )}
@@ -234,18 +268,33 @@ const RegistrationPage = () => {
             subtitle=""
             meta={`${currentRequest.req_id} - ${selectedPatient?.patient_id}`}
             sizeModal="2xlarge"
-            onClose={() => setPrescriptionPreview(false)}
+            onClose={closePreviewModal}
           >
             <ConsultResultPreview
               request={currentRequest}
               form={selectedPrescriptionRecord}
               backLabel="Back to Records"
-              onBack={() => setPrescriptionPreview(false)}
-              onDownloadPdf={() => { }}
-              onOpenPrintPage={() => { }}
+              onBack={closePreviewModal}
+              onDownloadPdf={() => {
+                openConsultPrintPage(currentRequest.req_id, {
+                  autoDownload: true,
+                  doctorId,
+                  type: 'prescription',
+                  patientName: selectedPatient?.name
+                })
+              }}
+              onOpenPrintPage={() => {
+                openConsultPrintPage(currentRequest.req_id, {
+                  autoPrint: true,
+                  doctorId,
+                  type: 'prescription',
+                  patientName: selectedPatient?.name
+                })
+              }}
               type="prescription"
               doctorId={doctorId}
               showDoneButton={false}
+              onSubmitSuccess={true}
             />
           </ModalHeader>
         )}
@@ -278,7 +327,6 @@ const RegistrationPage = () => {
             />
           </ModalHeader>
         ) : null}
-
 
         {/* ── Page ── */}
         <div

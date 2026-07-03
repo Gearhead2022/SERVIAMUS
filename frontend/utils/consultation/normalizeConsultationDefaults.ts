@@ -25,6 +25,7 @@ export function normalizeConsultationDefaults(
         consultation_date: new Date().toISOString().split("T")[0],
         chief_complaint: consult?.chief_complaint ?? "",
         hist_illness: consult?.hist_illness ?? "",
+        is_follow_up: consult?.is_follow_up ?? false,
 
         // Vitals
         bp: vitals?.bp ?? "",

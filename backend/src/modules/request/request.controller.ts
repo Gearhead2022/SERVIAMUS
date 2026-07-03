@@ -1,28 +1,14 @@
 import { Request, Response } from "express";
 import { getPrevVitalSigns, createRequest, getAllRegisteredUsers, getRequestData, getAllRequests, deleteRequest, updateRequest, getLastRecord, getAllUsers, updateUser, deleteUser } from "./request.services";
-import {
-  createNotification,
-  resolveNotificationUsers,
-  resolveUsersByRoleNames,
-} from "../notification/notification.services";
+import { createNotification, resolveNotificationUsers, resolveUsersByRoleNames } from "../notification/notification.services";
 import { getIO } from "../../socket";
 import { RequestType } from "@prisma/client";
 
-const labUpdateRooms = ["role_ADMIN", "role_DOCTOR", "role_LAB", "role_LABORATORY"] as const;
-const billingUpdateRooms = [
-  "role_ADMIN",
-  "role_CASHIER",
-  "role_LAB",
-  "role_LABORATORY",
-] as const;
-const requestUpdateRooms = [
-  "role_ADMIN",
-  "role_CASHIER",
-  "role_LAB",
-  "role_LABORATORY",
-  "role_STAFF",
-] as const;
+const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR"] as const;
 
+const normalizeIds = (ids: number | number[]) => {
+  return Array.isArray(ids) ? ids : [ids];
+};
 
 export const getPrevVitalSignsController = async (req: Request, res: Response) => {
   try {
@@ -37,7 +23,7 @@ export const getPrevVitalSignsController = async (req: Request, res: Response) =
 
     const vitals = await getPrevVitalSigns(patient_id);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       data: vitals
     });
@@ -52,10 +38,16 @@ export const getPrevVitalSignsController = async (req: Request, res: Response) =
 export const createRequestController = async (req: Request, res: Response) => {
   try {
     const request = await createRequest(req.body);
-    const userIds = await resolveNotificationUsers(request);
+
+    const requestUserIds = await resolveNotificationUsers(request);
+    const adminUserIds = await resolveUsersByRoleNames(["ADMIN"]);
+
+    const notificationUserIds = Array.from(
+      new Set([...normalizeIds(requestUserIds), ...adminUserIds])
+    );
 
     await createNotification({
-      userIds,
+      userIds: notificationUserIds,
       type: "NEW_REQUEST",
       title: "New Request",
       message: `New ${request.result.req_type} request created`,
@@ -63,23 +55,24 @@ export const createRequestController = async (req: Request, res: Response) => {
       entity_id: request.result.req_id,
     });
 
-    // console.log(request)
+    const payload = {
+      patientId: request.result.patient_id,
+      reason: "request-created",
+      requestId: request.result.req_id,
+    };
 
     const io = getIO();
 
-    io.to([...labUpdateRooms]).emit("request:updated");
+    io.to([...WORKFLOW_ROOMS]).emit("request:updated", payload);
+    io.to([...WORKFLOW_ROOMS]).emit("consultation:updated", payload);
 
     if (request.result.req_type === "LABORATORY") {
-      io.to([...labUpdateRooms]).emit("lab:updated", {
-        patientId: request.result.patient_id,
-        reason: "request-created",
-        requestId: request.result.req_id,
-      });
 
-      io.to([...billingUpdateRooms]).emit("billing:updated", {
-        patientId: request.result.patient_id,
+      io.to([...WORKFLOW_ROOMS]).emit("lab:updated", payload);
+
+      io.to([...WORKFLOW_ROOMS]).emit("billing:updated", {
+        ...payload,
         reason: "billing-created",
-        requestId: request.result.req_id,
       });
 
       const cashierUserIds = await resolveUsersByRoleNames(["CASHIER"]);
@@ -89,6 +82,7 @@ export const createRequestController = async (req: Request, res: Response) => {
         title: "New Laboratory Billing",
         message: "A laboratory billing record is ready for cashier processing.",
         entity: "billing",
+        entity_id: request.result.req_id,
       });
     }
 
@@ -104,12 +98,11 @@ export const createRequestController = async (req: Request, res: Response) => {
   }
 };
 
-
 export const getAllRegisteredUsersController = async (req: Request, res: Response) => {
   try {
     const data = await getAllRegisteredUsers();
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       data: data
     });
@@ -210,11 +203,19 @@ export const deleteRequestController = async (req: Request, res: Response) => {
 
     const request = await deleteRequest(requestId);
 
+    const payload = {
+      requestId,
+      reason: "request-deleted",
+    };
+
     const io = getIO();
 
-    io.to([...requestUpdateRooms]).emit("request:updated");
+    io.to([...WORKFLOW_ROOMS]).emit("request:deleted", payload);
+    io.to([...WORKFLOW_ROOMS]).emit("consultation:deleted", payload);
+    io.to([...WORKFLOW_ROOMS]).emit("billing:deleted", payload);
+    io.to([...WORKFLOW_ROOMS]).emit("lab:deleted", payload);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       data: request
     });
@@ -238,10 +239,19 @@ export const updateRequestController = async (req: Request, res: Response) => {
     }
 
     const result = await updateRequest(req_id, req.body);
-    const userIds = await resolveNotificationUsers(result);
+
+    const payload = {
+      requestId: req_id,
+      patientId: result?.result.patient_id,
+      reason: "request-updated",
+    };
+
     const io = getIO();
 
-    io.to([...labUpdateRooms]).emit("request:updated");
+    io.to([...WORKFLOW_ROOMS]).emit("request:updated", payload);
+    io.to([...WORKFLOW_ROOMS]).emit("consultation:updated", payload);
+    io.to([...WORKFLOW_ROOMS]).emit("billing:updated", payload);
+    io.to([...WORKFLOW_ROOMS]).emit("lab:updated", payload);
 
     return res.status(201).json({
       success: true,
@@ -268,7 +278,7 @@ export const getLastRecordRequestController = async (req: Request, res: Response
 
     const result = await getLastRecord(patient_id);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       data: result,
     });
@@ -284,7 +294,6 @@ export const getAllUsersController = async (
   req: Request,
   res: Response
 ) => {
-
   try {
 
     const page =
@@ -345,10 +354,14 @@ export const updateUserController = async (
       });
     }
 
-    const updatedUser = await updateUser(
-      user_id,
-      req.body
-    );
+    const updatedUser = await updateUser(user_id, req.body);
+
+    const io = getIO();
+
+    io.to([...WORKFLOW_ROOMS]).emit("users:updated", {
+      userId: user_id,
+      reason: "user-updated",
+    });
 
     return res.status(200).json({
       success: true,
@@ -382,7 +395,10 @@ export const deleteUserController = async (req: Request, res: Response) => {
 
     const io = getIO();
 
-    // io.to([...requestUpdateRooms]).emit("request:updated");
+    io.to([...WORKFLOW_ROOMS]).emit("users:deleted", {
+      userId,
+      reason: "user-deleted",
+    });
 
     return res.status(201).json({
       success: true,

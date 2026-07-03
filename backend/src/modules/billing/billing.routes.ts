@@ -12,23 +12,23 @@ import {
 const router = Router();
 
 // Get all billings (CASHIER/ADMIN only)
-router.get("/", authorize(["CASHIER", "ADMIN"]), getAllBillingsController);
+router.get("/", getAllBillingsController);
 
 // Get all payment records
-router.get("/getAllPayments", authorize(["CASHIER", "ADMIN"]), getAllpaymentsController);
+router.get("/getAllPayments", getAllpaymentsController);
 
 // Process payment - pay billing (CASHIER/ADMIN only)
-router.patch("/:billingId/pay", authorize(["CASHIER", "ADMIN"]), payBillingController);
+router.patch("/:billingId/pay", payBillingController);
 
 // Create payment record (CASHIER/ADMIN only)
-router.post("/payment", authorize(["CASHIER", "ADMIN"]), createPaymentController);
+router.post("/payment", createPaymentController);
 
 // Update billing status (CASHIER/ADMIN only)
-router.put("/:billing_id", authorize(["CASHIER", "ADMIN"]), updateBillingStatusController);
+router.put("/:billing_id", updateBillingStatusController);
 
 router.patch(
   "/:billing_id/discount",
-  authorize(["CASHIER", "ADMIN"]),
+
   updateBillingDiscountController
 );
 

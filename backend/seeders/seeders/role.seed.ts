@@ -5,7 +5,7 @@ export async function seedRoles(prisma: PrismaClient) {
         data: [
             { role_name: "ADMIN" },
             { role_name: "DOCTOR" },
-            { role_name: "MEDTECH" },
+            { role_name: "LAB" },
             { role_name: "STAFF" },
             { role_name: "CASHIER" },
         ],

@@ -1,3 +1,4 @@
+import { BillingProps } from "./BillingTypes";
 import { ConsultationProps, MedCertRequestProps, PrescriptionMedicine, Status } from "./ConsultationTypes";
 import { LabCategory, LabResultPayload, LabSchemaKey, RequestStatus } from "./LabTypes";
 import { PatientProps } from "./PatientTypes";
@@ -22,6 +23,8 @@ export type CreateRequestProps =
     patient_code: string;
     name: string;
     req_date: string;
+    is_follow_up: boolean;
+    consultation_id?: number | null;
 
     // vitals
     prev_bp?: string;
@@ -94,6 +97,8 @@ export interface RequestProps {
   cert?: MedCertRequestProps;
   prescription: PrescriptionMedicine;
   laboratory: LaboratoryProps;
+  billing: BillingProps;
+  workflowStatus: string;
 }
 
 export interface ConsultationRequestProps {
@@ -103,6 +108,7 @@ export interface ConsultationRequestProps {
   vs_id: number;
   vitals: VitalSignProps;
   consultation: ConsultationProps;
+  is_follow_up: boolean;
 }
 
 export interface LaboratoryProps {

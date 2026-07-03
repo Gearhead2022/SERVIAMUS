@@ -7,6 +7,7 @@ export const requestSchema = z.discriminatedUnion("req_type", [
     name: z.string().min(1, "Full name is required"),
     patient_code: z.string(),
     req_date: z.string().min(1, "Consultation date is required"),
+    is_follow_up: z.boolean(),
     age: z
       .string()
       .min(1, "Age is required")
@@ -31,6 +32,8 @@ export const requestSchema = z.discriminatedUnion("req_type", [
     ht: z.string().optional(),
     physician: z.number(),
     created_at: z.string().optional(),
+
+    consultation_id: z.number().nullable().optional(),
   }),
 
   z.object({

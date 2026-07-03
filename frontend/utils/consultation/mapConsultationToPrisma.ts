@@ -20,6 +20,7 @@ export function mapConsultationToPrisma(
 
         religion: data.religion ?? "",
         chief_complaint: data.chief_complaint,
+        is_follow_up: data.is_follow_up,
 
         // ─── STEP 2 ─────────────────────────
         hist_illness: data.hist_illness ?? "",

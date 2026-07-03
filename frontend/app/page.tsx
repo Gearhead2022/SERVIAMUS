@@ -54,8 +54,10 @@ export default function POSLogin() {
 
         {/* Photo */}
         <div
-          className="absolute inset-0 bg-cover bg-center [mask-image:linear-gradient(to_right,black_0%,black_50%,rgba(0,0,0,.7)_75%,transparent_90%)]"
-          style={{ backgroundImage: "url('/images/serviamus.jpeg')" }}
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('/images/serviamus.jpeg')",
+          }}
         />
 
         {/* Deep vignette overlay */}
@@ -63,7 +65,7 @@ export default function POSLogin() {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(to right, rgba(10,20,44,0.35) 0%, rgba(10,20,44,0.15) 40%, rgba(10,20,44,0.72) 100%)",
+              "linear-gradient(to right, rgba(0,0,0,0) 45%, rgba(2,10,22,.55) 75%, rgba(2,10,22,1) 100%)",
           }}
         />
         {/* Bottom fade */}

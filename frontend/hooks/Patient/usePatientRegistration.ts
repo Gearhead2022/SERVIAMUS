@@ -7,11 +7,9 @@ import { PatientProps } from "@/types/PatientTypes";
 import { getPrevVitalSigns, createRequest, getAllUsers as getAllRegisteredUsers, fetchAllRequest, deleteRequest, updateRequest, getLastRecord } from "@/services/request.services";
 import { UsersProps } from "@/types/RequestTypes";
 
-const STAFF_REQUESTS_QUERY_KEY = ["request"] as const;
-
 export const useGetAllpatient = (search: string) => {
   return useQuery<PatientProps[]>({
-    queryKey: ["patient", search],
+    queryKey: ["patient", "list", search],
     queryFn: () => fetchAllPatient(search),
   });
 };
@@ -42,10 +40,10 @@ export const usePatient = (closeModal: () => void) => {
 
 export const useGetPrevVitalSigns = (patient_id?: number) => {
   return useQuery<VitalSignProps | null>({
-    queryKey: ["request", patient_id],
+    queryKey: ["prevVitalSigns", patient_id],
 
     queryFn: async () => {
-      if (!patient_id) return null; // hard guard
+      if (!patient_id) return null;
       return getPrevVitalSigns(patient_id);
     },
 
@@ -67,23 +65,13 @@ export const useRequest = (closeModal: () => void) => {
           "Laboratory request has been successfully submitted and sent to the billing queue."
         );
 
-        const patientId = data?.result?.patient_id;
-
-        if (patientId) {
-          await queryClient.invalidateQueries({
-            queryKey: ["lab", "patient-requests", patientId],
-          });
-        }
-
-        await queryClient.invalidateQueries({
-          queryKey: ["lab"],
-        });
-
-        await queryClient.invalidateQueries({
-          queryKey: ["request"],
-        });
-
+        queryClient.invalidateQueries({ queryKey: ["request"] });
+        queryClient.invalidateQueries({ queryKey: ["lab"] });
+        queryClient.invalidateQueries({ queryKey: ["billing"] });
+        queryClient.invalidateQueries({ queryKey: ["consultation"] });
+        queryClient.invalidateQueries({ queryKey: ["queue"] });
         closeModal();
+
       } else {
         SweetAlert.successAlert(
           "Success",
@@ -129,14 +117,14 @@ export const useUpdatePatient = (closeModal: () => void) => {
 };
 export const useGetAllUsers = () => {
   return useQuery<UsersProps[]>({
-    queryKey: ["patient"],
+    queryKey: ["users", "registered"],
     queryFn: getAllRegisteredUsers,
   });
 };
 
 export const useGetPatientById = (patientId: number) => {
   return useQuery<PatientProps>({
-    queryKey: ["patient", patientId],
+    queryKey: ["patient", "detail", patientId],
     queryFn: () => fetchPatientById(patientId),
     enabled: !!patientId,
   });
@@ -168,7 +156,7 @@ export const useGetAllRequests = (param: {
 }
 ) => {
   return useQuery<TableRequestProps<RequestListStats>>({
-    queryKey: [...STAFF_REQUESTS_QUERY_KEY, param.page, param.limit, param.search, param.status, param.type, param.dateFrom, param.dateTo, param.sort],
+    queryKey: ['request', 'list', param],
     queryFn: () => fetchAllRequest(param.page, param.limit, param.search, param.status, param.type, param.dateFrom, param.dateTo, param.sort),
   });
 };
@@ -187,7 +175,7 @@ export const useDeleteRequest = () => {
         "Request deleted successfully"
       );
       queryClient.invalidateQueries({
-        queryKey: STAFF_REQUESTS_QUERY_KEY,
+        queryKey: ['request'],
       });
     },
   });
@@ -207,11 +195,7 @@ export const useUpdateRequest = (
     }: {
       request_id: number;
       data: CreateRequestProps;
-    }) =>
-      updateRequest(
-        request_id,
-        data
-      ),
+    }) => updateRequest(request_id, data),
 
     onSuccess: async (
       data: Awaited<
@@ -221,7 +205,6 @@ export const useUpdateRequest = (
       >
     ) => {
 
-      // console.log('from mutation', data);
       if (data?.request?.req_type === "LABORATORY") {
         SweetAlert.successAlert(
           "Request Updated",
@@ -253,7 +236,7 @@ export const useUpdateRequest = (
 
 export const useLastRecord = (patientId: number) => {
   return useQuery<RequestProps>({
-    queryKey: ["patient", patientId],
+    queryKey: ["patient", "last-record", patientId],
     queryFn: () => getLastRecord(patientId),
     enabled: !!patientId,
   });

@@ -42,8 +42,16 @@ export async function seedUsers(prisma: PrismaClient) {
     const cashier1 = await prisma.users.create({
         data: {
             name: "sample cashier",
-            username: "cashier1",
-            password: await hash("cashier1"),
+            username: "cashier",
+            password: await hash("cashier"),
+        },
+    });
+
+    const lab1 = await prisma.users.create({
+        data: {
+            name: "sample medtech",
+            username: "medtech",
+            password: await hash("medtech"),
         },
     });
 
@@ -64,6 +72,10 @@ export async function seedUsers(prisma: PrismaClient) {
             {
                 user_id: cashier1.user_id,
                 role_id: roleMap["CASHIER"],
+            },
+            {
+                user_id: lab1.user_id,
+                role_id: roleMap["LAB"],
             },
         ]
     });

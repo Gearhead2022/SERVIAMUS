@@ -1,13 +1,16 @@
 import { Request, Response } from "express";
 import { getAllPatients, addPatient, getPatientById, updatePatient } from "./patient.services";
+import { getIO } from "../../socket";
+
+const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR"] as const;
 
 export const getAllPatientsController = async (req: Request, res: Response) => {
   try {
     const search =
-    typeof req.query.search === "string" && req.query.search.trim() !== ""
-      ? req.query.search.trim()
-      : undefined;
-      
+      typeof req.query.search === "string" && req.query.search.trim() !== ""
+        ? req.query.search.trim()
+        : undefined;
+
     const patients = await getAllPatients(search);
 
     return res.status(200).json({
@@ -25,6 +28,16 @@ export const getAllPatientsController = async (req: Request, res: Response) => {
 export const addPatientController = async (req: Request, res: Response) => {
   try {
     const patient = await addPatient(req.body);
+
+    const payload = {
+      patientId: patient.patient_id,
+      reason: "patient-created",
+    };
+
+    const io = getIO();
+
+    io.to([...WORKFLOW_ROOMS]).emit("request:updated", payload);
+    io.to([...WORKFLOW_ROOMS]).emit("admin:updated", payload);
 
     return res.status(201).json({
       success: true,
@@ -77,6 +90,16 @@ export const updatePatientController = async (req: Request, res: Response) => {
     }
 
     const patient = await updatePatient(patientId, req.body);
+
+    const payload = {
+      patientId: patient.patient_id,
+      reason: "patient-created",
+    };
+
+    const io = getIO();
+
+    io.to([...WORKFLOW_ROOMS]).emit("request:updated", payload);
+    io.to([...WORKFLOW_ROOMS]).emit("admin:updated", payload);
 
     return res.status(200).json({
       success: true,

@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
 import { getAdminDashboard, getAllServices, updateService } from "./admin.services";
+import { getIO } from "../../socket";
+import { createNotification, resolveUsersByRoleNames } from "../notification/notification.services";
+
+const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR"] as const;
 
 export const getAllServicesController = async (
     req: Request,
@@ -77,6 +81,26 @@ export const updateServiceController = async (
             req.body
         );
 
+        const adminUserIds = await resolveUsersByRoleNames(["ADMIN"]);
+
+        await createNotification({
+            userIds: adminUserIds,
+            type: "SYSTEM",
+            title: "Update Services",
+            message: `service ${updatedService.service_name} was updated`,
+            entity: "request",
+            entity_id: updatedService.service_id,
+        });
+
+        const payload = {
+            ...updatedService,
+            reason: "services-updated",
+        };
+
+        const io = getIO();
+
+        io.to([...WORKFLOW_ROOMS]).emit("request:updated", payload);
+
         return res.status(200).json({
             success: true,
             data: updatedService,
@@ -101,8 +125,7 @@ export const getAdminDashboardController =
     ) => {
         try {
 
-            const dashboard =
-                await getAdminDashboard();
+            const dashboard = await getAdminDashboard();
 
             return res.status(200).json({
                 success: true,

@@ -1,37 +1,21 @@
 import { Request, Response } from "express";
-import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getConsultationResultById, getConsultationRxById, getDoctorById, getLabRequestByName, getMedicalCertificateById, getPatientPrescription, getRequestsPerWeekday, getStatistics, laboratoryRecordHistory, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
+import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getConsultationResultById, getConsultationRxById, getDoctorById, getFollowupRecords, getInitialConsultations, getLabRequestByName, getMedicalCertificateById, getPatientPrescription, getRequestsPerWeekday, getStatistics, laboratoryRecordHistory, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
 import { RequestStatus, RequestType } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
 import { getIO } from "../../socket";
-import { createNotification } from "../notification/notification.services";
+import { createNotification, resolveUsersByRoleNames } from "../notification/notification.services";
 
 type NonLaboratoryRequestType = Exclude<RequestType, "LABORATORY">;
+
+const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR"] as const;
 
 export const createConsultationResultController = async (req: Request, res: Response) => {
   try {
     const consult = await createConsultationResult(req.body);
 
-    const users = await prisma.consultationRequest.findMany({
-      where: {
-        cons_id: consult.cons_id
-      },
-      select: { physician: true },
-    });
-
-    const userIds = users.map(u => u.physician);
-
-    // await createNotification({
-    //   userIds,
-    //   type: "NEW_REQUEST",
-    //   title: "New Request",
-    //   message: `New ${request.result.req_type} request created`,
-    //   entity: "request",
-    //   entity_id: request.result.req_id,
-    // });
-
     const io = getIO();
 
-    io.to("role_DOCTOR").emit("consultation:updated");
+    io.to([...WORKFLOW_ROOMS]).emit("consultation:updated");
 
     return res.status(201).json({
       success: true,
@@ -114,6 +98,38 @@ export const updateRequestStatusController = async (
 
     const result = await requestAction(requestId, status);
 
+    const io = getIO();
+
+    io.to([...WORKFLOW_ROOMS]).emit("consultation:updated");
+    io.to([...WORKFLOW_ROOMS]).emit("request:updated");
+
+    const payload = {
+      patientId: result.patient_id,
+      reason: "request-created",
+      requestId: result.req_id,
+    };
+
+    if (result.status === "DONE") {
+
+      io.to([...WORKFLOW_ROOMS]).emit("consultation:updated", payload);
+
+      io.to([...WORKFLOW_ROOMS]).emit("billing:updated", {
+        ...payload,
+        reason: "billing-created",
+      });
+
+      const cashierUserIds = await resolveUsersByRoleNames(["CASHIER"]);
+
+      await createNotification({
+        userIds: cashierUserIds,
+        type: "NEW_REQUEST",
+        title: `New ${result.req_type} Billing`,
+        message: `A ${result.req_type} billing record is ready for cashier processing.`,
+        entity: "billing",
+        entity_id: result.req_id,
+      });
+    }
+
     res.status(200).json({
       message: "Request updated successfully",
       data: result,
@@ -130,7 +146,9 @@ export const getPatientRecordController = async (req: Request, res: Response) =>
   try {
     const patientId = Number(req.params.id);
 
-    const request = await consultationRecords(patientId);
+    const requestId = Number(req.query.request_id) || 1;
+
+    const request = await consultationRecords(patientId, requestId);
 
     return res.status(200).json({
       success: true,
@@ -245,57 +263,6 @@ export const getAllPatientMedCertController = async (req: Request, res: Response
     });
   }
 };
-
-// export const getAllPatientPrescriptionController = async (req: Request, res: Response) => {
-//   try {
-//     const patientId = Number(req.params.id);
-
-//     if (!patientId || isNaN(patientId)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid patient_id",
-//       });
-//     }
-
-//     const search =
-//       typeof req.query.search === "string" && req.query.search.trim() !== ""
-//         ? req.query.search.trim()
-//         : undefined;
-
-//     const certificates = await getAllPatientConsultationRecord(
-//       patientId,
-//       search
-//     );
-
-//     return res.status(200).json({
-//       success: true,
-//       data: certificates,
-//     });
-//   } catch (error: any) {
-//     return res.status(500).json({
-//       success: false,
-//       message: error.message || "Something went wrong",
-//     });
-//   }
-// };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export const getPatientPrescriptionController = async (req: Request, res: Response) => {
   try {
@@ -683,6 +650,51 @@ export const getMedicalCertificateByIdController = async (req: Request, res: Res
     const data = await getMedicalCertificateById(req_id);
     res.json(data);
   } catch (err: any) {
+    res.status(500).json({
+      message: err.message,
+      code: err.code,
+      meta: err.meta
+    });
+  }
+};
+
+export const getFollowupRecordsController = async (req: Request, res: Response) => {
+  try {
+    const cons_id = Number(req.params.id);
+
+    if (!cons_id || isNaN(cons_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid cons_ids",
+      });
+    }
+
+    const consultation = await getFollowupRecords(cons_id);
+
+    return res.status(200).json({
+      success: true,
+      data: consultation,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Something went wrong",
+    });
+  }
+};
+
+export const getInitialConsultationController = async (req: Request, res: Response) => {
+
+  const patientId = Number(req.params.id);
+
+  try {
+    const data = await getInitialConsultations(patientId);
+    return res.status(200).json({
+      success: true,
+      data: data,
+    });
+  } catch (err: any) {
+    console.error("CONTROLLER ERROR:", err);
     res.status(500).json({
       message: err.message,
       code: err.code,
