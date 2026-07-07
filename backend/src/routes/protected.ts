@@ -10,6 +10,7 @@ import PatientsRoutes from "../modules/patient/patient.routes";
 import ConsultationRoutes from "../modules/consultation/consultation.routes";
 import QueueRoutes from "../modules/queue/queue.routes";
 import NotificationRoutes from "../modules/notification/notification.route";
+import EncodingRoutes from "../modules/encoding/encoding.routes";
 
 const router = Router();
 
@@ -30,5 +31,7 @@ router.use("/lab", LabRoutes);  // Queue management routes
 router.use("/admin", AdminRoutes);  // Admin routes
 
 router.use("/notification", NotificationRoutes);  // Notidication routes
+
+router.use("/encoding", EncodingRoutes);  // Isolated records encoding routes
 
 export default router;

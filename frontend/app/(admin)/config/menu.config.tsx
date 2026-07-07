@@ -10,7 +10,8 @@ import {
   Clock3,
   ReceiptText,
   WalletCards,
-  BriefcaseMedical
+  BriefcaseMedical,
+  FilePlusCorner
 } from "lucide-react";
 
 export interface MenuItem {
@@ -42,6 +43,13 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/services",
     icon: <BriefcaseMedical size={18} />,
     iconOnly: <BriefcaseMedical size={30} />,
+    roles: ["ADMIN"]
+  },
+  {
+    label: "Encoding",
+    path: "/encoding",
+    icon: <FilePlusCorner size={18} />,
+    iconOnly: <FilePlusCorner size={30} />,
     roles: ["ADMIN"]
   },
   // {
