@@ -27,13 +27,17 @@ import type { LabCategory, LabResultPayload, LabSchemaKey } from "@/types/LabTyp
 import type { PatientProps } from "@/types/PatientTypes";
 import { canAddPatient } from "@/utils/permissions";
 
-type FieldType = "date" | "text" | "textarea";
+type FieldType = "date" | "text" | "textarea" | "select";
 
 type EncodingField = {
   key: string;
   label: string;
   type?: FieldType;
   placeholder?: string;
+   options?: {
+    value: string;
+    label: string;
+  }[];
 };
 
 type EncodingOption = {
@@ -52,8 +56,8 @@ const consultationFields: EncodingField[] = [
   { key: "followupDate", label: "Consultation Date", type: "date" },
   { key: "bp", label: "Blood Pressure", placeholder: "120/80" },
   { key: "temp", label: "Temperature", placeholder: "36.7 C" },
-  { key: "cr", label: "Cardiac Rate", placeholder: "80" },
-  { key: "rr", label: "Respiratory Rate", placeholder: "18" },
+  { key: "cr", label: "CR", placeholder: "80" },
+  { key: "rr", label: "RR", placeholder: "18" },
   { key: "wt", label: "Weight", placeholder: "60 kg" },
   { key: "ht", label: "Height", placeholder: "165 cm" },
   { key: "impression", label: "Impression", type: "textarea" },
@@ -94,8 +98,8 @@ const encodingOptions: EncodingOption[] = [
     schemaKey: "BT",
     testName: "Blood Typing",
     fields: [
-      { key: "abo_type", label: "ABO Type", placeholder: "A / B / AB / O" },
-      { key: "rh_type", label: "Rh Type", placeholder: "Positive / Negative" },
+      { key: "abo_type", label: "ABO Type", type: "select", options: [ { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "AB", label: "AB" }, { value: "O", label: "O" } ] },
+      { key: "rh_type", label: "Rh Type", type: "select", options: [ { value: "Positive", label: "Positive (+)" }, { value: "Negative", label: "Negative (-)" } ] },
       { key: "others2", label: "Remarks", type: "textarea" },
     ],
   },
@@ -160,7 +164,7 @@ const encodingOptions: EncodingOption[] = [
     schemaKey: "OGTT",
     testName: "OGTT",
     fields: [
-      { key: "test_type", label: "Test Type", placeholder: "50G / 75G / 100G" },
+      { key: "test_type", label: "Test Type", placeholder: "50G / 75G / 100G", type: "select", options: [ { value: "50G", label: "50G OGTT" }, { value: "75G", label: "75G OGTT" }, { value: "100G", label: "100G OGTT" } ] },
       { key: "fbs", label: "FBS" },
       { key: "onehagl", label: "1 Hour After Load" },
       { key: "twohagl", label: "2 Hours After Load" },
@@ -216,7 +220,7 @@ const encodingOptions: EncodingOption[] = [
     schemaKey: "serology",
     testName: "Serology",
     fields: [
-      { key: "test", label: "Test Name", placeholder: "Dengue / HBsAg / Syphilis" },
+      { key: "test", label: "Test Name", placeholder: "Dengue / HBsAg / Syphilis", type: "select", options: [ { value: "Dengue", label: "Dengue" }, { value: "HBsAg", label: "HBsAg" }, { value: "Syphilis", label: "Syphilis" }, { value: "Pregnancy Test", label: "Pregnancy Test (HCG)"} ] },
       { key: "method", label: "Method" },
       { key: "specimen", label: "Specimen" },
       { key: "day_of_fever", label: "Day of Fever" },
@@ -348,8 +352,7 @@ const EncodingPage = () => {
                 Records Encoding
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-[#6b7da0]">
-                Register missing patients, select existing patients, then encode
-                consultation follow-ups or laboratory results from one page.
+                Register archived patients and encode their medical records.
               </p>
             </div>
 
@@ -448,7 +451,7 @@ const EncodingPage = () => {
                         Encode Record
                       </h2>
                       <p className="text-sm text-[#6b7da0]">
-                        Fields change based on the selected record category.
+                        Data Category Selection
                       </p>
                     </div>
                   </div>
@@ -537,7 +540,7 @@ const EncodingPage = () => {
 
                         return (
                           <div key={field.key} className={isWide ? "md:col-span-2" : ""}>
-                            {field.type === "textarea" ? (
+                           {field.type === "textarea" ? (
                               <Textarea
                                 label={field.label}
                                 rows={4}
@@ -547,6 +550,25 @@ const EncodingPage = () => {
                                   updateField(field.key, event.target.value)
                                 }
                               />
+                            ) : field.type === "select" ? (
+                              <Select
+                                label={field.label}
+                                value={formValues[field.key] ?? ""}
+                                onChange={(event) =>
+                                  updateField(field.key, event.target.value)
+                                }
+                              >
+                                <option value="">
+                                  Select...
+                                  {/* {field.placeholder ?? `Select ${field.label}`} */}
+                                </option>
+
+                                {field.options?.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </Select>
                             ) : (
                               <Input
                                 label={field.label}
@@ -557,7 +579,7 @@ const EncodingPage = () => {
                                   updateField(field.key, event.target.value)
                                 }
                               />
-                            )}
+                            )}  
                           </div>
                         );
                       })}
@@ -568,7 +590,7 @@ const EncodingPage = () => {
 
               <div className="flex flex-col gap-3 border-t border-[#dce3ef] bg-[#f8fafc] p-5 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-[#6b7da0]">
-                  Saves are isolated to the encoding API and will not change active
+                  Saves are isolated to the encoding and will not change active
                   request queues or billing workflows.
                 </p>
                 <Button
@@ -576,8 +598,8 @@ const EncodingPage = () => {
                   type="submit"
                   disabled={
                     !selectedPatient ||
-                    isSaving ||
-                    (selectedOption.group === "consultation" && !latestConsultation)
+                    isSaving
+                    // || (selectedOption.group === "consultation" && !latestConsultation)
                   }
                   isLoading={isSaving}
                 >
