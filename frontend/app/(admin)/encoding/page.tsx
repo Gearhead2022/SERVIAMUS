@@ -195,7 +195,21 @@ const encodingOptions: EncodingOption[] = [
     ],
   },
 
-
+  {
+    value: "lab-FOBT",
+    label: "Fecal Occult Blood",
+    group: "lab",
+    category: "other",
+    schemaKey: "FOBT",
+    testName: "Fecal Occult Blood",
+    fields: [
+      { key: "test", label: "Test Name", placeholder: "Fecal Occult Blood" },
+      { key: "method", label: "METHOD" },
+      { key: "specimen", label: "SPECIMEN" },
+      { key: "day_of_fever", label: "DAYS OF FEVER" },
+      { key: "result", label: "RESULT INTERPRETATION", type: "textarea" },
+    ],
+  },
 
    {
     value: "lab-serology",
@@ -205,7 +219,7 @@ const encodingOptions: EncodingOption[] = [
     schemaKey: "serology",
     testName: "Serology",
     fields: [
-      { key: "test", label: "Test Name", placeholder: "Dengue / HBsAg / Syphilis", type: "select", options: [ { value: "FOBT", label: "FECAL OCCULT BLOOD" },{ value: "Dengue", label: "DENGUE" }, { value: "HBsAg", label: "HBsAg" }, { value: "Syphilis", label: "SYPHILIS" }, { value: "Pregnancy Test", label: "PREGNANCY TEST (HCG)"} ] },
+      { key: "test", label: "Test Name", placeholder: "Dengue / HBsAg / Syphilis", type: "select", options: [{ value: "Dengue", label: "DENGUE" }, { value: "HBsAg", label: "HBsAg" }, { value: "Syphilis", label: "SYPHILIS" }, { value: "Pregnancy Test", label: "PREGNANCY TEST (HCG)"} ] },
       { key: "method", label: "METHOD" },
       { key: "specimen", label: "SPECIMEN" },
       { key: "day_of_fever", label: "DAYS OF FEVER" },
@@ -224,11 +238,20 @@ const encodingOptions: EncodingOption[] = [
       { key: "rbc_count", label: "RBC COUNT" },
       { key: "wbc_count", label: "WBC COUNT" },
       { key: "platelet_count", label: "PLATELET COUNT" },
+      { key: "others", label: "OTHERS:MCV" },
+      { key: "mchc", label: "MCHC" },
+      { key: "reticulocyte_count", label: "RETICULOCYTE COUNT" },
+      { key: "nss_1", label: "NEUTROPHILS SEGMENTERS STAB 1" },
+      { key: "nss_2", label: "NEUTROPHILS SEGMENTERS STAB 2" },
+      { key: "nss_3", label: "NEUTROPHILS SEGMENTERS STAB 3" },
       { key: "lymphocytes", label: "LYMPHOCYTES" },
       { key: "monocytes", label: "MONOCYTES" },
       { key: "eosinophils", label: "EOSINOPHILS" },
       { key: "basophils", label: "BASOPHILS" },
       { key: "others1", label: "OTHER FINDINGS", type: "textarea" },
+      { key: "clotting_time", label: "CLOTTING TIME (CT)" },
+      { key: "bleeding_time", label: "Bleeding Time (BT)" },
+      { key: "others2", label: "REMARKS", type: "textarea" },
     ],
   },
   {
@@ -241,6 +264,7 @@ const encodingOptions: EncodingOption[] = [
     fields: [
       { key: "abo_type", label: "ABO TYPE", type: "select", options: [ { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "AB", label: "AB" }, { value: "O", label: "O" } ] },
       { key: "rh_type", label: "Rh TYPE", type: "select", options: [ { value: "Positive", label: "POSITIVE (+)" }, { value: "Negative", label: "NEGATIVE (-)" } ] },
+      { key: "others1", label: "OTHERS" },
       { key: "others2", label: "REMARKS", type: "textarea" },
     ],
   },
