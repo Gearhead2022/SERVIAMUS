@@ -10,6 +10,7 @@ import {
   Search,
   UserRoundCheck,
 } from "lucide-react";
+import ReactSelect, { SingleValue } from "react-select";
 import AddPatientForm from "@/components/Modal/ChildModal/AddPatientForm";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -26,8 +27,15 @@ import {
 import type { LabCategory, LabResultPayload, LabSchemaKey } from "@/types/LabTypes";
 import type { PatientProps } from "@/types/PatientTypes";
 import { canAddPatient } from "@/utils/permissions";
+import Label from "@/components/ui/label";
 
 type FieldType = "date" | "text" | "textarea" | "select";
+
+type PatientOption = {
+  value: string;
+  label: string;
+  patient: PatientProps;
+};
 
 type EncodingField = {
   key: string;
@@ -52,6 +60,8 @@ type EncodingOption = {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+
+
 const consultationFields: EncodingField[] = [
   { key: "followupDate", label: "Consultation Date", type: "date" },
   { key: "bp", label: "Blood Pressure", placeholder: "120/80" },
@@ -67,41 +77,9 @@ const consultationFields: EncodingField[] = [
 const encodingOptions: EncodingOption[] = [
   {
     value: "consultation-follow-up",
-    label: "Consultation - latest follow-up",
+    label: "Latest Consultation",
     group: "consultation",
     fields: consultationFields,
-  },
-  {
-    value: "lab-cbc",
-    label: "Hematology - CBC",
-    group: "lab",
-    category: "hematology",
-    schemaKey: "CBC",
-    testName: "CBC",
-    fields: [
-      { key: "hemoglobin", label: "Hemoglobin" },
-      { key: "rbc_count", label: "RBC Count" },
-      { key: "wbc_count", label: "WBC Count" },
-      { key: "platelet_count", label: "Platelet Count" },
-      { key: "lymphocytes", label: "Lymphocytes" },
-      { key: "monocytes", label: "Monocytes" },
-      { key: "eosinophils", label: "Eosinophils" },
-      { key: "basophils", label: "Basophils" },
-      { key: "others1", label: "Other Findings", type: "textarea" },
-    ],
-  },
-  {
-    value: "lab-blood-typing",
-    label: "Hematology - Blood Typing",
-    group: "lab",
-    category: "hematology",
-    schemaKey: "BT",
-    testName: "Blood Typing",
-    fields: [
-      { key: "abo_type", label: "ABO Type", type: "select", options: [ { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "AB", label: "AB" }, { value: "O", label: "O" } ] },
-      { key: "rh_type", label: "Rh Type", type: "select", options: [ { value: "Positive", label: "Positive (+)" }, { value: "Negative", label: "Negative (-)" } ] },
-      { key: "others2", label: "Remarks", type: "textarea" },
-    ],
   },
   {
     value: "lab-clinical-chemistry",
@@ -111,18 +89,18 @@ const encodingOptions: EncodingOption[] = [
     schemaKey: "clinical_chemistry",
     testName: "Clinical Chemistry",
     fields: [
-      { key: "fbs", label: "FBS" },
-      { key: "rbs", label: "RBS" },
-      { key: "bun", label: "BUN" },
+      { key: "fbs", label: "FASTING BLOOD SUGAR (FBS)" },
+      { key: "rbs", label: "RANDOM BLOOD SUGAR (RBS)" },
+      { key: "bun", label: "UREA (BUN)" },
       { key: "creatinine", label: "Creatinine" },
       { key: "uric_acid", label: "Uric Acid" },
-      { key: "cholesterol", label: "Cholesterol" },
-      { key: "hdl_cholesterol", label: "HDL Cholesterol" },
-      { key: "ldl_cholesterol", label: "LDL Cholesterol" },
-      { key: "triglycerides", label: "Triglycerides" },
-      { key: "sgpt", label: "SGPT" },
-      { key: "last_meal", label: "Last Meal" },
-      { key: "time_taken", label: "Time Taken" },
+    { key: "cholesterol", label: "CHOLESTEROL" },
+      { key: "hdl_cholesterol", label: "HDL-CHOLESTEROL" },
+      { key: "ldl_cholesterol", label: "LDL-CHOLESTEROL" },
+      { key: "triglycerides", label: "TRIGLYCERIDES" },
+      { key: "sgpt", label: "ALT/SGPT" },
+      { key: "last_meal", label: "LAST MEAL" },
+      { key: "time_taken", label: "TIME TAKEN" },
     ],
   },
   {
@@ -133,27 +111,11 @@ const encodingOptions: EncodingOption[] = [
     schemaKey: "chemistry",
     testName: "Electrolytes",
     fields: [
-      { key: "sodium", label: "Sodium" },
-      { key: "potassium", label: "Potassium" },
-      { key: "chloride", label: "Chloride" },
-      { key: "ionized_calcium", label: "Ionized Calcium" },
-      { key: "others", label: "Other Findings", type: "textarea" },
-    ],
-  },
-  {
-    value: "lab-hba1c",
-    label: "Clinical Chemistry - HbA1c",
-    group: "lab",
-    category: "clinical-chemistry",
-    schemaKey: "hba1c",
-    testName: "HbA1c",
-    fields: [
-      { key: "test_method", label: "Test Method" },
-      { key: "lot_no", label: "Lot Number" },
-      { key: "exp_date", label: "Expiration Date", type: "date" },
-      { key: "specimen", label: "Specimen" },
-      { key: "result", label: "Result" },
-      { key: "result_interpretation", label: "Interpretation", type: "textarea" },
+      { key: "sodium", label: "SODIUM (Na)" },
+      { key: "potassium", label: "POTASSIUM (K)" },
+      { key: "chloride", label: "CHLORIDE (Cl)" },
+      { key: "ionized_calcium", label: "IONIZED CALCIUM (iCa)" },
+      { key: "others", label: "OTHER FINDINGS", type: "textarea" },
     ],
   },
   {
@@ -164,14 +126,30 @@ const encodingOptions: EncodingOption[] = [
     schemaKey: "OGTT",
     testName: "OGTT",
     fields: [
-      { key: "test_type", label: "Test Type", placeholder: "50G / 75G / 100G", type: "select", options: [ { value: "50G", label: "50G OGTT" }, { value: "75G", label: "75G OGTT" }, { value: "100G", label: "100G OGTT" } ] },
+      { key: "test_type", label: "TEST TYPE", placeholder: "50G / 75G / 100G", type: "select", options: [ { value: "50G", label: "50G 1H-OGTT" }, { value: "75G", label: "75G 2H-OGTT (NON-GESTATIONAL)" },{ value: "75G", label: "75G 2H-OGTT (GESTATIONAL)" }, { value: "100G", label: "100G OGTT" } ] },
       { key: "fbs", label: "FBS" },
-      { key: "onehagl", label: "1 Hour After Load" },
-      { key: "twohagl", label: "2 Hours After Load" },
-      { key: "threehagl", label: "3 Hours After Load" },
+      { key: "onehagl", label: "1 HOUR AFTER LOAD" },
+      { key: "twohagl", label: "2 HOURS AFTER LOAD" },
+      { key: "threehagl", label: "3 HOURS AFTER LOAD" },
     ],
   },
-  {
+{
+    value: "lab-hba1c",
+    label: "Clinical Chemistry - HbA1c",
+    group: "lab",
+    category: "clinical-chemistry",
+    schemaKey: "hba1c",
+    testName: "HbA1c",
+    fields: [
+      { key: "test_method", label: "TEST METHOD" },
+      { key: "lot_no", label: "LOT NUMBER" },
+      { key: "exp_date", label: "EXPIRATION DATE", type: "date" },
+      { key: "specimen", label: "SPECIMEN" },
+      { key: "result", label: "RESULT" },
+      { key: "result_interpretation", label: "INTERPRETATION", type: "textarea" },
+    ],
+  },
+{
     value: "lab-urinalysis",
     label: "Clinical Microscopy - Urinalysis",
     group: "lab",
@@ -179,16 +157,20 @@ const encodingOptions: EncodingOption[] = [
     schemaKey: "urinalysis",
     testName: "Urinalysis",
     fields: [
-      { key: "color", label: "Color" },
-      { key: "transparency", label: "Transparency" },
-      { key: "ph_result", label: "pH" },
-      { key: "spec_grav_result", label: "Specific Gravity" },
-      { key: "protein", label: "Protein" },
-      { key: "glucose", label: "Glucose" },
-      { key: "pus_cells", label: "Pus Cells" },
+      { key: "color", label: "COLOR" },
+      { key: "transparency", label: "TRANSPARENCY" },
+      { key: "ph_result", label: "pH REACTION" },
+      { key: "spec_grav_result", label: "SPECIFIC GRAVITY" },
+      { key: "protein", label: "PROTEIN" },
+      { key: "nitrite", label: "NITRITE" },
+      { key: "glucose", label: "GLUCOSE" },
+      { key: "ketones", label: "KETONES" },
+      { key: "leukocytes", label: "LEUKOCYTES" },
+      { key: "blood", label: "BLOOD" },
+      { key: "pus_cells", label: "PUS CELLS" },
       { key: "rbc", label: "RBC" },
-      { key: "bacteria", label: "Bacteria" },
-      { key: "others", label: "Other Findings", type: "textarea" },
+      { key: "bacteria", label: "BACTERIA" },
+      { key: "others", label: "OTHER FINDINGS", type: "textarea" },
     ],
   },
   {
@@ -199,20 +181,23 @@ const encodingOptions: EncodingOption[] = [
     schemaKey: "parasitology",
     testName: "Parasitology",
     fields: [
-      { key: "time_collected", label: "Time Collected" },
-      { key: "time_received", label: "Time Received" },
-      { key: "color", label: "Color" },
-      { key: "consistency", label: "Consistency" },
-      { key: "pus_cells", label: "Pus Cells" },
+      { key: "time_collected", label: "TIME COLLECTED" },
+      { key: "time_received", label: "TIME RECEIVED" },
+      { key: "color", label: "COLOR" },
+      { key: "consistency", label: "CONSISTENCY" },
+      { key: "pus_cells", label: "PUS CELLS" },
       { key: "rbc", label: "RBC" },
-      { key: "bacteria", label: "Bacteria" },
-      { key: "hookworm", label: "Hookworm" },
-      { key: "ascaris", label: "Ascaris" },
-      { key: "trichuris", label: "Trichuris" },
-      { key: "others", label: "Other Findings", type: "textarea" },
+      { key: "bacteria", label: "BACTERIA" },
+      { key: "hookworm", label: "HOOKWORM" },
+      { key: "ascaris", label: "ASCARIS" },
+      { key: "trichuris", label: "TRICHURIS" },
+      { key: "others", label: "OTHER FINDINGS", type: "textarea" },
     ],
   },
-  {
+
+
+
+   {
     value: "lab-serology",
     label: "Serology - General",
     group: "lab",
@@ -220,11 +205,43 @@ const encodingOptions: EncodingOption[] = [
     schemaKey: "serology",
     testName: "Serology",
     fields: [
-      { key: "test", label: "Test Name", placeholder: "Dengue / HBsAg / Syphilis", type: "select", options: [ { value: "Dengue", label: "Dengue" }, { value: "HBsAg", label: "HBsAg" }, { value: "Syphilis", label: "Syphilis" }, { value: "Pregnancy Test", label: "Pregnancy Test (HCG)"} ] },
-      { key: "method", label: "Method" },
-      { key: "specimen", label: "Specimen" },
-      { key: "day_of_fever", label: "Day of Fever" },
-      { key: "result", label: "Result", type: "textarea" },
+      { key: "test", label: "Test Name", placeholder: "Dengue / HBsAg / Syphilis", type: "select", options: [ { value: "FOBT", label: "FECAL OCCULT BLOOD" },{ value: "Dengue", label: "DENGUE" }, { value: "HBsAg", label: "HBsAg" }, { value: "Syphilis", label: "SYPHILIS" }, { value: "Pregnancy Test", label: "PREGNANCY TEST (HCG)"} ] },
+      { key: "method", label: "METHOD" },
+      { key: "specimen", label: "SPECIMEN" },
+      { key: "day_of_fever", label: "DAYS OF FEVER" },
+      { key: "result", label: "RESULT INTERPRETATION", type: "textarea" },
+    ],
+  },
+  {
+    value: "lab-cbc",
+    label: "Hematology - CBC",
+    group: "lab",
+    category: "hematology",
+    schemaKey: "CBC",
+    testName: "CBC",
+    fields: [
+      { key: "hemoglobin", label: "HEMOGLOBIN" },
+      { key: "rbc_count", label: "RBC COUNT" },
+      { key: "wbc_count", label: "WBC COUNT" },
+      { key: "platelet_count", label: "PLATELET COUNT" },
+      { key: "lymphocytes", label: "LYMPHOCYTES" },
+      { key: "monocytes", label: "MONOCYTES" },
+      { key: "eosinophils", label: "EOSINOPHILS" },
+      { key: "basophils", label: "BASOPHILS" },
+      { key: "others1", label: "OTHER FINDINGS", type: "textarea" },
+    ],
+  },
+  {
+    value: "lab-blood-typing",
+    label: "Hematology - Blood Typing",
+    group: "lab",
+    category: "hematology",
+    schemaKey: "BT",
+    testName: "Blood Typing",
+    fields: [
+      { key: "abo_type", label: "ABO TYPE", type: "select", options: [ { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "AB", label: "AB" }, { value: "O", label: "O" } ] },
+      { key: "rh_type", label: "Rh TYPE", type: "select", options: [ { value: "Positive", label: "POSITIVE (+)" }, { value: "Negative", label: "NEGATIVE (-)" } ] },
+      { key: "others2", label: "REMARKS", type: "textarea" },
     ],
   },
 ];
@@ -234,7 +251,7 @@ const emptyValuesFor = (option: EncodingOption) => {
 
   for (const field of option.fields) {
     values[field.key] = field.type === "date" ? today() : "";
-  }
+  } 
 
   return values;
 };
@@ -258,6 +275,14 @@ const EncodingPage = () => {
   const { data: patients = [] } = useGetAllpatient(patientSearch);
   const saveLab = useSaveEncodingLabResult();
   const saveFollowUp = useSaveEncodingFollowUp();
+
+  const patientOptions: PatientOption[] = patients.map((patient) => ({
+  value: String(patient.patient_id),
+  label: `${patient.name}${
+    patient.patient_code ? ` (${patient.patient_code})` : ""
+  }`,
+  patient,
+}));
 
   const selectedPatient = useMemo(
     () =>
@@ -297,6 +322,15 @@ const EncodingPage = () => {
       [key]: value,
     }));
   };
+
+const filteredPatients = patients.filter((patient: PatientProps) => {
+  const keyword = patientSearch.toLowerCase();
+
+  return (
+    patient.name.toLowerCase().includes(keyword) ||
+    patient.patient_code?.toLowerCase().includes(keyword)
+  );
+});
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -380,6 +414,7 @@ const EncodingPage = () => {
               </section>
             )}
 
+
             <section className="rounded-lg border border-[#dce3ef] bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0f2244] text-white">
@@ -392,25 +427,56 @@ const EncodingPage = () => {
               </div>
 
               <div className="space-y-4">
-                <Input
-                  label="Search Patient"
-                  placeholder="Name or patient code"
-                  value={patientSearch}
-                  onChange={(event) => setPatientSearch(event.target.value)}
-                />
+                <div>
+                  <Label>Patient</Label>
+                  <ReactSelect
+                    options={patientOptions}
+                    placeholder="Search patient..."
+                    isClearable
+                    value={
+                      patientOptions.find(
+                        (option) => option.value === selectedPatientId
+                      ) ?? null
+                    }
+                    onChange={(selected) => {
+                      if (!selected) {
+                        setSelectedPatientId("");
+                        return;
+                      }
 
-                <Select
-                  label="Selected Patient"
-                  value={selectedPatientId}
-                  onChange={(event) => setSelectedPatientId(event.target.value)}
-                >
-                  <option value="">Select patient</option>
-                  {patients.map((patient: PatientProps) => (
-                    <option key={patient.patient_id} value={patient.patient_id}>
-                      {patient.name} {patient.patient_code ? `(${patient.patient_code})` : ""}
-                    </option>
-                  ))}
-                </Select>
+                      setSelectedPatientId(selected.value);
+                    }}
+                    onInputChange={(value) => {
+                      setPatientSearch(value);
+                    }}
+                    menuPortalTarget={
+                      typeof document !== "undefined"
+                        ? document.body
+                        : undefined
+                    }
+                    styles={{
+                      menuPortal: (base) => ({
+                        ...base,
+                        zIndex: 9999,
+                      }),
+
+                      control: (base) => ({
+                        ...base,
+                        borderRadius: "12px",
+                        borderColor: "#dce3ef",
+                        background: "#f4f6fb",
+                        minHeight: "42px",
+                        fontSize: "14px",
+                      }),
+
+                      menuList: (base) => ({
+                        ...base,
+                        maxHeight: 220,
+                        color: "#000",
+                      }),
+                    }}
+                  />
+                </div>
 
                 {selectedPatient && (
                   <div className="rounded-lg border border-[#dce3ef] bg-[#f8fafc] p-4">
@@ -432,6 +498,8 @@ const EncodingPage = () => {
                 )}
               </div>
             </section>
+
+
           </aside>
 
           <section className="rounded-lg border border-[#dce3ef] bg-white shadow-sm">
@@ -498,7 +566,7 @@ const EncodingPage = () => {
                   </div>
                 ) : (
                   <div className="space-y-5">
-                    {selectedOption.group === "consultation" && (
+                    {/* {selectedOption.group === "consultation" && (
                       <div className="rounded-lg border border-[#dce3ef] bg-[#f8fafc] p-4">
                         <p className="text-xs font-semibold uppercase tracking-widest text-[#6b7da0]">
                           Latest Initial Consultation
@@ -521,7 +589,7 @@ const EncodingPage = () => {
                           </p>
                         )}
                       </div>
-                    )}
+                    )} */}
 
                     {selectedOption.group === "lab" && (
                       <div className="max-w-xs">
