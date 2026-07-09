@@ -69,7 +69,7 @@ const getEncoderName = async (
   }
 
   if (!userId) {
-    return "Encoder";
+    return "ADMIN";
   }
 
   const user = await tx.users.findUnique({
@@ -77,7 +77,7 @@ const getEncoderName = async (
     select: { name: true },
   });
 
-  return user?.name?.trim() || "Encoder";
+  return user?.name?.trim() || "ADMIN";
 };
 
 const syncEncodedResultDate = async (
