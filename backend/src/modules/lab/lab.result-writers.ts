@@ -368,4 +368,26 @@ export const upsertStructuredLabResult = async ({
       update: data,
     });
   }
+  if (resolvedSchemaKey == "FOBT"){
+    const data = {
+      patient_id: patientId,
+      test_name: trimFormValue(form, "testname"),
+      method: trimFormValue(form, "method"),
+      specimen: trimFormValue(form, "specimen"),
+      day_of_fever: trimFormValue(form, "daysoffever"),
+      result: trimFormValue(form, "results"),
+      ...resultAuditFields(medTechUserId, pathologistUserId),
+    };
+
+    await tx.fOBTResult.upsert({
+      where: { lab_id: labId },
+      create: {
+        lab_id: labId,
+        ...data,
+      },
+      update: data,
+    });
+
+    return;
+  }
 };

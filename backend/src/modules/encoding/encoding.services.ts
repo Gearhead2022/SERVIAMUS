@@ -152,6 +152,14 @@ const syncEncodedResultDate = async (
     return;
   }
 
+    if (schemaKey === "FOBT") {
+    await tx.fOBTResult.updateMany({
+      where: { lab_id: labId },
+      data: { result_date: resultDate },
+    });
+    return;
+  }
+
   if (schemaKey === "sodium" || schemaKey === "potassium" || schemaKey === "chemistry") {
     await tx.chemistryResult.updateMany({
       where: { lab_id: labId },
@@ -281,8 +289,8 @@ export const saveEncodingFollowUpService = async (
         orderBy: [{ consultation_date: "desc" }, { consultation_id: "desc" }],
       });
 
-    if (!consultation) {
-      throw new Error("No initial consultation was found for this patient.");
+    if (!consultation) {  //remove this condition
+      throw new Error("No initial consultation was found for this patient."); 
     }
 
     const followupDate = parseEncodingDate(payload.followupDate, "Follow-up date");

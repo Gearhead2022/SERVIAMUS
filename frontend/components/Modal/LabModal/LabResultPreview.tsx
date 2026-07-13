@@ -74,7 +74,7 @@ export default function LabResultPreview({
               <Button type="button" variant="neutral" onClick={onPassToDoctor}>
                 Pass Data to Doctor
               </Button>
-            ) : null}
+            ) : null} 
             {showDoneButton && onDone ? (
               <Button type="button" variant="neutral" onClick={onDone}>
                 Done

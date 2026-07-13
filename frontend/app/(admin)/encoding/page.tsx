@@ -29,7 +29,7 @@ import type { PatientProps } from "@/types/PatientTypes";
 import { canAddPatient } from "@/utils/permissions";
 import Label from "@/components/ui/label";
 
-type FieldType = "date" | "text" | "textarea" | "select";
+type FieldType = "date" | "text" | "textarea" | "select" | "checkbox";
 
 type PatientOption = {
   value: string;
@@ -48,6 +48,19 @@ type EncodingField = {
   }[];
 };
 
+type EncodingSection = {
+  title: string;
+  fields: EncodingField[];
+};
+
+type ClinicalChemistryTest = {
+  value: string;
+  label: string;
+  testName: string;
+  schemaKey: LabSchemaKey;
+  fields: EncodingField[];
+};
+
 type EncodingOption = {
   value: string;
   label: string;
@@ -55,14 +68,92 @@ type EncodingOption = {
   category?: LabCategory;
   schemaKey?: LabSchemaKey;
   testName?: string;
-  fields: EncodingField[];
+  fields: EncodingField[] | EncodingSection[];
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 
 
-const consultationFields: EncodingField[] = [
+const initialConsultationFields: EncodingSection[] = [
+   {
+    title: "Vital Signs & History",
+    fields: [
+      { key: "followupDate", label: "Consultation Date", type: "date" },
+      { key: "bp", label: "Blood Pressure", placeholder: "120/80" },
+      { key: "temp", label: "Temperature", placeholder: "36.7 °C" },
+      { key: "cr", label: "Cardiac Rate", placeholder: "80 bpm" },
+      { key: "rr", label: "Respiratory Rate", placeholder: "18" },
+      { key: "wt", label: "Weight", placeholder: "50 kg" },
+      { key: "ht", label: "Height", placeholder: "160 cm" },
+      { key: "hist_illness", label: "History of Present Illness", type: "textarea" },
+    ],
+  },
+
+  {
+    title: "Past Medical History",
+    fields: [
+      { key: "pmh_allergy", label: "Food & Drug Allergy", type: "checkbox" },
+      { key: "pmh_admission", label: "Previous Admission", type: "checkbox" },
+      { key: "pmh_others", label: "Others", type: "checkbox" },
+      { key: "pmh_others_text", label: "Specify", placeholder: "Please specify..." },
+    ],
+  },
+
+  {
+    title: "Family History",
+    fields: [
+      { key: "fh_htn", label: "Hypertension", type: "checkbox" },
+      { key: "fh_dm", label: "Diabetes Mellitus", type: "checkbox" },
+      { key: "fh_ba", label: "Bronchial Asthma", type: "checkbox" },
+      { key: "fh_cancer", label: "Cancer", type: "checkbox" },
+      { key: "fh_others", label: "Others", type: "checkbox" },
+      { key: "fh_others_text", label: "Specify", placeholder: "Please specify..." },
+    ],
+  },
+
+  {
+    title: "OB-Gyne History",
+    fields: [
+      { key: "ob_score", label: "G P", placeholder: "G2P1" },
+      { key: "ob_nvsd", label: "NVSD", type: "checkbox" },
+      { key: "ob_cs", label: "CS", type: "checkbox" },
+      { key: "menarche", label: "Menarche", placeholder: "Age" },
+      { key: "interval", label: "Interval", placeholder: "Days" },
+      { key: "duration", label: "Duration", placeholder: "Days" },
+      { key: "amount", label: "Amount", placeholder: "Pads/day" },
+      { key: "ob_symptoms", label: "Symptoms" },
+    ],
+  },
+
+  {
+    title: "Personal & Social History",
+    fields: [
+      { key: "cigarette_use", label: "Cigarette Use", type: "checkbox" },
+      { key: "alcohol_use", label: "Alcohol Use", type: "checkbox" },
+      { key: "drug_use", label: "Drug Use", type: "checkbox" },
+      { key: "exercise", label: "Exercise", type: "checkbox" },
+      { key: "hygiene_prac", label: "Good Hygiene Practice", type: "checkbox" },
+      { key: "coffee_cons", label: "Coffee Consumption", type: "checkbox" },
+      { key: "soda_cons", label: "Soda Consumption", type: "checkbox" },
+      { key: "travel_history", label: "Travel History" },
+      { key: "diet", label: "Diet" },
+      { key: "stress", label: "Stress / Coping Mechanism" },
+      { key: "occupation", label: "Occupation" },
+    ],
+  },
+
+  {
+    title: "Examination & Assessment",
+    fields: [
+      { key: "examination", label: "Physical & Neurologic Examination", type: "textarea" },
+      { key: "assessment", label: "Assessment", type: "textarea" },
+      { key: "plans", label: "Plans", type: "textarea" },
+    ],
+  },
+];
+
+const ConsultationFields: EncodingField[] = [
   { key: "followupDate", label: "Consultation Date", type: "date" },
   { key: "bp", label: "Blood Pressure", placeholder: "120/80" },
   { key: "temp", label: "Temperature", placeholder: "36.7 C" },
@@ -74,33 +165,43 @@ const consultationFields: EncodingField[] = [
   { key: "instruction", label: "Instruction / Plan", type: "textarea" },
 ];
 
+const clinicalChemistryTests: ClinicalChemistryTest[] = [
+  { value: "fbs", label: "Fasting Blood Sugar (FBS)", testName: "FBS", schemaKey: "FBS", fields: [{ key: "fbs", label: "FASTING BLOOD SUGAR (FBS)" }] },
+  { value: "rbs", label: "Random Blood Sugar (RBS)", testName: "RBS", schemaKey: "RBS", fields: [{ key: "rbs", label: "RANDOM BLOOD SUGAR (RBS)" }] },
+  { value: "bun", label: "Urea (BUN)", testName: "BUN", schemaKey: "BUN", fields: [{ key: "bun", label: "UREA (BUN)" }] },
+  { value: "creatinine", label: "Creatinine", testName: "Creatinine", schemaKey: "clinical_chemistry", fields: [{ key: "creatinine", label: "Creatinine" }] },
+  { value: "uric_acid", label: "Uric Acid", testName: "Uric Acid", schemaKey: "uricacid", fields: [{ key: "uric_acid", label: "Uric Acid" }] },
+  { value: "cholesterol", label: "Total Cholesterol", testName: "Total Cholesterol", schemaKey: "totalcholesterol", fields: [{ key: "cholesterol", label: "CHOLESTEROL" }] },
+  { value: "hdl_cholesterol", label: "HDL Cholesterol", testName: "HDL Cholesterol", schemaKey: "HDL", fields: [{ key: "hdl_cholesterol", label: "HDL-CHOLESTEROL" }] },
+  { value: "ldl_cholesterol", label: "LDL Cholesterol", testName: "LDL Cholesterol", schemaKey: "LDL", fields: [{ key: "ldl_cholesterol", label: "LDL-CHOLESTEROL" }] },
+  { value: "triglycerides", label: "Triglycerides", testName: "Triglycerides", schemaKey: "triglycerides", fields: [{ key: "triglycerides", label: "TRIGLYCERIDES" }] },
+  { value: "sgpt", label: "ALT / SGPT", testName: "SGPT", schemaKey: "SGPT", fields: [{ key: "sgpt", label: "ALT/SGPT" }] },
+];
+
 const encodingOptions: EncodingOption[] = [
+  {
+    value: "initial-consultation",
+    label: "Initial Consultation",
+    group: "consultation",
+    fields: initialConsultationFields,
+  },
   {
     value: "consultation-follow-up",
     label: "Latest Consultation",
     group: "consultation",
-    fields: consultationFields,
+    fields: ConsultationFields,
   },
   {
     value: "lab-clinical-chemistry",
     label: "Clinical Chemistry - Panel",
     group: "lab",
     category: "clinical-chemistry",
-    schemaKey: "clinical_chemistry",
-    testName: "Clinical Chemistry",
     fields: [
-      { key: "fbs", label: "FASTING BLOOD SUGAR (FBS)" },
-      { key: "rbs", label: "RANDOM BLOOD SUGAR (RBS)" },
-      { key: "bun", label: "UREA (BUN)" },
-      { key: "creatinine", label: "Creatinine" },
-      { key: "uric_acid", label: "Uric Acid" },
-    { key: "cholesterol", label: "CHOLESTEROL" },
-      { key: "hdl_cholesterol", label: "HDL-CHOLESTEROL" },
-      { key: "ldl_cholesterol", label: "LDL-CHOLESTEROL" },
-      { key: "triglycerides", label: "TRIGLYCERIDES" },
-      { key: "sgpt", label: "ALT/SGPT" },
-      { key: "last_meal", label: "LAST MEAL" },
-      { key: "time_taken", label: "TIME TAKEN" },
+      {
+        key: "chemistry_tests",
+        label: "Clinical Chemistry Tests",
+        type: "checkbox",
+      },
     ],
   },
   {
@@ -126,7 +227,7 @@ const encodingOptions: EncodingOption[] = [
     schemaKey: "OGTT",
     testName: "OGTT",
     fields: [
-      { key: "test_type", label: "TEST TYPE", placeholder: "50G / 75G / 100G", type: "select", options: [ { value: "50G", label: "50G 1H-OGTT" }, { value: "75G", label: "75G 2H-OGTT (NON-GESTATIONAL)" },{ value: "75G", label: "75G 2H-OGTT (GESTATIONAL)" }, { value: "100G", label: "100G OGTT" } ] },
+      { key: "test_type", label: "TEST TYPE", placeholder: "50G / 75G / 100G", type: "select", options: [ { value: "50G", label: "50G 1H-OGTT" }, { value: "75G", label: "75G 2H-OGTT (NON-GESTATIONAL)" },{ value: "75Gv2", label: "75G 2H-OGTT (GESTATIONAL)" }, { value: "100G", label: "100G 3H-OGTT" } ] },
       { key: "fbs", label: "FBS" },
       { key: "onehagl", label: "1 HOUR AFTER LOAD" },
       { key: "twohagl", label: "2 HOURS AFTER LOAD" },
@@ -206,8 +307,8 @@ const encodingOptions: EncodingOption[] = [
       { key: "test", label: "Test Name", placeholder: "Fecal Occult Blood" },
       { key: "method", label: "METHOD" },
       { key: "specimen", label: "SPECIMEN" },
-      { key: "day_of_fever", label: "DAYS OF FEVER" },
-      { key: "result", label: "RESULT INTERPRETATION", type: "textarea" },
+      { key: "daysoffever", label: "DAYS OF FEVER" },
+      { key: "results", label: "RESULTS", type: "textarea" },
     ],
   },
 
@@ -261,7 +362,7 @@ const encodingOptions: EncodingOption[] = [
     category: "hematology",
     schemaKey: "BT",
     testName: "Blood Typing",
-    fields: [
+    fields: [ 
       { key: "abo_type", label: "ABO TYPE", type: "select", options: [ { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "AB", label: "AB" }, { value: "O", label: "O" } ] },
       { key: "rh_type", label: "Rh TYPE", type: "select", options: [ { value: "Positive", label: "POSITIVE (+)" }, { value: "Negative", label: "NEGATIVE (-)" } ] },
       { key: "others1", label: "OTHERS" },
@@ -270,12 +371,24 @@ const encodingOptions: EncodingOption[] = [
   },
 ];
 
+const defaultEncodingOption =
+  encodingOptions.find((option) => option.value === "consultation-follow-up") ??
+  encodingOptions[0];
+
 const emptyValuesFor = (option: EncodingOption) => {
   const values: Record<string, string> = {};
 
-  for (const field of option.fields) {
-    values[field.key] = field.type === "date" ? today() : "";
-  } 
+  for (const item of option.fields) {
+    if ("fields" in item) {
+      // It's an EncodingSection
+      for (const field of item.fields) {
+        values[field.key] = field.type === "date" ? today() : "";
+      }
+    } else {
+      // It's an EncodingField
+      values[item.key] = item.type === "date" ? today() : "";
+    }
+  }
 
   return values;
 };
@@ -285,14 +398,20 @@ const formatDate = (value?: string | null) => {
   return new Date(value).toLocaleDateString();
 };
 
+const isEncodingSection = (
+  item: EncodingField | EncodingSection
+): item is EncodingSection => "fields" in item;
+
 const EncodingPage = () => {
   const { user } = useAuth();
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState("");
-  const [selectedOptionValue, setSelectedOptionValue] = useState("consultation-follow-up");
+  const [selectedOptionValue, setSelectedOptionValue] = useState(
+    defaultEncodingOption.value
+  );
   const [labResultDate, setLabResultDate] = useState(today());
   const [formValues, setFormValues] = useState<Record<string, string>>(
-    emptyValuesFor(encodingOptions[0])
+    emptyValuesFor(defaultEncodingOption)
   );
   const [showPatientForm, setShowPatientForm] = useState(false);
 
@@ -323,6 +442,56 @@ const EncodingPage = () => {
     [selectedOptionValue]
   );
 
+  const selectedClinicalChemistryTests = useMemo(
+    () => {
+      const selectedValues = new Set(
+        (formValues.chemistry_tests ?? "").split(",").filter(Boolean)
+      );
+
+      return clinicalChemistryTests.filter((test) => selectedValues.has(test.value));
+    },
+    [formValues.chemistry_tests]
+  );
+
+  const visibleFields = useMemo(() => {
+    if (selectedOption.value === "lab-clinical-chemistry") {
+      const selector = selectedOption.fields[0] as EncodingField;
+      return [
+        selector,
+        ...selectedClinicalChemistryTests.flatMap((test) => test.fields),
+      ];
+    }
+
+    if (selectedOption.value === "lab-ogtt") {
+      const fields = selectedOption.fields as EncodingField[];
+      const testType = formValues.test_type;
+      const visibleKeys =
+        testType === "50G"
+          ? ["test_type", "fbs", "onehagl"]
+          : testType === "75G" || testType === "75Gv2"
+            ? ["test_type", "fbs", "onehagl", "twohagl"]
+            : testType === "100G"
+              ? ["test_type", "fbs", "onehagl", "twohagl", "threehagl"]
+              : ["test_type"];
+
+      return fields.filter((field) => visibleKeys.includes(field.key));
+    }
+
+    return selectedOption.fields;
+  }, [formValues.test_type, selectedClinicalChemistryTests, selectedOption]);
+
+  const renderedSections = useMemo(() => {
+    if (visibleFields.every((item) => !isEncodingSection(item))) {
+      return [{ title: null, fields: visibleFields as EncodingField[] }];
+    }
+
+    return visibleFields.map((item) =>
+      isEncodingSection(item)
+        ? { title: item.title, fields: item.fields }
+        : { title: null, fields: [item] }
+    );
+  }, [visibleFields]);
+
   const { data: latestConsultation, isFetching: isLoadingLatest } =
     useLatestEncodingConsultation(
       selectedPatient?.patient_id && selectedOption.group === "consultation"
@@ -331,6 +500,10 @@ const EncodingPage = () => {
     );
 
   const isSaving = saveLab.isPending || saveFollowUp.isPending;
+  const isLabTestSelectionMissing =
+    (selectedOption.value === "lab-clinical-chemistry" &&
+      selectedClinicalChemistryTests.length === 0) ||
+    (selectedOption.value === "lab-ogtt" && !formValues.test_type);
 
   const updateSelectedOption = (value: string) => {
     const nextOption =
@@ -341,10 +514,45 @@ const EncodingPage = () => {
   };
 
   const updateField = (key: string, value: string) => {
+    if (key === "test_type" && selectedOption.value === "lab-ogtt") {
+      setFormValues({ [key]: value });
+      return;
+    }
+
     setFormValues((current) => ({
       ...current,
       [key]: value,
     }));
+  };
+
+  const toggleClinicalChemistryTest = (testValue: string) => {
+    setFormValues((current) => {
+      const selectedValues = new Set(
+        (current.chemistry_tests ?? "").split(",").filter(Boolean)
+      );
+
+      if (selectedValues.has(testValue)) {
+        selectedValues.delete(testValue);
+      } else {
+        selectedValues.add(testValue);
+      }
+
+      const visibleKeys = new Set(
+        clinicalChemistryTests
+          .filter((test) => selectedValues.has(test.value))
+          .flatMap((test) => test.fields.map((field) => field.key))
+      );
+      const nextValues = Object.fromEntries(
+        Object.entries(current).filter(
+          ([key]) => key === "chemistry_tests" || visibleKeys.has(key)
+        )
+      );
+
+      return {
+        ...nextValues,
+        chemistry_tests: Array.from(selectedValues).join(","),
+      };
+    });
   };
 
 const filteredPatients = patients.filter((patient: PatientProps) => {
@@ -381,23 +589,69 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
       return;
     }
 
+    if (
+      selectedOption.value === "lab-clinical-chemistry" &&
+      selectedClinicalChemistryTests.length === 0
+    ) {
+      return;
+    }
+
+    if (selectedOption.value === "lab-clinical-chemistry") {
+      for (const test of selectedClinicalChemistryTests) {
+        const testFieldKeys = new Set(test.fields.map((field) => field.key));
+        const form: LabResultPayload = Object.fromEntries(
+          Object.entries(formValues).filter(
+            ([key, value]) => testFieldKeys.has(key) && value.trim() !== ""
+          )
+        );
+
+        await saveLab.mutateAsync({
+          patientId: selectedPatient.patient_id,
+          category: selectedOption.category ?? "other",
+          form,
+          resultDate: labResultDate || today(),
+          schemaKey: test.schemaKey,
+          testName: test.testName,
+        });
+      }
+
+      setFormValues(emptyValuesFor(selectedOption));
+      return;
+    }
+
+    if (selectedOption.value === "lab-ogtt" && !formValues.test_type) {
+      return;
+    }
+
     const form: LabResultPayload = Object.fromEntries(
-      Object.entries(formValues).filter(([, value]) => value.trim() !== "")
+      Object.entries(formValues).filter(
+        ([key, value]) => key !== "chemistry_test" && value.trim() !== ""
+      )
     );
+
+    const ogttDetails =
+      formValues.test_type === "50G"
+        ? { schemaKey: "onehOGTT" as const, testName: "50G 1H-OGTT" }
+        : formValues.test_type === "75G" || formValues.test_type === "75Gv2"
+          ? { schemaKey: "twohOGTT" as const, testName: "75G 2H-OGTT" }
+          : { schemaKey: "OGTT" as const, testName: "100G 3H-OGTT" };
+
+    const labDetails =
+      selectedOption.value === "lab-ogtt" ? ogttDetails : selectedOption;
 
     await saveLab.mutateAsync({
       patientId: selectedPatient.patient_id,
       category: selectedOption.category ?? "other",
       form,
       resultDate: labResultDate || today(),
-      schemaKey: selectedOption.schemaKey ?? null,
-      testName: selectedOption.testName ?? selectedOption.label,
+      schemaKey: labDetails.schemaKey ?? null,
+      testName: labDetails.testName ?? selectedOption.label,
     });
     setFormValues(emptyValuesFor(selectedOption));
   };
 
   return (
-    <RoleGuard allowedRoles={["ADMIN", "STAFF", "DOCTOR", "LAB", "LABORATORY"]}>
+    <RoleGuard allowedRoles={["ADMIN"]}>
       <main className="min-h-screen bg-[#edf1f7] font-['DM_Sans'] text-[#14233d]">
         <div className="border-b border-[#dce3ef] bg-white px-5 py-5 sm:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -626,53 +880,99 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                       </div>
                     )}
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {selectedOption.fields.map((field) => {
-                        const isWide = field.type === "textarea";
-
+                    <div className="space-y-6">
+                      {renderedSections.map((section, index) => {
                         return (
-                          <div key={field.key} className={isWide ? "md:col-span-2" : ""}>
-                           {field.type === "textarea" ? (
-                              <Textarea
-                                label={field.label}
-                                rows={4}
-                                placeholder={field.placeholder}
-                                value={formValues[field.key] ?? ""}
-                                onChange={(event) =>
-                                  updateField(field.key, event.target.value)
-                                }
-                              />
-                            ) : field.type === "select" ? (
-                              <Select
-                                label={field.label}
-                                value={formValues[field.key] ?? ""}
-                                onChange={(event) =>
-                                  updateField(field.key, event.target.value)
-                                }
-                              >
-                                <option value="">
-                                  Select...
-                                  {/* {field.placeholder ?? `Select ${field.label}`} */}
-                                </option>
+                          <section key={section.title ?? `fields-${index}`}>
+                            {section.title && (
+                              <h3 className="mb-3 text-sm font-bold text-[#0f2244]">
+                                {section.title}
+                              </h3>
+                            )}
+                            <div className="grid gap-4 md:grid-cols-2">
+                              {section.fields.map((field) => {
+                                const isWide =
+                                  field.type === "textarea" ||
+                                  field.key === "chemistry_tests";
 
-                                {field.options?.map((option) => (
-                                  <option key={option.value} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </Select>
-                            ) : (
-                              <Input
-                                label={field.label}
-                                type={field.type ?? "text"}
-                                placeholder={field.placeholder}
-                                value={formValues[field.key] ?? ""}
-                                onChange={(event) =>
-                                  updateField(field.key, event.target.value)
-                                }
-                              />
-                            )}  
-                          </div>
+                                return (
+                                  <div key={field.key} className={isWide ? "md:col-span-2" : ""}>
+                                    {field.type === "textarea" ? (
+                                      <Textarea
+                                        label={field.label}
+                                        rows={4}
+                                        placeholder={field.placeholder}
+                                        value={formValues[field.key] ?? ""}
+                                        onChange={(event) => updateField(field.key, event.target.value)}
+                                      />
+                                    ) : field.type === "select" ? (
+                                      <Select
+                                        label={field.label}
+                                        required={
+                                          field.key === "test_type"
+                                        }
+                                        value={formValues[field.key] ?? ""}
+                                        onChange={(event) => updateField(field.key, event.target.value)}
+                                      >
+                                        <option value="">Select...</option>
+                                        {field.options?.map((option) => (
+                                          <option key={option.value} value={option.value}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </Select>
+                                    ) : field.key === "chemistry_tests" ? (
+                                      <fieldset className="rounded-lg border border-[#dce3ef] bg-[#f8fafc] p-4">
+                                        <legend className="px-1 text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0]">
+                                          {field.label}
+                                        </legend>
+                                        <div className="grid gap-2 sm:grid-cols-2">
+                                          {clinicalChemistryTests.map((test) => {
+                                            const isSelected = selectedClinicalChemistryTests.some(
+                                              (selectedTest) => selectedTest.value === test.value
+                                            );
+
+                                            return (
+                                              <label
+                                                key={test.value}
+                                                className="flex min-h-[40px] items-center gap-2 rounded-md border border-[#dce3ef] bg-white px-3 text-sm text-[#14233d]"
+                                              >
+                                                <input
+                                                  type="checkbox"
+                                                  checked={isSelected}
+                                                  onChange={() => toggleClinicalChemistryTest(test.value)}
+                                                />
+                                                {test.label}
+                                              </label>
+                                            );
+                                          })}
+                                        </div>
+                                      </fieldset>
+                                    ) : field.type === "checkbox" ? (
+                                      <label className="flex min-h-[42px] items-center gap-3 rounded-lg border border-[#dce3ef] bg-[#f4f6fb] px-3 text-sm font-medium text-[#14233d]">
+                                        <input
+                                          type="checkbox"
+                                          checked={formValues[field.key] === "true"}
+                                          onChange={(event) =>
+                                            updateField(field.key, String(event.target.checked))
+                                          }
+                                        />
+                                        {field.label}
+                                      </label>
+                                    ) : (
+                                      <Input
+                                        label={field.label}
+                                        type={field.type ?? "text"}
+                                        placeholder={field.placeholder}
+                                        value={formValues[field.key] ?? ""}
+                                        onChange={(event) => updateField(field.key, event.target.value)}
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </section>
                         );
                       })}
                     </div>
@@ -681,16 +981,17 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
               </div>
 
               <div className="flex flex-col gap-3 border-t border-[#dce3ef] bg-[#f8fafc] p-5 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-[#6b7da0]">
+                {/* <p className="text-xs text-[#6b7da0]">
                   Saves are isolated to the encoding and will not change active
                   request queues or billing workflows.
-                </p>
+                </p> */}
                 <Button
                   icon={<Save size={17} />}
                   type="submit"
                   disabled={
                     !selectedPatient ||
-                    isSaving
+                    isSaving ||
+                    isLabTestSelectionMissing
                     // || (selectedOption.group === "consultation" && !latestConsultation)
                   }
                   isLoading={isSaving}
