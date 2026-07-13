@@ -86,6 +86,7 @@ const initialConsultationFields: EncodingSection[] = [
       { key: "rr", label: "Respiratory Rate", placeholder: "18" },
       { key: "wt", label: "Weight", placeholder: "50 kg" },
       { key: "ht", label: "Height", placeholder: "160 cm" },
+      { key: "chief_complain", label: "Chief Complaint", type: "textarea" },
       { key: "hist_illness", label: "History of Present Illness", type: "textarea" },
     ],
   },
@@ -202,7 +203,10 @@ const encodingOptions: EncodingOption[] = [
         label: "Clinical Chemistry Tests",
         type: "checkbox",
       },
+      { key: "sodium", label: "SODIUM (Na)" },
+      { key: "potassium", label: "POTASSIUM (K)" },
     ],
+    
   },
   {
     value: "lab-chemistry",
@@ -298,7 +302,7 @@ const encodingOptions: EncodingOption[] = [
 
   {
     value: "lab-FOBT",
-    label: "Fecal Occult Blood",
+    label: "Clinical Microscopy - Fecal Occult Blood",
     group: "lab",
     category: "other",
     schemaKey: "FOBT",
