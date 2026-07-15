@@ -20,7 +20,8 @@ import { useAuth } from "@/context/AuthContext";
 import RoleGuard from "@/guards/RoleGuard";
 import { useGetAllpatient } from "@/hooks/Patient/usePatientRegistration";
 import {
-  useLatestEncodingConsultation,
+  useEncodingConsultations,
+  useSaveEncodingConsultation,
   useSaveEncodingFollowUp,
   useSaveEncodingLabResult,
 } from "@/hooks/admin/useEncoding";
@@ -88,6 +89,7 @@ const initialConsultationFields: EncodingSection[] = [
       { key: "ht", label: "Height", placeholder: "160 cm" },
       { key: "chief_complain", label: "Chief Complaint", type: "textarea" },
       { key: "hist_illness", label: "History of Present Illness", type: "textarea" },
+      { key: "follow_up_date", label: "Follow-up Date", type: "date" },
     ],
   },
 
@@ -179,16 +181,21 @@ const clinicalChemistryTests: ClinicalChemistryTest[] = [
   { value: "sgpt", label: "ALT / SGPT", testName: "SGPT", schemaKey: "SGPT", fields: [{ key: "sgpt", label: "ALT/SGPT" }] },
 ];
 
+const clinicalChemistryCommonFields: EncodingField[] = [
+  { key: "last_meal", label: "Last Meal", placeholder: "e.g. 6 hours ago" },
+  { key: "time_taken", label: "Time Taken", placeholder: "e.g. 08:30 AM" },
+];
+
 const encodingOptions: EncodingOption[] = [
   {
     value: "initial-consultation",
-    label: "Initial Consultation",
+    label: "Consultation",
     group: "consultation",
     fields: initialConsultationFields,
   },
   {
     value: "consultation-follow-up",
-    label: "Latest Consultation",
+    label: "Follow-up Check-up",
     group: "consultation",
     fields: ConsultationFields,
   },
@@ -376,7 +383,7 @@ const encodingOptions: EncodingOption[] = [
 ];
 
 const defaultEncodingOption =
-  encodingOptions.find((option) => option.value === "consultation-follow-up") ??
+  encodingOptions.find((option) => option.value === "initial-consultation") ??
   encodingOptions[0];
 
 const emptyValuesFor = (option: EncodingOption) => {
@@ -386,11 +393,11 @@ const emptyValuesFor = (option: EncodingOption) => {
     if ("fields" in item) {
       // It's an EncodingSection
       for (const field of item.fields) {
-        values[field.key] = field.type === "date" ? today() : "";
+        values[field.key] = field.type === "date" && field.key !== "follow_up_date" ? today() : "";
       }
     } else {
       // It's an EncodingField
-      values[item.key] = item.type === "date" ? today() : "";
+      values[item.key] = item.type === "date" && item.key !== "follow_up_date" ? today() : "";
     }
   }
 
@@ -421,7 +428,9 @@ const EncodingPage = () => {
 
   const { data: patients = [] } = useGetAllpatient(patientSearch);
   const saveLab = useSaveEncodingLabResult();
+  const saveConsultation = useSaveEncodingConsultation();
   const saveFollowUp = useSaveEncodingFollowUp();
+  const [selectedConsultationId, setSelectedConsultationId] = useState("");
 
   const patientOptions: PatientOption[] = patients.map((patient) => ({
   value: String(patient.patient_id),
@@ -462,6 +471,7 @@ const EncodingPage = () => {
       const selector = selectedOption.fields[0] as EncodingField;
       return [
         selector,
+        ...clinicalChemistryCommonFields,
         ...selectedClinicalChemistryTests.flatMap((test) => test.fields),
       ];
     }
@@ -496,14 +506,14 @@ const EncodingPage = () => {
     );
   }, [visibleFields]);
 
-  const { data: latestConsultation, isFetching: isLoadingLatest } =
-    useLatestEncodingConsultation(
-      selectedPatient?.patient_id && selectedOption.group === "consultation"
+  const { data: consultations = [], isFetching: isLoadingConsultations } =
+    useEncodingConsultations(
+      selectedPatient?.patient_id && selectedOption.value === "consultation-follow-up"
         ? selectedPatient.patient_id
         : undefined
     );
 
-  const isSaving = saveLab.isPending || saveFollowUp.isPending;
+  const isSaving = saveLab.isPending || saveConsultation.isPending || saveFollowUp.isPending;
   const isLabTestSelectionMissing =
     (selectedOption.value === "lab-clinical-chemistry" &&
       selectedClinicalChemistryTests.length === 0) ||
@@ -515,6 +525,7 @@ const EncodingPage = () => {
     setSelectedOptionValue(nextOption.value);
     setLabResultDate(today());
     setFormValues(emptyValuesFor(nextOption));
+    setSelectedConsultationId("");
   };
 
   const updateField = (key: string, value: string) => {
@@ -548,7 +559,7 @@ const EncodingPage = () => {
       );
       const nextValues = Object.fromEntries(
         Object.entries(current).filter(
-          ([key]) => key === "chemistry_tests" || visibleKeys.has(key)
+          ([key]) => key === "chemistry_tests" || key === "last_meal" || key === "time_taken" || visibleKeys.has(key)
         )
       );
 
@@ -576,9 +587,20 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
     }
 
     if (selectedOption.group === "consultation") {
+      if (selectedOption.value === "initial-consultation") {
+        await saveConsultation.mutateAsync({
+          patientId: selectedPatient.patient_id,
+          consultationDate: formValues.followupDate || today(),
+          fields: formValues,
+        });
+        setFormValues(emptyValuesFor(selectedOption));
+        return;
+      }
+
+      if (!selectedConsultationId) return;
       await saveFollowUp.mutateAsync({
         patientId: selectedPatient.patient_id,
-        consultationId: latestConsultation?.consultation_id ?? null,
+        consultationId: Number(selectedConsultationId),
         followupDate: formValues.followupDate || today(),
         impression: formValues.impression,
         instruction: formValues.instruction,
@@ -602,7 +624,7 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
 
     if (selectedOption.value === "lab-clinical-chemistry") {
       for (const test of selectedClinicalChemistryTests) {
-        const testFieldKeys = new Set(test.fields.map((field) => field.key));
+        const testFieldKeys = new Set(["last_meal", "time_taken", ...test.fields.map((field) => field.key)]);
         const form: LabResultPayload = Object.fromEntries(
           Object.entries(formValues).filter(
             ([key, value]) => testFieldKeys.has(key) && value.trim() !== ""
@@ -670,7 +692,7 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
               <p className="mt-1 max-w-2xl text-sm text-[#6b7da0]">
                 Register archived patients and encode their medical records.
               </p>
-            </div>
+            </div>   
 
             {canAddPatient(user?.roles) && (
               <Button
@@ -723,10 +745,12 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                     onChange={(selected) => {
                       if (!selected) {
                         setSelectedPatientId("");
+                        setSelectedConsultationId("");
                         return;
                       }
 
                       setSelectedPatientId(selected.value);
+                      setSelectedConsultationId("");
                     }}
                     onInputChange={(value) => {
                       setPatientSearch(value);
@@ -884,6 +908,29 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                       </div>
                     )}
 
+                    {selectedOption.value === "consultation-follow-up" && (
+                      <div className="max-w-xl">
+                        <Select
+                          label="Existing Consultation Record"
+                          required
+                          value={selectedConsultationId}
+                          onChange={(event) => setSelectedConsultationId(event.target.value)}
+                        >
+                          <option value="">
+                            {isLoadingConsultations ? "Loading consultations..." : "Select a consultation..."}
+                          </option>
+                          {consultations.map((consultation) => (
+                            <option key={consultation.consultation_id} value={consultation.consultation_id}>
+                              {formatDate(consultation.consultation_date)} — {consultation.chief_complaint || "No chief complaint"}
+                            </option>
+                          ))}
+                        </Select>
+                        {!isLoadingConsultations && consultations.length === 0 && (
+                          <p className="mt-2 text-sm text-[#c8102e]">This patient has no consultation record to attach a follow-up to.</p>
+                        )}
+                      </div>
+                    )}
+
                     <div className="space-y-6">
                       {renderedSections.map((section, index) => {
                         return (
@@ -995,7 +1042,8 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                   disabled={
                     !selectedPatient ||
                     isSaving ||
-                    isLabTestSelectionMissing
+                    isLabTestSelectionMissing ||
+                    (selectedOption.value === "consultation-follow-up" && !selectedConsultationId)
                     // || (selectedOption.group === "consultation" && !latestConsultation)
                   }
                   isLoading={isSaving}

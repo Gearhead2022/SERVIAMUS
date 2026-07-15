@@ -1,6 +1,8 @@
 import { Router } from "express";
 import {
   getEncodingLatestConsultationController,
+  getEncodingConsultationsController,
+  saveEncodingConsultationController,
   saveEncodingFollowUpController,
   saveEncodingLabResultController,
 } from "./encoding.controller";
@@ -12,6 +14,8 @@ router.get(
   "/patients/:patientId/latest-consultation",
   getEncodingLatestConsultationController
 );
+router.get("/patients/:patientId/consultations", getEncodingConsultationsController);
+router.post("/consultations", saveEncodingConsultationController);
 
 router.post(
   "/lab-results",

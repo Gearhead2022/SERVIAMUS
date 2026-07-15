@@ -34,11 +34,27 @@ export type SaveEncodingFollowUpPayload = {
   ht?: string;
 };
 
+export type SaveEncodingConsultationPayload = {
+  patientId: number;
+  consultationDate: string;
+  fields: Record<string, string>;
+};
+
 export const fetchLatestEncodingConsultation = async (patientId: number) => {
   const res = await api.get(
     `/api/encoding/patients/${patientId}/latest-consultation`
   );
   return res.data.data as LatestEncodingConsultation | null;
+};
+
+export const fetchEncodingConsultations = async (patientId: number) => {
+  const res = await api.get(`/api/encoding/patients/${patientId}/consultations`);
+  return res.data.data as LatestEncodingConsultation[];
+};
+
+export const saveEncodingConsultation = async (payload: SaveEncodingConsultationPayload) => {
+  const res = await api.post("/api/encoding/consultations", payload);
+  return res.data.data;
 };
 
 export const saveEncodingLabResult = async (payload: SaveEncodingLabPayload) => {

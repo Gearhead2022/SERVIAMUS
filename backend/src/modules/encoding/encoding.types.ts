@@ -26,3 +26,10 @@ export type EncodingFollowUpPayload = {
   wt?: string | null;
   ht?: string | null;
 };
+
+export type EncodingConsultationPayload = {
+  patientId: number;
+  consultationDate: string;
+  userId?: number;
+  fields: Record<string, string | undefined>;
+};
