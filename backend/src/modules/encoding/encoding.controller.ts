@@ -8,7 +8,7 @@ import {
 } from "./encoding.services";
 
 export const getEncodingConsultationsController = async (req: Request, res: Response) => {
-  try {
+  try { 
     const patientId = Number(req.params.patientId);
     if (!Number.isInteger(patientId) || patientId <= 0) return res.status(400).json({ success: false, message: "Invalid patient." });
     return res.status(200).json({ success: true, data: await getEncodingConsultationsService(patientId) });
