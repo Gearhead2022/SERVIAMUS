@@ -225,9 +225,16 @@ export const saveEncodingConsultationService = async (
     if (!patient) throw new Error("Selected patient was not found.");
 
     const encoder = payload.userId
-      ? await tx.users.findUnique({ where: { user_id: payload.userId }, select: { user_id: true } })
+      ? await tx.users.findFirst({
+          where: {
+            user_id: payload.userId,
+            is_active: true,
+            roles: { some: { role: { role_name: "ADMIN" } } },
+          },
+          select: { user_id: true },
+        })
       : null;
-    if (!encoder) throw new Error("An active encoder account is required to save a consultation.");
+    if (!encoder) throw new Error("An active administrator account is required to save a consultation.");
 
     const fields = payload.fields;
     const consultationDate = parseEncodingDate(payload.consultationDate, "Consultation date");

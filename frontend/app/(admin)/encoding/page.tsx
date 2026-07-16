@@ -2,13 +2,20 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import {
+  Activity,
+  ClipboardCheck,
   ClipboardPenLine,
   FilePlusCorner,
   FlaskConical,
+  HeartPulse,
+  History,
+  type LucideIcon,
   Plus,
   Save,
   Search,
+  Stethoscope,
   UserRoundCheck,
+  Users,
 } from "lucide-react";
 import ReactSelect, { SingleValue } from "react-select";
 import AddPatientForm from "@/components/Modal/ChildModal/AddPatientForm";
@@ -413,6 +420,55 @@ const isEncodingSection = (
   item: EncodingField | EncodingSection
 ): item is EncodingSection => "fields" in item;
 
+// Maps each consultation section title to a small glyph so the section
+// nav and section headers stay quickly scannable at a glance.
+const sectionIconMap: Record<string, LucideIcon> = {
+  "Vital Signs & History": Stethoscope,
+  "Past Medical History": History,
+  "Family History": Users,
+  "OB-Gyne History": HeartPulse,
+  "Personal & Social History": Activity,
+  "Examination & Assessment": ClipboardCheck,
+};
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+// A single reusable checkbox control styled as a chip, so selected items
+// are visible at a glance instead of relying on a small tick mark alone.
+const CheckboxChip = ({
+  id,
+  label,
+  checked,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+}) => (
+  <label
+    htmlFor={id}
+    className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors ${
+      checked
+        ? "border-[#0e7c7b] bg-[#eff6f4] text-[#0e7c7b]"
+        : "border-[#dce3ef] bg-white text-[#14233d] hover:border-[#0e7c7b]/50"
+    }`}
+  >
+    <input
+      id={id}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className="h-4 w-4 shrink-0 rounded border-[#c6d1e3] text-[#0e7c7b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0e7c7b]"
+    />
+    <span>{label}</span>
+  </label>
+);
+
 const EncodingPage = () => {
   const { user } = useAuth();
   const [patientSearch, setPatientSearch] = useState("");
@@ -506,6 +562,13 @@ const EncodingPage = () => {
     );
   }, [visibleFields]);
 
+  // Named sections only (used to build the quick-jump nav for long forms
+  // like the initial consultation, which has six stacked sections).
+  const sectionNavItems = useMemo(
+    () => renderedSections.filter((section) => Boolean(section.title)),
+    [renderedSections]
+  );
+
   const { data: consultations = [], isFetching: isLoadingConsultations } =
     useEncodingConsultations(
       selectedPatient?.patient_id && selectedOption.value === "consultation-follow-up"
@@ -518,6 +581,31 @@ const EncodingPage = () => {
     (selectedOption.value === "lab-clinical-chemistry" &&
       selectedClinicalChemistryTests.length === 0) ||
     (selectedOption.value === "lab-ogtt" && !formValues.test_type);
+
+  // Plain-language reason the Save button is disabled, surfaced next to
+  // it so encoders don't have to guess what's missing.
+  const saveBlockedReason = useMemo(() => {
+    if (!selectedPatient) return "Select a patient to begin encoding.";
+    if (selectedOption.value === "consultation-follow-up" && !selectedConsultationId) {
+      return "Choose an existing consultation record to attach this follow-up.";
+    }
+    if (selectedOption.value === "lab-ogtt" && !formValues.test_type) {
+      return "Select a test type to continue.";
+    }
+    if (
+      selectedOption.value === "lab-clinical-chemistry" &&
+      selectedClinicalChemistryTests.length === 0
+    ) {
+      return "Select at least one lab test to continue.";
+    }
+    return null;
+  }, [
+    formValues.test_type,
+    selectedClinicalChemistryTests.length,
+    selectedConsultationId,
+    selectedOption.value,
+    selectedPatient,
+  ]);
 
   const updateSelectedOption = (value: string) => {
     const nextOption =
@@ -678,8 +766,8 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
 
   return (
     <RoleGuard allowedRoles={["ADMIN"]}>
-      <main className="min-h-screen bg-[#edf1f7] font-['DM_Sans'] text-[#14233d]">
-        <div className="border-b border-[#dce3ef] bg-white px-5 py-5 sm:px-8">
+      <main className="min-h-screen scroll-smooth bg-[#edf1f7] font-['DM_Sans'] text-[#14233d]">
+        <div className="border-b border-[#dce3ef] bg-white px-5 py-5 shadow-sm sm:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="mb-2 inline-flex items-center gap-2 rounded-lg bg-[#eff6f4] px-3 py-1 text-xs font-semibold text-[#0e7c7b]">
@@ -707,7 +795,7 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
           </div>
         </div>
 
-        <div className="mx-auto grid w-full max-w-7xl gap-5 px-5 py-6 lg:grid-cols-[390px_minmax(0,1fr)]">
+        <div className="mx-auto grid w-full max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[390px_minmax(0,1fr)] lg:items-start">
           <aside className="space-y-5">
             {showPatientForm && (
               <section className="overflow-hidden rounded-lg border border-[#dce3ef] bg-white shadow-sm">
@@ -719,7 +807,7 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
             )}
 
 
-            <section className="rounded-lg border border-[#dce3ef] bg-white p-5 shadow-sm">
+            <section className="rounded-lg border border-[#dce3ef] bg-white p-5 shadow-sm lg:sticky lg:top-4">
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0f2244] text-white">
                   <Search size={18} />
@@ -766,13 +854,19 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                         zIndex: 9999,
                       }),
 
-                      control: (base) => ({
+                      control: (base, state) => ({
                         ...base,
                         borderRadius: "12px",
-                        borderColor: "#dce3ef",
+                        borderColor: state.isFocused ? "#0e7c7b" : "#dce3ef",
+                        boxShadow: state.isFocused
+                          ? "0 0 0 3px rgba(14,124,123,0.15)"
+                          : "none",
                         background: "#f4f6fb",
                         minHeight: "42px",
                         fontSize: "14px",
+                        "&:hover": {
+                          borderColor: "#0e7c7b",
+                        },
                       }),
 
                       menuList: (base) => ({
@@ -811,9 +905,13 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
           <section className="rounded-lg border border-[#dce3ef] bg-white shadow-sm">
             <form onSubmit={handleSubmit} className="flex h-full flex-col">
               <div className="border-b border-[#dce3ef] p-5">
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#c8102e] text-white">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-lg text-white ${
+                        selectedOption.group === "lab" ? "bg-[#c8102e]" : "bg-[#0e7c7b]"
+                      }`}
+                    >
                       {selectedOption.group === "lab" ? (
                         <FlaskConical size={19} />
                       ) : (
@@ -859,16 +957,16 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
 
               <div className="flex-1 p-5">
                 {!selectedPatient ? (
-                  <div className="flex min-h-[360px] items-center justify-center rounded-lg border border-dashed border-[#c6d1e3] bg-[#f8fafc] p-6 text-center">
-                    <div>
-                      <Search className="mx-auto mb-3 text-[#6b7da0]" size={32} />
-                      <h3 className="text-base font-bold text-[#0f2244]">
-                        Select a patient to start encoding
-                      </h3>
-                      <p className="mt-1 text-sm text-[#6b7da0]">
-                        Use Add Patient only for records that do not exist in the system.
-                      </p>
+                  <div className="flex min-h-[360px] flex-col items-center justify-center rounded-lg border border-dashed border-[#c6d1e3] bg-[#f8fafc] p-6 text-center">
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#eff6f4] text-[#0e7c7b]">
+                      <Search size={26} />
                     </div>
+                    <h3 className="text-base font-bold text-[#0f2244]">
+                      Select a patient to start encoding
+                    </h3>
+                    <p className="mt-1 max-w-sm text-sm text-[#6b7da0]">
+                      Search by name or patient code on the left. Use Add Patient only for records that do not exist in the system.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-5">
@@ -898,7 +996,7 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                     )} */}
 
                     {selectedOption.group === "lab" && (
-                      <div className="max-w-xs">
+                      <div className="max-w-xs rounded-lg border border-[#dce3ef] bg-[#f8fafc] p-4">
                         <Input
                           label="Result Date"
                           type="date"
@@ -909,7 +1007,7 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                     )}
 
                     {selectedOption.value === "consultation-follow-up" && (
-                      <div className="max-w-xl">
+                      <div className="max-w-xl rounded-lg border border-[#dce3ef] bg-[#f8fafc] p-4">
                         <Select
                           label="Existing Consultation Record"
                           required
@@ -931,23 +1029,54 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                       </div>
                     )}
 
+                    {sectionNavItems.length > 1 && (
+                      <div className="sticky top-0 z-10 -mx-5 flex gap-2 overflow-x-auto border-b border-[#dce3ef] bg-white/95 px-5 py-2 backdrop-blur">
+                        {sectionNavItems.map((section) => (
+                          <a
+                            key={section.title}
+                            href={`#${slugify(section.title as string)}`}
+                            className="shrink-0 rounded-full border border-[#dce3ef] px-3 py-1.5 text-xs font-semibold text-[#50617f] transition-colors hover:border-[#0e7c7b] hover:text-[#0e7c7b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0e7c7b]"
+                          >
+                            {section.title}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="space-y-6">
                       {renderedSections.map((section, index) => {
+                        const SectionIcon = section.title
+                          ? sectionIconMap[section.title] ?? ClipboardPenLine
+                          : null;
+
                         return (
-                          <section key={section.title ?? `fields-${index}`}>
-                            {section.title && (
-                              <h3 className="mb-3 text-sm font-bold text-[#0f2244]">
-                                {section.title}
-                              </h3>
+                          <section
+                            key={section.title ?? `fields-${index}`}
+                            id={section.title ? slugify(section.title) : undefined}
+                            className={
+                              section.title
+                                ? "scroll-mt-16 rounded-lg border border-[#dce3ef] bg-[#fbfcfe] p-4"
+                                : ""
+                            }
+                          >
+                            {section.title && SectionIcon && (
+                              <div className="mb-3 flex items-center gap-2">
+                                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#eff6f4] text-[#0e7c7b]">
+                                  <SectionIcon size={15} />
+                                </span>
+                                <h3 className="text-sm font-bold text-[#0f2244]">
+                                  {section.title}
+                                </h3>
+                              </div>
                             )}
-                            <div className="grid gap-4 md:grid-cols-2">
+                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                               {section.fields.map((field) => {
                                 const isWide =
                                   field.type === "textarea" ||
                                   field.key === "chemistry_tests";
 
                                 return (
-                                  <div key={field.key} className={isWide ? "md:col-span-2" : ""}>
+                                  <div key={field.key} className={isWide ? "col-span-full" : ""}>
                                     {field.type === "textarea" ? (
                                       <Textarea
                                         label={field.label}
@@ -977,39 +1106,36 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                                         <legend className="px-1 text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0]">
                                           {field.label}
                                         </legend>
-                                        <div className="grid gap-2 sm:grid-cols-2">
+                                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                                           {clinicalChemistryTests.map((test) => {
                                             const isSelected = selectedClinicalChemistryTests.some(
                                               (selectedTest) => selectedTest.value === test.value
                                             );
 
                                             return (
-                                              <label
+                                              <CheckboxChip
                                                 key={test.value}
-                                                className="flex min-h-[40px] items-center gap-2 rounded-md border border-[#dce3ef] bg-white px-3 text-sm text-[#14233d]"
-                                              >
-                                                <input
-                                                  type="checkbox"
-                                                  checked={isSelected}
-                                                  onChange={() => toggleClinicalChemistryTest(test.value)}
-                                                />
-                                                {test.label}
-                                              </label>
+                                                id={`chem-${test.value}`}
+                                                label={test.label}
+                                                checked={isSelected}
+                                                onChange={() => toggleClinicalChemistryTest(test.value)}
+                                              />
                                             );
                                           })}
                                         </div>
                                       </fieldset>
                                     ) : field.type === "checkbox" ? (
-                                      <label className="flex min-h-[42px] items-center gap-3 rounded-lg border border-[#dce3ef] bg-[#f4f6fb] px-3 text-sm font-medium text-[#14233d]">
-                                        <input
-                                          type="checkbox"
-                                          checked={formValues[field.key] === "true"}
-                                          onChange={(event) =>
-                                            updateField(field.key, String(event.target.checked))
-                                          }
-                                        />
-                                        {field.label}
-                                      </label>
+                                      <CheckboxChip
+                                        id={`field-${field.key}`}
+                                        label={field.label}
+                                        checked={formValues[field.key] === "true"}
+                                        onChange={() =>
+                                          updateField(
+                                            field.key,
+                                            String(formValues[field.key] !== "true")
+                                          )
+                                        }
+                                      />
                                     ) : (
                                       <Input
                                         label={field.label}
@@ -1031,11 +1157,16 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                 )}
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-[#dce3ef] bg-[#f8fafc] p-5 sm:flex-row sm:items-center sm:justify-between">
-                {/* <p className="text-xs text-[#6b7da0]">
-                  Saves are isolated to the encoding and will not change active
-                  request queues or billing workflows.
-                </p> */}
+              <div className="sticky bottom-0 z-10 flex flex-col gap-3 border-t border-[#dce3ef] bg-[#f8fafc]/95 p-5 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+                {saveBlockedReason ? (
+                  <p role="status" className="text-xs font-medium text-[#c8102e]">
+                    {saveBlockedReason}
+                  </p>
+                ) : (
+                  <p role="status" className="text-xs text-[#6b7da0]">
+                    Ready to save.
+                  </p>
+                )}
                 <Button
                   icon={<Save size={17} />}
                   type="submit"
