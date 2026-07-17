@@ -496,13 +496,10 @@ const EncodingPage = () => {
   patient,
 }));
 
-  const selectedPatient = useMemo(
-    () =>
-      patients.find(
-        (patient: PatientProps) => String(patient.patient_id) === selectedPatientId
-      ) ?? null,
-    [patients, selectedPatientId]
-  );
+  const selectedPatient =
+    patients.find(
+      (patient: PatientProps) => String(patient.patient_id) === selectedPatientId
+    ) ?? null;
 
   const selectedOption = useMemo(
     () =>
@@ -584,7 +581,7 @@ const EncodingPage = () => {
 
   // Plain-language reason the Save button is disabled, surfaced next to
   // it so encoders don't have to guess what's missing.
-  const saveBlockedReason = useMemo(() => {
+  const saveBlockedReason = (() => {
     if (!selectedPatient) return "Select a patient to begin encoding.";
     if (selectedOption.value === "consultation-follow-up" && !selectedConsultationId) {
       return "Choose an existing consultation record to attach this follow-up.";
@@ -599,13 +596,7 @@ const EncodingPage = () => {
       return "Select at least one lab test to continue.";
     }
     return null;
-  }, [
-    formValues.test_type,
-    selectedClinicalChemistryTests.length,
-    selectedConsultationId,
-    selectedOption.value,
-    selectedPatient,
-  ]);
+  })();
 
   const updateSelectedOption = (value: string) => {
     const nextOption =

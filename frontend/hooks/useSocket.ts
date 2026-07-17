@@ -118,7 +118,7 @@ export default function useSocket(onNotification?: NotificationHandler) {
         socket.on("consultation:updated", handleConsultationUpdated);
         socket.on("consultation:deleted", handleConsultationDeleted);
         socket.on("lab:updated", handleLabUpdated);
-        socket.on("lab.deleted", handleLabDeleted);
+        socket.on("lab:deleted", handleLabDeleted);
         socket.on("billing:updated", handleBillingUpdated);
         socket.on("billing:deleted", handleBillingDeleted);
         socket.on("admin:updated", handleUsersUpdated);
