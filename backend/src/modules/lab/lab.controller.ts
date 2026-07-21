@@ -276,6 +276,9 @@ export const updateLabRequestStatusController = async (req: Request, res: Respon
       });
     }
 
+    const currentRequest = await getLabRequestByIdService(labId);
+    const isStartingLaboratoryRequest =
+      status === "pending" && currentRequest.requestStatus === "queued";
     const request = await updateLabRequestStatusService(labId, status, userId);
 
     emitLabUpdated({
@@ -284,6 +287,27 @@ export const updateLabRequestStatusController = async (req: Request, res: Respon
       reason: "status-updated",
       requestId: request.requestId,
     });
+
+    if (
+      isStartingLaboratoryRequest ||
+      (status === "done" && request.requestStatus === "done")
+    ) {
+      const staffUserIds = await resolveUsersByRoleNames(["STAFF"]);
+      const isCompleted = status === "done";
+
+      await createNotification({
+        userIds: staffUserIds,
+        type: "SYSTEM",
+        title: isCompleted
+          ? "Laboratory Request Completed"
+          : "Laboratory Request Now Serving",
+        message: isCompleted
+          ? `Laboratory request for patient ${request.patientId} has been completed.`
+          : `Laboratory request for patient ${request.patientId} is now being served.`,
+        entity: "request",
+        entity_id: request.requestId,
+      });
+    }
 
     return res.status(200).json({
       success: true,

@@ -7,7 +7,7 @@ import { ReactNode } from "react";
 import ClientProviders from "@/providers/ReactQueryProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import SocketProvider from "@/providers/SocketProvider";
-import NotificationSoundProvider from "@/providers/NotificationSoundProvider";
+import NotificationSpeechProvider from "@/providers/NotificationSpeechProvider";
 import { Toaster } from "react-hot-toast";
 
 const roboto = Roboto({ weight: "400", subsets: ["latin"] });
@@ -29,7 +29,7 @@ export default function RootLayout({
         <ClientProviders>
           <AuthProvider>
             <SocketProvider />
-            <NotificationSoundProvider />
+            <NotificationSpeechProvider />
 
             <Toaster position="top-right" toastOptions={{ duration: 5000, }} />
             {children}

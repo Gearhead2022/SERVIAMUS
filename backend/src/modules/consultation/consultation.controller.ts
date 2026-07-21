@@ -109,6 +109,22 @@ export const updateRequestStatusController = async (
       requestId: result.req_id,
     };
 
+    if (result.status === "SERVING" || result.status === "DONE") {
+      const staffUserIds = await resolveUsersByRoleNames(["STAFF"]);
+      const patientCode = result.patient.patient_code ?? `Patient ${result.patient.patient_id}`;
+      const workflowLabel = result.req_type === "CERTIFICATE" ? "certificate request" : "consultation";
+      const action = result.status === "SERVING" ? "is now being served" : "has been completed";
+
+      await createNotification({
+        userIds: staffUserIds,
+        type: "SYSTEM",
+        title: result.status === "SERVING" ? "Request Now Serving" : "Request Completed",
+        message: `${workflowLabel.charAt(0).toUpperCase()}${workflowLabel.slice(1)} for patient ${patientCode} ${action}.`,
+        entity: "request",
+        entity_id: result.req_id,
+      });
+    }
+
     if (result.status === "DONE") {
 
       io.to([...WORKFLOW_ROOMS]).emit("consultation:updated", payload);

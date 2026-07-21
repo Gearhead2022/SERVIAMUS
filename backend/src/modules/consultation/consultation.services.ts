@@ -506,6 +506,14 @@ export const requestAction = async (
       data: {
         status,
       },
+      include: {
+        patient: {
+          select: {
+            patient_code: true,
+            patient_id: true,
+          },
+        },
+      },
     });
 
 
