@@ -17,7 +17,6 @@ export default function useNotificationSpeech() {
 
     window.addEventListener("pointerdown", enableSpeech, { once: true });
     window.addEventListener("keydown", enableSpeech, { once: true });
-
     const socket = createSocket();
     const handleNotification = (notification: SpeechNotification) => {
       if (isSpeechEnabled.current) {
