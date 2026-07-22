@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getConsultationResultById, getConsultationRxById, getDoctorById, getFollowupRecords, getInitialConsultations, getLabRequestByName, getMedicalCertificateById, getPatientPrescription, getRequestsPerWeekday, getStatistics, laboratoryRecordHistory, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
+import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createFollowUp, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getConsultationResultById, getConsultationRxById, getDoctorById, getFollowupById, getFollowupRecords, getInitialConsultations, getInitialConsultationWithPrevFollowups, getLabRequestByName, getMedicalCertificateById, getPatientPrescription, getRequestsPerWeekday, getStatistics, laboratoryRecordHistory, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
 import { RequestStatus, RequestType } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
 import { getIO } from "../../socket";
@@ -579,7 +579,7 @@ export const getLabRequestByNameController = async (req: Request, res: Response)
     const data = await getLabRequestByName(name, patientId);
     res.json(data);
   } catch (err: any) {
-    console.error("CONTROLLER ERROR:", err);
+    // console.error("CONTROLLER ERROR:", err);
     res.status(500).json({
       message: err.message,
       code: err.code,
@@ -633,7 +633,9 @@ export const getConsultationRxByIdController = async (req: Request, res: Respons
   const req_id = Number(req.params.id);
 
   try {
+    console.log('request_id', req_id)
     const data = await getConsultationRxById(req_id);
+    console.log('backend returned data', data)
     res.json(data);
   } catch (err: any) {
     res.status(500).json({
@@ -658,6 +660,21 @@ export const getMedicalCertificateByIdController = async (req: Request, res: Res
   }
 };
 
+export const getFollowupResultByIdController = async (req: Request, res: Response) => {
+  const req_id = Number(req.params.id);
+
+  try {
+    const data = await getFollowupById(req_id);
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({
+      message: err.message,
+      code: err.code,
+      meta: err.meta
+    });
+  }
+};
+
 export const getFollowupRecordsController = async (req: Request, res: Response) => {
   try {
     const cons_id = Number(req.params.id);
@@ -669,11 +686,11 @@ export const getFollowupRecordsController = async (req: Request, res: Response) 
       });
     }
 
-    const consultation = await getFollowupRecords(cons_id);
+    const followup = await getFollowupRecords(cons_id);
 
     return res.status(200).json({
       success: true,
-      data: consultation,
+      data: followup,
     });
   } catch (error: any) {
     return res.status(500).json({
@@ -699,6 +716,52 @@ export const getInitialConsultationController = async (req: Request, res: Respon
       message: err.message,
       code: err.code,
       meta: err.meta
+    });
+  }
+};
+
+export const createFollowupResultController = async (req: Request, res: Response) => {
+  try {
+
+    const consult = await createFollowUp(req.body);
+
+    const io = getIO();
+
+    io.to([...WORKFLOW_ROOMS]).emit("consultation:updated");
+
+    return res.status(201).json({
+      success: true,
+      data: consult
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+export const getInitialConsultationWithPrevFollowupsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const patientId = Number(req.params.patientId);
+    const consultationId = Number(req.params.consultationId);
+
+    const consult = await getInitialConsultationWithPrevFollowups(
+      patientId,
+      consultationId
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: consult,
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
     });
   }
 };

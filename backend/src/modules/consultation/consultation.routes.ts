@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createConsultationResultController, createMedCertResultController, createPrescriptionController, getAllPatientConsultationController, getAllPatientMedCertController, getAllPatientRequestController, getConsultationRecordByIdController, getConsultationRecordHistoryController, getConsultationResultByIdController, getConsultationRxByIdController, getDoctorByIdController, getFollowupRecordsController, getInitialConsultationController, getLabRequestByNameController, getMedicalCertificateByIdController, getMedicalCertificateRecordHistoryController, getPatientPrescriptionController, getPatientRecordController, getPrescriptionByRequestController, getPrescriptionRecordHistoryController, getStatisticsController, getWeeklyTallyController, laboratoryRecordHistoryController, updateRequestStatusController } from "./consultation.controller";
+import { createConsultationResultController, createFollowupResultController, createMedCertResultController, createPrescriptionController, getAllPatientConsultationController, getAllPatientMedCertController, getAllPatientRequestController, getConsultationRecordByIdController, getConsultationRecordHistoryController, getConsultationResultByIdController, getConsultationRxByIdController, getDoctorByIdController, getFollowupRecordsController, getFollowupResultByIdController, getInitialConsultationController, getInitialConsultationWithPrevFollowupsController, getLabRequestByNameController, getMedicalCertificateByIdController, getMedicalCertificateRecordHistoryController, getPatientPrescriptionController, getPatientRecordController, getPrescriptionByRequestController, getPrescriptionRecordHistoryController, getStatisticsController, getWeeklyTallyController, laboratoryRecordHistoryController, updateRequestStatusController } from "./consultation.controller";
 
 const router = Router();
 
@@ -132,6 +132,11 @@ router.get(
 )
 
 router.get(
+  "/:id/getFollowupRecordByIdz",
+  getFollowupResultByIdController
+)
+
+router.get(
   "/:id/getFollowupRecords",
   getFollowupRecordsController
 );
@@ -141,5 +146,18 @@ router.get(
   "/:id/consultation-cases",
   getInitialConsultationController
 );
+
+router.post(
+  "/createFollowup",
+  createFollowupResultController
+);
+
+//get Initial consultation and previous followups
+
+router.get(
+  "/:patientId/patient/:consultationId/followups",
+  getInitialConsultationWithPrevFollowupsController
+);
+
 
 export default router;

@@ -63,6 +63,7 @@ export interface PatientConsultationRecordsPayload {
 
 export interface PrescriptionPayload {
     consultation_id: number;
+    followup_id: number;
     patient_id: number;
     doctor_id: number;
 
@@ -76,13 +77,7 @@ export interface PrescriptionPayload {
 export interface PrescriptionMedicine {
     medicine_name: string;
     strength?: string;
-
-    form: string;
-    dose: string;
-    frequency: string;
-    route: string;
-    duration: string;
-
+    brand_name: string;
     quantity?: string;
     instruction?: string;
 }
@@ -128,3 +123,68 @@ export type FollowupWithRelations =
             consult: true;
         };
     }>;
+
+export interface CreateFollowupPayload {
+    consultation_id: number;
+    cons_id?: number;
+    patient_id?: number;
+    vs_id: number;
+
+    name: string;
+    contact_number: string;
+    address: string;
+    birth_date: string;
+    sex: string;
+    age: string;
+    religion: string;
+
+    consultation_date: string;
+
+    pmh_allergy: boolean;
+    pmh_admission: boolean;
+    pmh_others: boolean;
+    pmh_others_text: string;
+
+    fh_htn: boolean;
+    fh_dm: boolean;
+    fh_ba: boolean;
+    fh_cancer: boolean;
+    fh_others: boolean;
+    fh_others_text: string;
+
+    ob_score: string;
+    ob_nvsd: boolean;
+    ob_cs: boolean;
+
+    menarche: string;
+    interval: string;
+    duration: string;
+    amount: string;
+    ob_symptoms: string;
+
+    cigarette_use: boolean;
+    alcohol_use: boolean;
+    drug_use: boolean;
+    exercise: boolean;
+    hygiene_prac: boolean;
+    coffee_cons: boolean;
+    soda_cons: boolean;
+
+    sh_allergy: boolean;
+    sh_admission: boolean;
+
+    travel_history: string;
+    diet: string;
+    stress: string;
+    occupation: string;
+
+    follow_up_date: string;
+
+    followup: {
+        consultation_id?: number;
+        vs_id?: number;
+        follow_up_date: string;
+        impression: string;
+        instruction: string;
+    };
+}

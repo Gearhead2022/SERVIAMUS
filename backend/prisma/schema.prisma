@@ -86,7 +86,6 @@ model VitallSign {
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
 
-  phr                   ConsultationRecords[]
   cons_req              ConsultationRequest[]
   patient               Patients               @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
   consultations         Consultation[]
@@ -180,9 +179,6 @@ model ConsultationRecords {
   patient Patients       @relation(fields: [patient_id], references: [patient_id])
   consult Consultation[]
 
-  vitallSign      VitallSign? @relation(fields: [vitallSignVs_id], references: [vs_id])
-  vitallSignVs_id Int?
-
   @@index([patient_id])
   @@map("consultation_records")
 }
@@ -195,7 +191,7 @@ enum Sex {
 model ConsultationFollowUp {
   followup_id     Int      @id @default(autoincrement())
   consultation_id Int
-  followup_date   DateTime
+  follow_up_date  DateTime
   vs_id           Int?
   impression      String?  @db.Text
   instruction     String?  @db.Text
@@ -299,6 +295,7 @@ model Prescription {
   presc_id Int @id @default(autoincrement())
 
   consultation_id Int
+  followup_id     Int?
   patient_id      Int
   doctor_id       Int
 
@@ -311,9 +308,8 @@ model Prescription {
   patient      Patients     @relation(fields: [patient_id], references: [patient_id])
   doctor       Users        @relation(fields: [doctor_id], references: [user_id])
 
-  medicines                       PrescriptionItem[]
-  consultationFollowUp            ConsultationFollowUp? @relation(fields: [consultationFollowUpFollowup_id], references: [followup_id])
-  consultationFollowUpFollowup_id Int?
+  medicines            PrescriptionItem[]
+  consultationFollowUp ConsultationFollowUp? @relation(fields: [followup_id], references: [followup_id])
 
   @@map("prescriptions")
 }
@@ -325,13 +321,8 @@ model PrescriptionItem {
 
   medicine_name String
   strength      String?
-
-  form      String
-  dose      String
-  frequency String
-  route     String
-  duration  String
-  quantity  String?
+  brand_name    String
+  quantity      String?
 
   instruction String?
 

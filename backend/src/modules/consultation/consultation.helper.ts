@@ -122,3 +122,17 @@ export const ensureBillingForRequest = async (
         },
     });
 };
+
+export type ConsultationRequestWithConsultation<T> = {
+    is_follow_up: boolean;
+    consultation: T | null;
+    initialConsultation: T[];
+};
+
+export function getConsultationFromRequest<T>(
+    consult: ConsultationRequestWithConsultation<T>
+): T | undefined {
+    return consult.is_follow_up
+        ? consult.consultation ?? undefined
+        : consult.initialConsultation[0];
+}

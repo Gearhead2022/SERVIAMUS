@@ -14,9 +14,9 @@ import { seedServices } from "./seeders/services.seed";
 const prisma = new PrismaClient();
 
 async function main() {
-    await seedRoles(prisma);
-    await seedUsers(prisma);
-    await seedLaboratory(prisma);
+    // await seedRoles(prisma);
+    // await seedUsers(prisma);
+    // await seedLaboratory(prisma);
     await seedServices(prisma);
     // await seedConsultationRecords(prisma);
     // await seedMedicalCertificateRequest(prisma);

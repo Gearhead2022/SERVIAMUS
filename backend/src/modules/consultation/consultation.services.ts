@@ -1,7 +1,7 @@
 import { prisma } from "../../config/prismaClient";
-import { FollowupConsultationProps, FollowupWithRelations, MedicalCertificatePayload, PatientConsultationRecordsPayload, PrescriptionPayload, WeeklyTally } from "./consultation.types";
-import { RequestStatus, RequestType } from "@prisma/client";
-import { mapRequestToQueueStatus } from "./consultation.helper";
+import { CreateFollowupPayload, FollowupConsultationProps, FollowupWithRelations, MedicalCertificatePayload, PatientConsultationRecordsPayload, PrescriptionPayload, WeeklyTally } from "./consultation.types";
+import { PrescriptionItem, RequestStatus, RequestType } from "@prisma/client";
+import { getConsultationFromRequest, mapRequestToQueueStatus } from "./consultation.helper";
 import { Prisma } from "@prisma/client";
 import { hasQueueTable } from "../queue/queue.services";
 import { ensureBillingForRequest } from "./consultation.helper";
@@ -397,6 +397,7 @@ export const getAllRequests = async (
         req_date: true,
         req_type: true,
         status: true,
+        created_at: true,
 
         patient: {
           select: {
@@ -430,7 +431,30 @@ export const getAllRequests = async (
             physician: true,
             vs_id: true,
             doctor: true,
-            initialConsultation: true,
+            is_follow_up: true,
+
+            initialConsultation: {
+              include: {
+                consultationFollowUps: {
+                  orderBy: {
+                    follow_up_date: "desc",
+                  },
+                  take: 1,
+                },
+              },
+            },
+
+            consultation: {
+              include: {
+                consultationFollowUps: {
+                  orderBy: {
+                    follow_up_date: "desc",
+                  },
+                  take: 1,
+                },
+              },
+            },
+
             vitals: {
               select: {
                 bp: true,
@@ -439,8 +463,8 @@ export const getAllRequests = async (
                 rr: true,
                 wt: true,
                 ht: true,
-              }
-            }
+              },
+            },
           },
         },
 
@@ -456,6 +480,8 @@ export const getAllRequests = async (
         },
       },
     });
+
+  // console.log('all request', requests)
 
   return {
     data: requests,
@@ -626,10 +652,12 @@ export const getStatistics = async () => {
 };
 
 export const createPresciptions = async (payload: PrescriptionPayload) => {
+  console.log("Prescription payload:", payload);
   return prisma.$transaction(async (tx) => {
     const prescription = await tx.prescription.create({
       data: {
         consultation_id: payload.consultation_id,
+        followup_id: payload.followup_id ?? null,
         patient_id: payload.patient_id,
         doctor_id: payload.doctor_id,
         gen_notes: payload.gen_notes,
@@ -639,11 +667,7 @@ export const createPresciptions = async (payload: PrescriptionPayload) => {
           create: payload.medicines.map((m) => ({
             medicine_name: m.medicine_name,
             strength: m.strength,
-            form: m.form,
-            dose: m.dose,
-            frequency: m.frequency,
-            route: m.route,
-            duration: m.duration,
+            brand_name: m.brand_name,
             quantity: m.quantity,
             instruction: m.instruction,
           })),
@@ -1481,23 +1505,8 @@ export const prescriptionRecordHistory = async (
             strength:
               m.strength,
 
-            form:
-              m.form,
-
-            dose:
-              m.dose,
-
-            frequency:
-              m.frequency,
-
-            route:
-              m.route,
-
-            duration:
-              m.duration,
-
-            quantity:
-              m.quantity,
+            brand_name:
+              m.brand_name,
 
             instruction:
               m.instruction,
@@ -2340,7 +2349,7 @@ export const laboratoryRecordHistory = async (
         })),
     }));
 
-  console.log('asd', total);
+  // console.log('asd', total);
 
   return {
     data,
@@ -2385,25 +2394,64 @@ export const createMedicalCertificate = async (payload: MedicalCertificatePayloa
 }
 
 export const getConsultationRecordById = async (cons_id: number) => {
-  return prisma.$transaction(async (tx) => {
-    const data = await tx.consultation.findFirst({
-
-      where: {
-        cons_id
+  const request = await prisma.consultationRequest.findUnique({
+    where: { cons_id },
+    include: {
+      consultation: {
+        include: {
+          patient: true,
+          vitals: true,
+          consultRecords: true,
+          consultationFollowUps: {
+            orderBy: {
+              follow_up_date: "desc",
+            },
+            take: 1,
+          },
+        },
       },
-      select: {
-        cons_id: true,
-        consultation_id: true,
-        patient_id: true,
-        consultation_date: true,
-        vs_id: true,
-        phr_id: true,
-        chief_complaint: true,
-      }
-    })
+      initialConsultation: {
+        include: {
+          patient: true,
+          vitals: true,
+          consultRecords: true,
+          consultationFollowUps: {
+            orderBy: {
+              follow_up_date: "desc",
+            },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
 
-    return data;
-  })
+  if (!request) return null;
+
+  const consultation = request.is_follow_up
+    ? request.consultation
+    : request.initialConsultation[0];
+
+  if (!consultation) return null;
+
+  const patient = consultation.patient;
+  const vitals = consultation.vitals;
+  const consultRecords = consultation.consultRecords;
+  const latestFollowup = consultation.consultationFollowUps[0];
+
+  return {
+    consultation_id: consultation.consultation_id,
+    patient_id: patient.patient_id,
+    name: patient.name,
+    consultationFollowUps: latestFollowup ?? null,
+
+    cons_id: consultation.cons_id,
+    followup_id: latestFollowup?.followup_id ?? null,
+    consultation_date: consultation.consultation_date,
+    vs_id: vitals?.vs_id,
+    phr_id: consultRecords?.phr_id,
+    chief_complaint: consultation.chief_complaint,
+  };
 }
 
 export const getRequestsPerWeekday = async (req_types?: RequestType[]) => {
@@ -2629,6 +2677,17 @@ export const getConsultationRxById = async (req_id: number) => {
     select: {
       consult: {
         include: {
+          consultation: {
+            include: {
+              prescriptions: {
+                include: {
+                  patient: true,
+                  medicines: true,
+                },
+              },
+            },
+          },
+
           initialConsultation: {
             include: {
               prescriptions: {
@@ -2644,35 +2703,37 @@ export const getConsultationRxById = async (req_id: number) => {
     },
   });
 
-  if (!record?.consult?.initialConsultation?.length) {
+  if (!record?.consult) {
     return null;
   }
 
   const consultation = record.consult;
 
-  const consultationData = consultation.initialConsultation[0];
+  const consultationData = getConsultationFromRequest(record.consult);
 
-  if (!consultationData?.prescriptions?.length) {
+  if (!consultationData) {
+    return null;
+  }
+
+  if (!consultationData.prescriptions.length) {
     return null;
   }
 
   const prescriptionData = consultationData.prescriptions[0];
 
+  console.log('backend data', prescriptionData)
+
   return {
     patient_id: prescriptionData.patient.patient_id,
+    followup_id: prescriptionData.followup_id,
     cons_id: consultation.cons_id,
     doctor_id: prescriptionData.doctor_id,
     gen_notes: prescriptionData.gen_notes,
 
-    medicines: prescriptionData.medicines.map((m) => ({
+    medicines: prescriptionData.medicines.map((m: PrescriptionItem) => ({
       medicine_name: m.medicine_name,
       strength: m.strength,
-      form: m.form,
-      dose: m.dose,
-      frequency: m.frequency,
-      route: m.route,
-      duration: m.duration,
-      quantity: m.quantity,
+      brand_name: m.brand_name,
       instruction: m.instruction,
     })),
   };
@@ -2719,17 +2780,204 @@ export const getMedicalCertificateById = async (req_id: number) => {
 
 };
 
+export const getFollowupById = async (req_id: number) => {
+  const record = await prisma.request.findFirst({
+    where: {
+      req_id
+    },
+    select: {
+      consult: {
+        include: {
+          initialConsultation: {
+            include: {
+              patient: true,
+              vitals: true,
+              consultRecords: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!record || !record.consult) return null;
+
+  // console.log("STEP 1", record);
+
+  // if (!record) {
+  //   console.log("RETURN NULL: record not found");
+  //   return null;
+  // }
+
+  // if (!record.consult) {
+  //   console.log("RETURN NULL: consult not found");
+  //   return null;
+  // }
+
+  // console.log("STEP 2", record.consult);
+
+  const consultation = record.consult;
+
+  let consultationData;
+
+  if (consultation.is_follow_up) {
+    consultationData = await prisma.consultation.findUnique({
+      where: {
+        consultation_id: consultation.case_consultation_id!,
+      },
+      include: {
+        patient: true,
+        vitals: true,
+        consultRecords: true,
+      },
+    });
+  } else {
+    consultationData = consultation.initialConsultation.at(0);
+  }
+
+  if (!consultationData) return null;
+
+  // console.log("STEP 3", consultation.initialConsultation);
+
+  if (!consultationData) {
+    console.log("RETURN NULL: consultationData not found");
+    return null;
+  }
+
+  if (!consultationData) return null;
+
+  const patient = consultationData.patient;
+  const vitals = consultationData.vitals;
+  const consultRecords = consultationData.consultRecords;
+
+  const consultationId = record.consult.case_consultation_id;
+
+  let followup: FollowupWithRelations | null = null;
+
+  if (consultationId) {
+    followup = await prisma.consultationFollowUp.findFirst({
+      where: {
+        consultation_id: consultationId,
+      },
+      include: {
+        vitals: true,
+        consult: true,
+        prescriptions: {
+          include: {
+            medicines: true,
+          },
+        },
+      },
+      orderBy: {
+        follow_up_date: "desc", // latest follow-up
+      },
+    });
+  }
+  return {
+    consultation_id: consultationData.consultation_id,
+    cons_id: consultation.cons_id,
+    patient_id: patient.patient_id,
+    name: patient.name,
+    address: patient.address,
+    contact_number: patient.contact_number,
+    birth_date: patient.birth_date,
+    sex: patient.sex,
+    age: patient.age,
+    religion: patient.religion ?? undefined,
+    consultation_date: consultationData.consultation_date,
+    chief_complaint: consultationData.chief_complaint,
+    hist_illness: consultationData.hist_illness ?? undefined,
+    bp: vitals?.bp ?? undefined,
+    temp: vitals?.temp ?? undefined,
+    cr: vitals?.cr ?? undefined,
+    rr: vitals?.rr ?? undefined,
+    wt: vitals?.wt ?? undefined,
+    ht: vitals?.ht ?? undefined,
+    pmh_allergy: consultRecords?.pmh_allergy ?? false,
+    pmh_admission: consultRecords?.pmh_admission ?? false,
+    pmh_others: consultRecords?.pmh_others ?? false,
+    pmh_others_text: consultRecords?.pmh_others_text ?? undefined,
+    fh_htn: consultRecords?.fh_htn ?? false,
+    fh_dm: consultRecords?.fh_dm ?? false,
+    fh_ba: consultRecords?.fh_ba ?? false,
+    fh_cancer: consultRecords?.fh_cancer ?? false,
+    fh_others: consultRecords?.fh_others ?? false,
+    fh_others_text: consultRecords?.fh_others_text ?? undefined,
+    ob_score: consultRecords?.ob_score ?? "",
+    ob_nvsd: consultRecords?.ob_nvsd ?? false,
+    ob_cs: consultRecords?.ob_cs ?? false,
+    menarche: consultRecords?.menarche ?? "",
+    interval: consultRecords?.interval ?? "",
+    duration: consultRecords?.duration ?? "",
+    amount: consultRecords?.amount ?? "",
+    ob_symptoms: consultRecords?.ob_symptoms ?? "",
+    cigarette_use: consultRecords?.cigarette_use ?? false,
+    alcohol_use: consultRecords?.alcohol_use ?? false,
+    drug_use: consultRecords?.drug_use ?? false,
+    exercise: consultRecords?.exercise ?? false,
+    hygiene_prac: consultRecords?.hygiene_prac ?? false,
+    coffee_cons: consultRecords?.coffee_cons ?? false,
+    soda_cons: consultRecords?.soda_cons ?? false,
+    sh_allergy: consultRecords?.sh_allergy ?? false,
+    sh_admission: consultRecords?.sh_admission ?? false,
+    travel_history: consultRecords?.travel_history ?? undefined,
+    diet: consultRecords?.diet ?? undefined,
+    stress: consultRecords?.stress ?? undefined,
+    occupation: consultRecords?.occupation ?? undefined,
+    examination: consultationData.examination ?? undefined,
+    assessment: consultationData.assessment ?? undefined,
+    plans: consultationData.plans ?? undefined,
+    follow_up_date: consultationData.follow_up_date ?? undefined,
+
+    followup: followup
+      ? {
+        followup_id: followup.followup_id,
+        consultation_id: followup.consultation_id,
+        vs_id: followup.vs_id,
+        follow_up_date: followup.follow_up_date,
+        impression: followup.impression,
+        instruction: followup.instruction,
+        vitals: followup.vitals,
+        prescriptions: '',
+      }
+      : null,
+  };
+};
+
 export const getFollowupRecords = async (cons_id: number) => {
   return prisma.$transaction(async (tx) => {
 
     const consultationRequest = await tx.consultationRequest.findUnique({
-      where: { cons_id },
+      where: {
+        cons_id
+      },
+      include: {
+        vitals: true
+      }
     });
 
     if (!consultationRequest) {
       return null;
     }
-    const consultationId = consultationRequest.case_consultation_id;
+    let consultationId: number | null = null
+
+    if (consultationRequest.case_consultation_id) {
+
+      consultationId = consultationRequest.case_consultation_id;
+
+    } else {
+
+      const initial = await tx.consultation.findFirst({
+        where: {
+          cons_id: consultationRequest.cons_id,
+        },
+        select: {
+          consultation_id: true,
+        },
+      });
+
+      consultationId = initial?.consultation_id ?? null;
+    }
 
     let consultation = null;
 
@@ -2768,6 +3016,13 @@ export const getFollowupRecords = async (cons_id: number) => {
       followups = await tx.consultationFollowUp.findMany({
         where: {
           consultation_id: consultationId,
+          consult: {
+            consultRequest: {
+              request: {
+                status: 'DONE'
+              }
+            }
+          }
         },
         include: {
           vitals: true,
@@ -2779,13 +3034,18 @@ export const getFollowupRecords = async (cons_id: number) => {
           },
         },
         orderBy: {
-          followup_date: "asc",
+          follow_up_date: "asc",
         },
       });
     }
 
+    // console.log('backend followup data', followups)
+
     return {
       ...baseline,
+      consultation_id: consultation.consultation_id,
+      vs_id: consultationRequest.vs_id,
+      followup_date: consultation.follow_up_date,
 
       initialConsultation: {
         consultation_id: consultation.consultation_id,
@@ -2796,31 +3056,30 @@ export const getFollowupRecords = async (cons_id: number) => {
         assessment: consultation.assessment,
         plans: consultation.plans,
         follow_up_date: consultation.follow_up_date,
-
-        bp: consultation.vitals?.bp,
-        temp: consultation.vitals?.temp,
-        cr: consultation.vitals?.cr,
-        rr: consultation.vitals?.rr,
-        wt: consultation.vitals?.wt,
-        ht: consultation.vitals?.ht,
-        prescription: {
-          presc_id: consultation.prescriptions[0].presc_id,
-          consultation_id: consultation.prescriptions[0].consultation_id,
-          patient_id: consultation.prescriptions[0].patient_id,
-          doctor_id: consultation.prescriptions[0].doctor_id,
-          gen_notes: consultation.prescriptions[0].gen_notes,
-          issued_date: consultation.prescriptions[0].issued_date,
-          medicines: consultation.prescriptions[0].medicines.map((m) => ({
-            medicine_name: m.medicine_name,
-            strength: m.strength,
-            form: m.form,
-            dose: m.dose,
-            frequency: m.frequency,
-            route: m.route,
-            duration: m.duration,
-            quantity: m.quantity,
-            instruction: m.instruction,
-          })),
+        prescription: consultation.prescriptions.length > 0
+          ? {
+            presc_id: consultation.prescriptions[0].presc_id,
+            consultation_id: consultation.prescriptions[0].consultation_id,
+            patient_id: consultation.prescriptions[0].patient_id,
+            doctor_id: consultation.prescriptions[0].doctor_id,
+            gen_notes: consultation.prescriptions[0].gen_notes,
+            issued_date: consultation.prescriptions[0].issued_date,
+            medicines: consultation.prescriptions[0].medicines.map((m) => ({
+              medicine_name: m.medicine_name,
+              strength: m.strength,
+              brand_name: m.brand_name,
+              instruction: m.instruction,
+            })),
+          }
+          : null,
+        initialVitals: {
+          vs_id: consultation.vitals?.vs_id,
+          bp: consultation.vitals?.bp,
+          temp: consultation.vitals?.temp,
+          cr: consultation.vitals?.cr,
+          rr: consultation.vitals?.rr,
+          wt: consultation.vitals?.wt,
+          ht: consultation.vitals?.ht,
         }
       },
 
@@ -2861,4 +3120,118 @@ export const getInitialConsultations = async (patientId: number) => {
       doctor: c.consultRequest.doctor,
     }
   })
+};
+
+
+export const createFollowUp = async (payload: CreateFollowupPayload) => {
+  return prisma.$transaction(async (tx) => {
+    const consultation = await tx.consultationRecords.update({
+      where: { patient_id: payload.patient_id },
+      data: {
+        patient_id: payload.patient_id,
+
+        pmh_allergy: payload.pmh_allergy ?? false,
+        pmh_admission: payload.pmh_admission ?? false,
+        pmh_others: payload.pmh_others ?? false,
+        pmh_others_text: payload.pmh_others_text ?? null,
+
+        fh_htn: payload.fh_htn ?? false,
+        fh_dm: payload.fh_dm ?? false,
+        fh_ba: payload.fh_ba ?? false,
+        fh_cancer: payload.fh_cancer ?? false,
+        fh_others: payload.fh_others ?? false,
+        fh_others_text: payload.fh_others_text ?? null,
+
+        ob_score: payload.ob_score ?? null,
+        ob_nvsd: payload.ob_nvsd ?? false,
+        ob_cs: payload.ob_cs ?? false,
+
+        menarche: payload.menarche ?? null,
+        interval: payload.interval ?? null,
+        duration: payload.duration ?? null,
+        amount: payload.amount ?? null,
+        ob_symptoms: payload.ob_symptoms ?? null,
+
+        cigarette_use: payload.cigarette_use ?? false,
+        alcohol_use: payload.alcohol_use ?? false,
+        drug_use: payload.drug_use ?? false,
+        exercise: payload.exercise ?? false,
+        hygiene_prac: payload.hygiene_prac ?? false,
+        coffee_cons: payload.coffee_cons ?? false,
+        soda_cons: payload.soda_cons ?? false,
+
+        sh_allergy: payload.sh_allergy ?? false,
+        sh_admission: payload.sh_admission ?? false,
+
+        travel_history: payload.travel_history ?? null,
+        diet: payload.diet ?? null,
+        stress: payload.stress ?? null,
+        occupation: payload.occupation ?? null,
+      },
+    });
+
+    const followup = await tx.consultationFollowUp.create({
+      data: {
+        consultation_id: payload.consultation_id ?? 0,
+        follow_up_date: new Date(payload.followup.follow_up_date),
+        vs_id: payload.vs_id,
+        impression: payload.followup.impression,
+        instruction: payload.followup.instruction,
+      }
+    })
+    return followup;
+  })
+}
+
+// For print preview
+
+export const getInitialConsultationWithPrevFollowups = async (patientId: number, consultationId: number) => {
+  const initialConsultation = await prisma.consultation.findFirst({
+    where: {
+      patient_id: patientId,
+      consultation_id: consultationId
+    },
+    include: {
+      vitals: true,
+      consultRequest: {
+        include: {
+          doctor: true,
+        }
+      }
+    },
+    orderBy: {
+      created_at: 'desc'
+    }
+  });
+
+  const FollowupsData = await prisma.consultationFollowUp.findMany({
+    where: {
+      consultation_id: consultationId
+    },
+    include: {
+      vitals: true
+    }
+  })
+
+  return {
+    consultation_id: initialConsultation?.consultation_id,
+    consultation_date: initialConsultation?.consultation_date,
+    chief_complaint: initialConsultation?.chief_complaint,
+    hist_illness: initialConsultation?.hist_illness,
+    examination: initialConsultation?.examination,
+    assessment: initialConsultation?.assessment,
+    plans: initialConsultation?.plans,
+    follow_up_date: initialConsultation?.follow_up_date,
+    doctor: initialConsultation?.consultRequest.doctor,
+    initialVitals: initialConsultation?.vitals,
+    followups: FollowupsData.map((f) => ({
+      followup_id: f.followup_id,
+      consultation_id: f.consultation_id,
+      vs_id: f.vs_id,
+      followup_date: f.follow_up_date,
+      impression: f.impression,
+      instruction: f.instruction,
+      vitals: f.vitals,
+    })),
+  }
 };
