@@ -1,47 +1,30 @@
 // utils/consultation/normalizeConsultationDefaults.ts
 
-import { FollowupConsultationResultProps } from "@/types/ConsultationTypes";
-import { PatientProps } from "@/types/PatientTypes";
-import { VitalSignProps } from "@/types/RequestTypes";
+import { RegisterFollowupFormValues } from "@/schemas/consultation.schema";
 
-interface followup {
-    followup_date: Date;
-    vs_id: number;
-    impression?: string;
-    instruction?: string;
-}
-
-export function normalizeFollowUpDefaults(
-    patient?: PatientProps,
-    followups?: FollowupConsultationResultProps,
-    currentVitals?: VitalSignProps,
-    followup?: followup
+export function mapFollowUpToPrisma(
+    followups?: RegisterFollowupFormValues,
+    patientId?: number,
+    const_id?: number,
 ) {
     return {
-        consultation_id: followups?.initialConsultation.consultation_id,
-        vs_id: currentVitals?.vs_id,
+        cons_id: const_id,
+        consultation_id: followups?.consultation_id ?? 0,
+        vs_id: followups?.vs_id,
         // Patient Info
-        patient_id: patient?.patient_id,
-        name: patient?.name ?? "",
-        contact_number: patient?.contact_number ?? "",
-        address: patient?.address ?? "",
-        birth_date: patient?.birth_date
-            ? new Date(patient.birth_date).toISOString().split("T")[0]
+        patient_id: patientId,
+        name: followups?.name ?? "",
+        contact_number: followups?.contact_number ?? "",
+        address: followups?.address ?? "",
+        birth_date: followups?.birth_date
+            ? new Date(followups.birth_date).toISOString().split("T")[0]
             : "",
-        sex: patient?.sex?.toLowerCase() === "female" ? "female" : "male",
-        age: patient?.age?.toString() ?? "",
+        sex: followups?.sex?.toLowerCase() === "female" ? "female" : "male",
+        age: followups?.age?.toString() ?? "",
         religion: followups?.religion ?? "",
 
         // Consultation Info
         consultation_date: new Date().toISOString().split("T")[0],
-
-        // Vitals
-        bp: currentVitals?.bp ?? "",
-        temp: currentVitals?.temp ?? "",
-        cr: currentVitals?.cr ?? "",
-        rr: currentVitals?.rr ?? "",
-        wt: currentVitals?.wt ?? "",
-        ht: currentVitals?.ht ?? "",
 
         // Personal Medical History
         pmh_allergy: followups?.pmh_allergy ?? false,
@@ -92,11 +75,13 @@ export function normalizeFollowUpDefaults(
             : "",
 
         followup: {
-            consultation_id: followups?.consultation_id,
-            vs_id: followup?.vs_id,
-            follow_up_date: followup?.followup_date,
-            impression: followup?.impression,
-            instruction: followup?.instruction,
+            consultation_id: followups?.followup.consultation_id,
+            vs_id: followups?.followup.vs_id,
+            follow_up_date: followups?.followup.follow_up_date
+                ? new Date(followups.followup.follow_up_date).toISOString().split("T")[0]
+                : "",
+            impression: followups?.followup.impression ?? "",
+            instruction: followups?.followup.instruction ?? "",
         },
     };
 }

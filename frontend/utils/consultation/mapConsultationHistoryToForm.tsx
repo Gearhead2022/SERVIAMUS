@@ -1,8 +1,8 @@
-import { ConsultationResultProps } from "@/types/ConsultationTypes";
+import { FollowupConsultationResultProps } from "@/types/ConsultationTypes";
 import { PatientProps } from "@/types/PatientTypes";
 
-export function mapConsultationRecordToForm(
-    consultation: ConsultationResultProps,
+export function mapConsultationHistoryToForm(
+    consultation: FollowupConsultationResultProps,
     patient?: PatientProps,
     cons_id?: number,
 ) {
@@ -15,29 +15,29 @@ export function mapConsultationRecordToForm(
         religion: patient?.religion ?? "",
         birth_date: patient?.birth_date ?? "",
         sex:
-            consultation.sex
-                ? consultation.sex.toLowerCase() as "male" | "female"
+            patient?.sex
+                ? patient.sex.toLowerCase() as "male" | "female"
                 : "male",
         age: String(patient?.age ?? ""),
 
         // consultation details
         consultation_date: consultation.consultation_date ? new Date(consultation.consultation_date).toISOString().split("T")[0] : "",
 
-        chief_complaint: consultation.chief_complaint ?? "",
-        hist_illness: consultation.hist_illness ?? "",
-        examination: consultation.examination ?? "",
-        assessment: consultation.assessment ?? "",
-        plans: consultation.plans ?? "",
+        chief_complaint: consultation.initialConsultation.chief_complaint ?? "",
+        hist_illness: consultation.initialConsultation.hist_illness ?? "",
+        examination: consultation.initialConsultation.examination ?? "",
+        assessment: consultation.initialConsultation.assessment ?? "",
+        plans: consultation.initialConsultation.plans ?? "",
         follow_up_date: consultation.follow_up_date ? new Date(consultation.follow_up_date).toISOString().split("T")[0] : "",
-        is_follow_up: consultation.is_follow_up ?? false,
+        is_follow_up: false,
 
         // vitals (from your include: vitals)
-        bp: consultation.bp ?? "",
-        temp: consultation.temp ?? "",
-        cr: consultation.cr ?? "",
-        rr: consultation.rr ?? "",
-        wt: consultation.wt ?? "",
-        ht: consultation.ht ?? "",
+        bp: consultation.initialConsultation.initialVitals.bp ?? "",
+        temp: consultation.initialConsultation.initialVitals.temp ?? "",
+        cr: consultation.initialConsultation.initialVitals.cr ?? "",
+        rr: consultation.initialConsultation.initialVitals.rr ?? "",
+        wt: consultation.initialConsultation.initialVitals.wt ?? "",
+        ht: consultation.initialConsultation.initialVitals.ht ?? "",
 
         // PMH / history flags (safe defaults if not present)
         pmh_allergy: consultation.pmh_allergy ?? false,

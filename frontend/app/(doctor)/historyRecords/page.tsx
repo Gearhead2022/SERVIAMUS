@@ -20,6 +20,7 @@ import RoleGuard from "@/guards/RoleGuard";
 import SummaryCards from "@/components/ui/SummaryCards";
 import ConsultationResultModalView from "@/components/Modal/ChildModal/ConsultationResultModalView";
 import { openConsultPrintPage } from "@/utils/consultation/consultPrint";
+import ConsultationHistoryModal from "@/components/Modal/ChildModal/ConsultationHistoryModal";
 
 type Status = "WAITING" | "SERVING" | "DONE" | "CANCELED" | "RELEASED" | "ISSUED" | "ACTIVE";
 type TabId = "consultations" | "prescriptions" | "certificates" | "laboratory";
@@ -200,12 +201,13 @@ const HistoryRecords = () => {
     const [selecteRxRecord, setSelectedRxRecord] = useState<PrescriptionHistoryItem | null>(null);
     const [selectedCertificateRecord, setSelectedCertificateRecord] = useState<MedicalCertificateHistoryItem | null>(null);
 
-    // console.log('consult request', laboratoryData)
+    console.log('consult request', selectedConsultationRecord)
 
     const handleViewConsultation = async (
         requestId: number,
         form: RegisterConsultationFormValues,
     ) => {
+        console.log('from handler', form)
         setCurrentRequestId(requestId);
         setSelectedConsultationRecord(form);
         setConsultationResultPreview(true);
@@ -270,6 +272,7 @@ const HistoryRecords = () => {
             bg: "#fdf0f2",
         },
     ];
+    // console.log('consult', selectedConsultationRecord)
 
     return (
         <RoleGuard allowedRoles={["DOCTOR", "ADMIN"]}>
@@ -278,7 +281,7 @@ const HistoryRecords = () => {
                 <div className="relative">
 
                     {currentRequest && selecteConsultRecord && consultationResultPreview && selectedConsultationRecord && (
-                        <ConsultationResultModalView form={selectedConsultationRecord} type="consult-result" doctorId={doctorId} onBack={() => setConsultationResultPreview(false)} patient={selecteConsultRecord.patient} request={currentRequest}
+                        <ConsultationHistoryModal type="consult-result" doctorId={doctorId} onBack={() => setConsultationResultPreview(false)} patient={selecteConsultRecord.patient} request={currentRequest}
                             onDownloadPdf={() =>
                                 openConsultPrintPage(currentRequest.req_id, {
                                     autoDownload: true,
@@ -293,7 +296,7 @@ const HistoryRecords = () => {
                                     patientName: selecteConsultRecord?.patient.name
                                 })
                             }}
-                        ></ConsultationResultModalView>
+                        ></ConsultationHistoryModal>
                     )}
 
                     {currentRequest && selecteConsultRecord && prescriptionPreview && selectedPrescriptionRecord && (
@@ -485,7 +488,7 @@ const HistoryRecords = () => {
                                             <EmptyState icon={Stethoscope} message="No consultation records match your search." />
                                         ) : (
                                             <table className="w-full text-sm">
-                                                <TableHead cols={["Patient", "Chief Complaint", "Diagnosis", "Doctor", "Follow-up", "Status", "Date Request", "action"]} />
+                                                <TableHead cols={["Patient", "Chief Complaint", "Doctor", "Follow-up", "Status", "Date Request", "action"]} />
                                                 <tbody>
                                                     {Array.isArray(filteredConsults) && filteredConsults.map((c, i) => (
                                                         <tr key={i} className="group transition-all"
@@ -507,15 +510,15 @@ const HistoryRecords = () => {
                                                             <td className="px-5 py-3.5 max-w-[160px]">
                                                                 <p className="text-[12px] truncate" style={{ color: "#4a5568" }}>{c.consultation.chief_complaint}</p>
                                                             </td>
-                                                            <td className="px-5 py-3.5 max-w-[180px]">
+                                                            {/* <td className="px-5 py-3.5 max-w-[180px]">
                                                                 <p className="text-[12px] truncate" style={{ color: "#4a5568" }}>{c.consultation.assessment}</p>
-                                                            </td>
+                                                            </td> */}
                                                             <td className="px-5 py-3.5 whitespace-nowrap">
                                                                 <p className="text-[12px]" style={{ color: "#6b7da0" }}>{c.consultationRequest.doctor.name}</p>
                                                             </td>
                                                             <td className="px-5 py-3.5 whitespace-nowrap">
                                                                 {c.consultation.follow_up_date ? (
-                                                                    <span className="flex items-center gap-1.5 text-[11px] font-medium"
+                                                                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-black"
                                                                         style={{ color: "#d97706" }}>
                                                                         <Clock size={10} />{formatDate(c.consultation.follow_up_date)}
                                                                     </span>

@@ -3,11 +3,12 @@
 import Button from "@/components/ui/Button";
 import MedicalFormPreview from "../NestedModal/ModalPreview/MedicalFormPreview";
 import { RequestProps } from "@/types/RequestTypes";
-import { MedCertFormValues, PrescriptionValues, RegisterConsultationFormValues } from "@/schemas/consultation.schema";
+import { MedCertFormValues, PrescriptionValues, RegisterConsultationFormValues, RegisterFollowupFormValues } from "@/schemas/consultation.schema";
+import { useState } from "react";
 
 type Props = {
     request: RequestProps;
-    form: RegisterConsultationFormValues | PrescriptionValues | MedCertFormValues;
+    form: RegisterConsultationFormValues | PrescriptionValues | MedCertFormValues | RegisterFollowupFormValues;
     onBack: () => void;
     onDownloadPdf?: () => void;
     onOpenPrintPage: () => void;
@@ -15,7 +16,7 @@ type Props = {
     backLabel?: string;
     showDoneButton?: boolean;
     onSubmitSuccess?: boolean;
-    type: "consult-result" | "prescription" | "med-cert";
+    type: "consult-result" | "prescription" | "med-cert" | "followup-result";
     doctorId: number;
 };
 
@@ -38,7 +39,14 @@ export default function ConsultResultPreview({
             ? "temp-1"
             : "default";
 
-    // console.log('modals', form)
+    // console.log("LIVE FORM", form);
+
+    const [submitted, setSubmitted] = useState(false);
+
+    const handleDone = async () => {
+        await onDone?.();
+        setSubmitted(true);
+    };
 
     return (
         <div className={`consult-print-sheet  bg-slate-100 print:bg-white print:p-0 ${type === "med-cert" ? "page-b6" : "page-a4"}`}>
@@ -70,7 +78,7 @@ export default function ConsultResultPreview({
                 </div>
             </div>
 
-            <MedicalFormPreview type={type} form={form} doctorId={doctorId} template={template} />
+            <MedicalFormPreview type={type} form={form} doctorId={doctorId} template={template} isSaved={onSubmitSuccess} />
 
             <div className="rounded-2xl border border-slate-200 bg-white p-4 print:hidden">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -82,7 +90,7 @@ export default function ConsultResultPreview({
                             {backLabel}
                         </Button>
                         {showDoneButton && onDone ? (
-                            <Button type="button" variant="primary" onClick={onDone} disabled={onSubmitSuccess}>
+                            <Button type="button" variant="primary" onClick={handleDone} disabled={submitted}>
                                 Done
                             </Button>
                         ) : null}

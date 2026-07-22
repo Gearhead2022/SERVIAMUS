@@ -75,6 +75,14 @@ export const formatDate = (
     }).format(date);
 };
 
+export const formatDateTime = (date: string | Date) => {
+    return new Date(date).toLocaleTimeString("en-PH", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+    });
+};
+
 export const formatTime = (
     value?: string | Date,
     options?: Intl.DateTimeFormatOptions

@@ -31,9 +31,8 @@ const Select: React.FC<SelectProps> = ({
 
       <select
         {...props}
-        className={`${selectBaseCls} ${arrowStyle} ${
-          error ? selectErrCls : ""
-        } ${className}`}
+        className={`${selectBaseCls} ${arrowStyle} ${error ? selectErrCls : ""
+          } ${className}`}
       >
         {children}
       </select>

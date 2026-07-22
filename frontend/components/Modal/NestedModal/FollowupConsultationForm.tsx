@@ -18,9 +18,10 @@ type StepProps = {
     form: UseFormReturn<RegisterFollowupFormValues>;
     consultation?: InitialConsultationProps;
     followups?: FollowupConsultationProps[];
-    vitals?: VitalSignProps;
+    currentvitals?: VitalSignProps;
     patient?: PatientProps;
     prescription?: PrescriptionProps;
+    initialVitals?: VitalSignProps;
 };
 const STEPS = [
     { label: "Personal", sub: "Information" },
@@ -172,8 +173,8 @@ function Step1({ form, consultation }: StepProps) {
                     <textarea
                         rows={3}
                         placeholder="Describe the patient's primary reason for consultation…"
-                        className={`${inputCls} resize-y text-gray-900 readonly cursor-not-allowed`}
-                        value={consultation?.chief_complaint ?? ""}
+                        className={`${inputCls}  resize-y text-gray-900 readonly cursor-not-allowed`}
+                        defaultValue={consultation?.chief_complaint}
                     />
                 </FormGroup>
             </div>
@@ -196,7 +197,7 @@ function Step2({ form, consultation }: StepProps) {
                     rows={5}
                     placeholder="Describe onset, duration, character, associated symptoms, relieving/aggravating factors…"
                     className={`${inputCls} mt-1 resize-y readonly cursor-not-allowed`}
-                    value={consultation?.hist_illness}
+                    defaultValue={consultation?.hist_illness}
                 />
             </div>
         </>
@@ -304,27 +305,7 @@ function Step3({ form }: StepProps) {
     );
 }
 
-function ReadOnlyBlock({
-    label,
-    value,
-}: {
-    label: string;
-    value?: string | null;
-}) {
-    return (
-        <div className="rounded-xl border border-[#e1e7f2] bg-[#fbfcff] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0] mb-2">
-                {label}
-            </p>
-
-            <p className="text-sm text-[#1a2a45] leading-relaxed whitespace-pre-line">
-                {value || "-"}
-            </p>
-        </div>
-    );
-}
-
-function Step4({ form, consultation, followups = [], patient, vitals, prescription }: StepProps) {
+function Step4({ form, consultation, followups = [], patient, currentvitals, prescription, initialVitals }: StepProps) {
     const { register, formState: { errors } } = form;
 
     return (
@@ -341,7 +322,7 @@ function Step4({ form, consultation, followups = [], patient, vitals, prescripti
                 <h5 className={`text-center ${labelCls}`}>PATIENT&apos;S NAME: {patient?.name}</h5>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr] gap-5">
 
                 {/* TIMELINE */}
                 <div className="rounded-2xl border border-[#dce3ef] bg-white p-5">
@@ -439,7 +420,7 @@ function Step4({ form, consultation, followups = [], patient, vitals, prescripti
                             </span>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr]">
+                        <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr]">
 
                             {/* LEFT INFO */}
                             <div className="border-r border-[#dce3ef] p-5">
@@ -461,23 +442,23 @@ function Step4({ form, consultation, followups = [], patient, vitals, prescripti
                                 <div className="space-y-3">
 
                                     {[
-                                        ["BP", vitals?.bp],
-                                        ["TEMP", vitals?.temp],
-                                        ["CR", vitals?.cr],
-                                        ["RR", vitals?.rr],
-                                        ["WT", vitals?.wt],
-                                        ["HT", vitals?.ht],
+                                        ["BP", initialVitals?.bp],
+                                        ["TEMP", initialVitals?.temp],
+                                        ["CR", initialVitals?.cr],
+                                        ["RR", initialVitals?.rr],
+                                        ["WT", initialVitals?.wt],
+                                        ["HT", initialVitals?.ht],
                                     ].map(([label, value]) => (
 
                                         <div
                                             key={label}
-                                            className="flex items-center justify-between border-b border-dashed border-[#edf1f6] pb-2"
+                                            className="grid grid-cols-[1fr_1fr] items-center border-b border-dashed border-[#edf1f6] pb-1"
                                         >
-                                            <span className="text-xs font-semibold text-[#6b7da0]">
-                                                {label}
+                                            <span className="flex justify-between pr-5 text-xs font-semibold text-[#6b7da0]">
+                                                {label} <strong>:</strong>
                                             </span>
 
-                                            <span className="text-sm font-medium text-[#0f2244]">
+                                            <span className="text-sm font-medium text-[#0f2244] bg-gray-100 pl-1">
                                                 {value || "-"}
                                             </span>
                                         </div>
@@ -489,46 +470,61 @@ function Step4({ form, consultation, followups = [], patient, vitals, prescripti
                             {/* RIGHT CONTENT */}
                             <div className="p-5">
 
-                                <div className="pb-4 border-b border-[#edf1f6] gap-2 space-y-4">
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7da0] mb-1">
-                                        Chief Complaint
-                                    </p>
+                                <div className="rounded-xl border border-[#e5eaf2] bg-white p-4 space-y-3">
 
-                                    <p className="text-sm leading-6 text-[#1a2a45] whitespace-pre-wrap">
-                                        {consultation?.chief_complaint || "-"}
-                                    </p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7b8ca8]">
+                                                Chief Complaint
+                                            </p>
+                                            <p className="mt-1 text-sm text-[#1a2a45] leading-5">
+                                                {consultation?.chief_complaint || "-"}
+                                            </p>
+                                        </div>
 
-                                    <p className="text-[9px] font-semibold uppercase tracking-widest text-[#6b7da0] mb-1">
-                                        History of Present Illness
-                                    </p>
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7b8ca8]">
+                                                History of Present Illness
+                                            </p>
+                                            <p className="mt-1 text-sm text-[#1a2a45] leading-5">
+                                                {consultation?.hist_illness || "-"}
+                                            </p>
+                                        </div>
+                                    </div>
 
-                                    <p className="text-sm leading-6 text-[#1a2a45] whitespace-pre-wrap">
-                                        {consultation?.hist_illness || "-"}
-                                    </p>
+                                    <div className="border-t border-[#edf1f6]" />
 
-                                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0] mb-1">
-                                        Physical / Neurologic Examination
-                                    </p>
+                                    <div>
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7b8ca8]">
+                                            Physical / Neurologic Examination
+                                        </p>
+                                        <p className="mt-1 text-sm text-[#1a2a45] leading-5 whitespace-pre-wrap">
+                                            {consultation?.examination || "-"}
+                                        </p>
+                                    </div>
 
-                                    <p className="text-sm leading-6 text-[#1a2a45] whitespace-pre-wrap">
-                                        {consultation?.examination || "-"}
-                                    </p>
+                                    <div className="border-t border-[#edf1f6]" />
 
-                                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0] mb-2">
-                                        Assessment
-                                    </p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7b8ca8]">
+                                                Assessment
+                                            </p>
+                                            <p className="mt-1 text-sm text-[#1a2a45] leading-5 whitespace-pre-wrap">
+                                                {consultation?.assessment || "-"}
+                                            </p>
+                                        </div>
 
-                                    <p className="text-sm leading-6 text-[#1a2a45] whitespace-pre-wrap">
-                                        {consultation?.assessment || "-"}
-                                    </p>
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7b8ca8]">
+                                                Plans
+                                            </p>
+                                            <p className="mt-1 text-sm text-[#1a2a45] leading-5 whitespace-pre-wrap">
+                                                {consultation?.plans || "-"}
+                                            </p>
+                                        </div>
+                                    </div>
 
-                                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0] mb-2">
-                                        Plans
-                                    </p>
-
-                                    <p className="text-sm leading-6 text-[#1a2a45] whitespace-pre-wrap">
-                                        {consultation?.plans || "-"}
-                                    </p>
                                 </div>
 
                                 {/* PRESCRIPTION */}
@@ -538,102 +534,223 @@ function Step4({ form, consultation, followups = [], patient, vitals, prescripti
                                         Prescription
                                     </p>
 
-                                    {prescription?.medicines?.length ? (
+                                    <div className="rounded-xl border border-[#e5eaf2] bg-white p-4 space-y-3">
+                                        {prescription?.medicines?.length ? (
+                                            <div className="space-y-3">
+                                                {prescription.medicines.map((m, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className="border-b border-[#edf1f6] pb-3 last:border-0"
+                                                    >
 
-                                        <div className="space-y-3">
+                                                        <div className="flex justify-between">
 
-                                            {prescription.medicines.map((m, index) => (
+                                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7b8ca8]">
+                                                                {m.medicine_name}
+                                                            </p>
+                                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#7b8ca8]">
+                                                                {m.brand_name}
+                                                            </p>
 
-                                                <div
-                                                    key={index}
-                                                    className="border-b border-[#edf1f6] pb-3 last:border-0"
-                                                >
-
-                                                    <div className="flex justify-between">
-
-                                                        <p className="font-semibold text-sm text-[#0f2244]">
-                                                            {m.medicine_name}
-                                                        </p>
-                                                        <p className="text-sm text-[#6b7da0]">
-                                                            {m.dose} {m.frequency}
-                                                        </p>
-
+                                                        </div>
+                                                        {m.instruction && (
+                                                            <p className="text-sm text-[#1a2a45] mt-2 rounded-xl">
+                                                                {m.instruction}
+                                                            </p>
+                                                        )}
                                                     </div>
-                                                    {m.instruction && (
-                                                        <p className="text-sm text-[#1a2a45] mt-2">
-                                                            {m.instruction}
-                                                        </p>
-                                                    )}
-
-                                                </div>
-
-                                            ))}
-
-                                        </div>
-
-                                    ) : (
-
-                                        <p className="text-sm text-[#6b7da0]">
-                                            No prescription recorded.
-                                        </p>
-
-                                    )}
-
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-[#6b7da0]">
+                                                No prescription recorded.
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
-
                             </div>
-
                         </div>
-
                     </div>
 
+                    {/* PREVIOUS FOLLOW-UPS READ ONLY */}
+                    {followups && followups.length > 0 && (
+                        <div className="rounded-2xl border border-[#dce3ef] bg-white">
+                            <h3 className="text-sm font-semibold text-[#0f2244] p-5">
+                                Previous Follow-up Records
+                            </h3>
+
+                            <div className="divide-y divide-[#edf1f6]">
+                                {followups.map((item, index) => (
+                                    <div
+                                        key={item.followup_id ?? index}
+                                        className="grid grid-cols-1 lg:grid-cols-[180px_1fr]"
+                                    >
+                                        {/* LEFT DETAILS */}
+                                        <div className="border-r border-[#dce3ef] p-5">
+                                            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0] mb-4">
+                                                Follow-up #{index + 1}
+                                            </p>
+
+                                            <p className="text-[11px] text-[#6b7da0]">
+                                                Consultation Date
+                                            </p>
+
+                                            <p className="font-semibold text-[#0f2244] mt-1">
+                                                {formatDate(item.followup_date)}
+                                            </p>
+
+                                            <div className="space-y-3 mt-5">
+                                                {[
+                                                    ["BP", item.vitals?.bp],
+                                                    ["TEMP", item.vitals?.temp],
+                                                    ["CR", item.vitals?.cr],
+                                                    ["RR", item.vitals?.rr],
+                                                    ["WT", item.vitals?.wt],
+                                                    ["HT", item.vitals?.ht],
+                                                ].map(([label, value]) => (
+                                                    <div
+                                                        key={label}
+                                                        className="grid grid-cols-[1fr_1fr] items-center border-b border-dashed border-[#edf1f6] pb-1"
+                                                    >
+                                                        <span className="flex justify-between pr-5 text-xs font-semibold text-[#6b7da0]">
+                                                            {label} <strong>:</strong>
+                                                        </span>
+
+                                                        <span className="text-sm font-medium text-[#0f2244] bg-gray-100 pl-1">
+                                                            {value || "-"}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* RIGHT DETAILS */}
+                                        <div className="p-5 space-y-4">
+                                            <div className="border p-3 border-sm rounded-lg border-gray-300">
+                                                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0] mb-2">
+                                                    Impression
+                                                </p>
+                                                <p className="text-sm text-[#1a2a45] whitespace-pre-line h-[60px]">
+                                                    {item.impression || "-"}
+                                                </p>
+                                            </div>
+
+                                            <div className="border p-3 border-sm rounded-lg border-gray-300">
+                                                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0] mb-2">
+                                                    Instruction
+                                                </p>
+                                                <p className="text-sm text-[#1a2a45] whitespace-pre-line min-h-[60px]">
+                                                    {item.instruction || "-"}
+                                                </p>
+                                            </div>
+
+                                            <div className="border p-3 border-sm rounded-lg border-gray-300">
+                                                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0] mb-2">
+                                                    Follow-up Date
+                                                </p>
+                                                <p className="text-sm text-[#1a2a45]">
+                                                    {formatDate(item.followup_date)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* NEW FOLLOW-UP EDITABLE */}
-                    <div className="rounded-2xl border border-[#b0dede] bg-[#f8ffff] p-5">
-                        <h3 className="text-sm font-semibold text-[#0e7c7b] mb-4">
+                    <div className="rounded-2xl border border-[#b0dede] bg-[#f8ffff]">
+                        <h3 className="text-sm font-semibold text-[#0e7c7b] p-5">
                             New Follow-up Details
                         </h3>
 
-                        <div className="grid grid-cols-1 gap-4">
-                            <FormGroup label="Impression">
-                                <textarea
-                                    rows={5}
-                                    placeholder="Enter doctor's impression for this follow-up..."
-                                    className={`${inputCls} mt-1 resize-y`}
-                                    {...register("followups.0.impression")}
-                                />
-                                {errors.followups?.[0]?.impression && (
-                                    <p className="text-sm text-red-500 mt-1">
-                                        {errors.followups[0].impression.message as string}
-                                    </p>
-                                )}
-                            </FormGroup>
+                        <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr]">
+                            {/* LEFT INFO */}
+                            <div className="border-r border-[#dce3ef] p-5">
 
-                            <FormGroup label="Instruction">
-                                <textarea
-                                    rows={5}
-                                    placeholder="Enter instructions, advice, medication, or next steps..."
-                                    className={`${inputCls} mt-1 resize-y`}
-                                    {...register("followups.0.instruction")}
-                                />
-                                {errors.followups?.[0]?.instruction && (
-                                    <p className="text-sm text-red-500 mt-1">
-                                        {errors.followups[0].instruction.message as string}
-                                    </p>
-                                )}
-                            </FormGroup>
+                                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0] mb-4">
+                                    Visit Details
+                                </p>
 
-                            <FormGroup label="Follow-up Date">
-                                <input
-                                    type="date"
-                                    className={`${inputCls} !w-[50%]`}
-                                    {...register("followups.0.follow_up_date")}
-                                />
-                                {errors.followups?.[0]?.follow_up_date && (
-                                    <p className="text-sm text-red-500 mt-1">
-                                        {errors.followups[0].follow_up_date.message as string}
+                                <div className="mb-5">
+                                    <p className="text-[11px] text-[#6b7da0]">
+                                        Consultation Date
                                     </p>
-                                )}
-                            </FormGroup>
+
+                                    <p className="font-semibold text-[#0f2244] mt-1">
+                                        {formatDate(new Date)}
+                                    </p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {[
+                                        ["BP", currentvitals?.bp],
+                                        ["TEMP", currentvitals?.temp],
+                                        ["CR", currentvitals?.cr],
+                                        ["RR", currentvitals?.rr],
+                                        ["WT", currentvitals?.wt],
+                                        ["HT", currentvitals?.ht],
+                                    ].map(([label, value]) => (
+
+                                        <div
+                                            key={label}
+                                            className="grid grid-cols-[1fr_1fr] items-center border-b border-dashed border-[#edf1f6] pb-1"
+                                        >
+                                            <span className="flex justify-between pr-5 text-xs font-semibold text-[#6b7da0]">
+                                                {label} <strong>:</strong>
+                                            </span>
+
+                                            <span className="text-sm font-medium text-[#0f2244] bg-gray-100 pl-1">
+                                                {value || "-"}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                            </div>
+                            <div className="p-5">
+                                <FormGroup label="Impression">
+                                    <textarea
+                                        rows={4}
+                                        placeholder="Enter doctor's impression for this follow-up..."
+                                        className={`${inputCls} mt-1 resize-y`}
+                                        {...register("followup.impression")}
+                                    />
+                                    {errors.followup?.impression && (
+                                        <p className="text-sm text-red-500 mt-1">
+                                            {errors.followup.impression.message as string}
+                                        </p>
+                                    )}
+                                </FormGroup>
+
+                                <FormGroup label="Instruction">
+                                    <textarea
+                                        rows={6}
+                                        placeholder="Enter instructions, advice, medication, or next steps..."
+                                        className={`${inputCls} mt-1 resize-y`}
+                                        {...register("followup.instruction")}
+                                    />
+                                    {errors.followup?.instruction && (
+                                        <p className="text-sm text-red-500 mt-1">
+                                            {errors.followup.instruction.message as string}
+                                        </p>
+                                    )}
+                                </FormGroup>
+
+                                <FormGroup label="Follow-up Date">
+                                    <input
+                                        type="date"
+                                        className={`${inputCls} !w-[50%]`}
+                                        {...register("followup.follow_up_date")}
+                                    />
+                                    {errors.followup?.follow_up_date && (
+                                        <p className="text-sm text-red-500 mt-1">
+                                            {errors.followup.follow_up_date.message as string}
+                                        </p>
+                                    )}
+                                </FormGroup>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -642,29 +759,31 @@ function Step4({ form, consultation, followups = [], patient, vitals, prescripti
     );
 }
 
-
-const FollowupConsultationForm: React.FC<{ patient: PatientProps | undefined, vitals: VitalSignProps | undefined, followups: FollowupConsultationResultProps | undefined, cons_id: number, onClose: () => void, onPreview: (data: RegisterFollowupFormValues) => void }> = ({ patient, vitals, followups, cons_id, onClose, onPreview }) => {
+const FollowupConsultationForm: React.FC<{ patient: PatientProps | undefined, currentVitals: VitalSignProps | undefined, followups: FollowupConsultationResultProps | undefined, cons_id: number, onClose: () => void, onPreview: (data: RegisterFollowupFormValues) => void }> = ({ patient, currentVitals, followups, cons_id, onClose, onPreview }) => {
 
     const [step, setStep] = useState(1);
-
     const form = useForm<RegisterFollowupFormValues>({
         resolver: zodResolver(patientFollowUpConsultationSchema),
         mode: "onSubmit",
-        defaultValues: normalizeFollowUpDefaults(patient, followups, vitals) as RegisterFollowupFormValues,
+        defaultValues: normalizeFollowUpDefaults(patient, followups, currentVitals, undefined) as RegisterFollowupFormValues,
     });
 
-    console.log('main', followups?.initialConsultation.prescription)
+    // console.log('current', currentVitals)
+    // console.log('initial', followups)
 
     const panels: React.ReactElement[] = [
         <Step1 key="step1" form={form} consultation={followups?.initialConsultation} />,
         <Step2 key="step2" form={form} consultation={followups?.initialConsultation} />,
         <Step3 key="step3" form={form} />,
-        <Step4 key="step4" form={form} followups={followups?.followups ?? undefined} consultation={followups?.initialConsultation ?? undefined}
-            vitals={vitals} patient={patient ?? undefined} prescription={followups?.initialConsultation.prescription} />,
+        <Step4 key="step4" form={form}
+            followups={followups?.followups ?? undefined} consultation={followups?.initialConsultation ?? undefined}
+            currentvitals={currentVitals} patient={patient ?? undefined} prescription={followups?.initialConsultation.prescription}
+            initialVitals={followups?.initialConsultation.initialVitals} />,
     ];
 
     const handlePreview = () => {
         const values = form.getValues(); // get current form state
+        console.log('values passed to front end', values)
         onPreview(values);
     };
 

@@ -1,17 +1,18 @@
 "use client";
-import { MedCertFormValues, RegisterConsultationFormValues } from "@/schemas/consultation.schema";
+import { MedCertFormValues, RegisterConsultationFormValues, RegisterFollowupFormValues } from "@/schemas/consultation.schema";
 import Image from "next/image";
 import { PrescriptionValues } from "@/schemas/consultation.schema";
 import { useGetPatientById } from "@/hooks/Patient/usePatientRegistration";
-import { useGetDoctorById } from "@/hooks/Consultation/useConsultation";
+import { useGetDoctorById, useGetInitialConsultationWithFollowups } from "@/hooks/Consultation/useConsultation";
 import { formattedCurrentDate } from "@/utils/Date";
 import { formatDate } from "@/utils/Date";
 
 type Props = {
-    type: "consult-result" | "prescription" | "med-cert";
-    form: RegisterConsultationFormValues | PrescriptionValues | MedCertFormValues;
+    type: "consult-result" | "prescription" | "med-cert" | "followup-result";
+    form: RegisterConsultationFormValues | PrescriptionValues | MedCertFormValues | RegisterFollowupFormValues;
     doctorId?: number;
     template?: "temp-1" | "default";
+    isSaved?: boolean;
 };
 
 export default function ConsultResultDocument({
@@ -19,7 +20,9 @@ export default function ConsultResultDocument({
     form,
     doctorId,
     template,
+    isSaved,
 }: Props) {
+    // console.log('forms passed', doctorId)
     if (type === "consult-result") {
         return (
             <MedicalFormPreview
@@ -58,6 +61,15 @@ export default function ConsultResultDocument({
             <MedicalCertificatePreviewVer2
                 form={form as MedCertFormValues}
                 doctorId={doctorId}
+            />
+        );
+    }
+    if (type === "followup-result") {
+        // console.log("Rendering FollowupFormPreview", form);
+        return (
+            <FollowupFormPreview
+                form={form as RegisterFollowupFormValues}
+                isSaved={!!isSaved}
             />
         );
     }
@@ -503,6 +515,7 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
 
     const { data: patientInfo } = useGetPatientById(form.patient_id);
     const { data: doctorInfo } = useGetDoctorById(doctorId);
+    // console.log('from preview', form)
 
     return (
         <div className="print-document bg-gray-100 flex items-start justify-center font-serif">
@@ -622,7 +635,7 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
                     {/* Name */}
                     <div className="flex items-end gap-2">
                         <span className="font-semibold whitespace-nowrap">Name:</span>
-                        <div className="flex-1 border-b border-gray-500 min-h-[20px] px-1">
+                        <div className="flex-1 border-b border-gray-500 tracking-widest font-bold min-h-[20px] px-1">
                             {patientInfo?.name}
                         </div>
                     </div>
@@ -645,7 +658,7 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
                 </div>
 
                 {/* Rx SYMBOL + WRITING AREA */}
-                <div className="mt-6 flex-1">
+                <div className="mt-2 flex-1">
                     <div
                         className="text-5xl italic text-red-600 leading-none mb-2"
                         style={{ fontFamily: "'Palatino Linotype', Palatino, serif" }}
@@ -656,32 +669,28 @@ function MedicalRxPreview({ form, doctorId }: { form: PrescriptionValues, doctor
                     {/* Prescription content or blank lines */}
                     {form.medicines && form.medicines.length > 0 ? (
                         form.medicines.map((m, index) => (
-                            <div key={index} className="mb-4">
+                            <div key={index} className="mb-4 px-[20px]">
 
                                 {/* MED NAME */}
-                                <div className="font-semibold text-black text-[17px]">
-                                    {index + 1}. {m.medicine_name} {m.strength && `(${m.strength})`}
+                                <div className="font-semibold text-black text-[17px] flex justify-between">
+                                    <p>{index + 1}. {m.medicine_name}</p> <p>{m.strength && `(${m.strength})`}</p>
                                 </div>
 
                                 {/* RX LINE (classic doctor style) */}
                                 <div className="ml-4 text-[14px] leading-relaxed text-black">
-                                    <div>
-                                        Sig: {m.dose} {m.route} {m.frequency}
-                                    </div>
-
-                                    <div>
-                                        Duration: {m.duration}
+                                    <div className="uppercase tracking-wider">
+                                        ( {m.brand_name} )
                                     </div>
 
                                     {m.quantity && (
-                                        <div>
-                                            Dispense: {m.quantity}
+                                        <div className="text-end">
+                                            # {m.quantity}
                                         </div>
                                     )}
 
                                     {m.instruction && (
-                                        <div className="italic text-black">
-                                            Notes: {m.instruction}
+                                        <div className="text-black">
+                                            Sig: {m.instruction}
                                         </div>
                                     )}
                                 </div>
@@ -834,7 +843,7 @@ function MedicalRxPreviewVer2({ form, doctorId }: { form: PrescriptionValues, do
                     {/* Name */}
                     <div className="flex items-end gap-2">
                         <span className="font-semibold whitespace-nowrap">Name:</span>
-                        <div className="flex-1 border-b border-gray-500 min-h-[20px] px-1">
+                        <div className="flex-1 border-b border-gray-500 tracking-widest font-bold min-h-[20px] px-1">
                             {patientInfo?.name}
                         </div>
                     </div>
@@ -867,47 +876,36 @@ function MedicalRxPreviewVer2({ form, doctorId }: { form: PrescriptionValues, do
 
                     {/* Prescription content or blank lines */}
                     {form.medicines && form.medicines.length > 0 ? (
-                        <>
-                            {form.medicines.map((m, index) => (
-                                <div key={index} className="mb-4">
+                        form.medicines.map((m, index) => (
+                            <div key={index} className="mb-4 px-[20px]">
 
-                                    {/* MED NAME */}
-                                    <div className="font-semibold text-black">
-                                        {index + 1}. {m.medicine_name} {m.strength && `(${m.strength})`}
+                                {/* MED NAME */}
+                                <div className="font-semibold text-black text-[17px] flex justify-between">
+                                    <p>{index + 1}. {m.medicine_name}</p> <p>{m.strength && `(${m.strength})`}</p>
+                                </div>
+
+                                {/* RX LINE (classic doctor style) */}
+                                <div className="ml-4 text-[14px] leading-relaxed text-black">
+                                    <div className="uppercase tracking-wider">
+                                        ( {m.brand_name} )
                                     </div>
 
-                                    {/* RX LINE (classic doctor style) */}
-                                    <div className="ml-4 text-[13px] leading-relaxed text-black">
-                                        <div>
-                                            Sig: {m.dose} {m.route} {m.frequency}
+                                    {m.quantity && (
+                                        <div className="text-end">
+                                            # {m.quantity}
                                         </div>
+                                    )}
 
-                                        <div>
-                                            Duration: {m.duration}
+                                    {m.instruction && (
+                                        <div className="text-black">
+                                            Sig: {m.instruction}
                                         </div>
-
-                                        {m.quantity && (
-                                            <div>
-                                                Dispense: {m.quantity}
-                                            </div>
-                                        )}
-
-                                        {m.instruction && (
-                                            <div className="italic text-black">
-                                                Notes: {m.instruction}
-                                            </div>
-                                        )}
-                                    </div>
-
+                                    )}
                                 </div>
-                            ))
-                            }
-                            {form.gen_notes && (
-                                <div className="italic text-black text-sm">
-                                    Notes: {form.gen_notes}
-                                </div>
-                            )}
-                        </>
+
+                            </div>
+                        ))
+
                     ) : (
                         <div className="flex flex-col gap-8 mt-2">
                             {Array.from({ length: 10 }).map((_, i) => (
@@ -1305,7 +1303,7 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
                         </div>
 
                         {/* FAMILY ASSESSMENT */}
-                        <div>
+                        {/* <div>
                             <SectionHeader title="Family Assessment Tools" />
                             <div className="border-x border-black p-2 font-semibold text-sm">
                                 Genogram Family Map
@@ -1316,7 +1314,7 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
                                     minHeight: "320px",
                                 }}
                             />
-                        </div>
+                        </div> */}
                         {/* FAMILY ASSESSMENT */}
                         <div>
                             <div className="grid grid-cols-2">
@@ -1332,6 +1330,277 @@ function MedicalFormPreview({ form }: { form: RegisterConsultationFormValues }) 
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div >
+    );
+}
+
+function FollowupFormPreview({ form, isSaved }: { form: RegisterFollowupFormValues, isSaved: boolean }) {
+    const { data: initialConsults } = useGetInitialConsultationWithFollowups(Number(form.patient_id), Number(form.consultation_id));
+    //  console.log('form template', initialConsults)
+    return (
+        <div className="print-document bg-gray-100 flex items-center justify-center">
+            {/* LONG BOND PAPER */}
+            <div
+                className="print-page paper-legal bg-white w-full">
+                <div
+                    className="result-header border-b border-slate-300 pb-3"
+                    style={{
+                        fontFamily: "'Times New Roman', Times, serif",
+                    }}
+                >
+                    <div className="grid grid-cols-[5rem_1fr_5rem] items-center">
+
+                        {/* LEFT LOGO */}
+                        <div className="flex justify-center">
+                            <Image
+                                src="/images/serviamus.jpeg"
+                                alt="Serviamus logo"
+                                width={60}
+                                height={60}
+                                className=" h-20 w-30 rounded-full object-cover"
+                                priority
+                                unoptimized
+                            />
+                        </div>
+
+                        {/* CENTER INFO */}
+                        <div className="min-w-0 text-center leading-tight">
+
+                            <h1 className=" text-[20px] font-black uppercase text-blue-800">
+                                SERVIAMUS MEDICAL CLINIC AND LABORATORY, INC.
+                            </h1>
+
+                            <p className="text-[13px] text-slate-600 tracking-wider">
+                                Puer Sanctus VI Building, Corner Rosario-Verbena Streets,
+                                Brgy. 33, Bacolod City
+                            </p>
+
+                            <div className="flex justify-center mt-3">
+                                <h2 className="mt-2 text-[12px] font-bold tracking-[0.1em] text-amber-700! uppercase border-b border-black inline-block">
+                                    Patient&apos;s Record
+                                </h2>
+                            </div>
+
+                            <p className="text-[10px] font-serif font-bold">
+                                Follow-up Consult (B)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {/* PATIENT INFO */}
+                <div className="py-3">
+                    {/* ROW 1 */}
+                    <div className="grid grid-cols-12">
+                        <div className="flex px-2 py-1 col-span-12 pl-20">
+                            <label className="text-sm font-semibold">PATIENT NAME:</label>
+                            <div className="border-b-2 border-gray-400 h-5 text-sm pl-2 font-bold tracking-[0.1em] w-[300px]">{form?.name}</div>
+                        </div>
+                    </div>
+                </div>
+                <div >
+                    {/* NEW FOLLOW-UP EDITABLE */}
+                    <div className="rounded-2xl border border-[#b0dede] bg-[#f8ffff]">
+
+                        <div className="grid grid-cols-1 lg:grid-cols-[150px_1fr] print:flex">
+                            {/* LEFT INFO */}
+                            <div className="border-r border-[#dce3ef] p-2 print:w-[20%]">
+                                <div className="flex items-center mb-5 gap-2">
+                                    <p className="text-[12px] font-bold text-[#6b7da0]">Date: </p>
+                                    <p className="font-semibold text-[#0f2244] text-xs">{formatDate(initialConsults?.consultation_date)}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    {[
+                                        ["BP", initialConsults?.initialVitals.bp],
+                                        ["TEMP", initialConsults?.initialVitals.temp],
+                                        ["CR", initialConsults?.initialVitals.cr],
+                                        ["RR", initialConsults?.initialVitals.rr],
+                                        ["WT", initialConsults?.initialVitals.wt],
+                                        ["HT", initialConsults?.initialVitals.ht],
+                                    ].map(([label, value]) => (
+
+                                        <div
+                                            key={label}
+                                            className="flex justify-between text-xs border-b border-dashed border-[#edf1f6] pb-1"
+                                        >
+                                            <span className="font-bold text-[#6b7da0]">
+                                                {label}
+                                            </span>
+
+                                            <span className="font-semibold text-[#0f2244]">
+                                                {value || "-"}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                            </div>
+                            <div className="p-2 print:w-[80%]">
+                                <div className="grid grid-cols-[.5fr_1fr] space-y-5">
+                                    <p className="text-[12px] text-[#6b7da0] font-bold">Chief Complain: </p>
+                                    <p className="font-semibold px-2 rounded-lg text-[#0f2244] text-xs">{initialConsults?.chief_complaint}</p>
+
+                                    <p className="text-[12px] text-[#6b7da0] font-bold">History of Present Illness: </p>
+                                    <p className="font-semibold px-2 rounded-lg text-[#0f2244] text-xs">{initialConsults?.hist_illness}</p>
+
+                                    <p className="text-[12px] text-[#6b7da0] font-bold">Physical / Neurologic Examination: </p>
+                                    <p className="font-semibold px-2 rounded-lg text-[#0f2244] text-xs">{initialConsults?.examination}</p>
+
+                                    <p className="text-[12px] text-[#6b7da0] font-bold">Assessment: </p>
+                                    <p className="font-semibold px-2 rounded-lg text-[#0f2244] text-xs">{initialConsults?.assessment}</p>
+
+                                    <p className="text-[12px] text-[#6b7da0] font-bold">Plans: </p>
+                                    <p className="font-semibold px-2 rounded-lg text-[#0f2244] text-xs">{initialConsults?.plans}</p>
+                                </div>
+                                <div className="flex items-center gap-2 justify-end pr-5 py-2">
+                                    <p className="text-[12px] text-[#6b7da0] font-bold">Follow-up Date</p>
+                                    <p className="font-semibold bg-gray-200 w-[100px] px-2 rounded-lg text-[#0f2244] text-xs">{formatDate(initialConsults?.follow_up_date)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Previous Follow-ups */}
+                    {initialConsults && initialConsults?.followups?.length > 0 && (
+                        <div className="space-y-3">
+                            {initialConsults.followups.map((followup) => (
+                                <div
+                                    key={followup.followup_id}
+                                    className="rounded-xl border border-[#dce3ef] bg-white overflow-hidden"
+                                >
+                                    <div className="grid grid-cols-1 lg:grid-cols-[150px_1fr] print:flex">
+
+                                        {/* LEFT */}
+                                        <div className="border-r border-[#edf1f6] bg-[#fafbfd] p-3 print:w-[20%]">
+                                            <div className="flex items-center mb-5 gap-2">
+                                                <p className="text-[12px] font-bold text-[#6b7da0]">Date: </p>
+                                                <p className="font-semibold text-[#0f2244] text-xs">{formatDate(followup.followup_date)}</p>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                {[
+                                                    ["BP", followup.vitals?.bp],
+                                                    ["TEMP", followup.vitals?.temp],
+                                                    ["CR", followup.vitals?.cr],
+                                                    ["RR", followup.vitals?.rr],
+                                                    ["WT", followup.vitals?.wt],
+                                                    ["HT", followup.vitals?.ht],
+                                                ].map(([label, value]) => (
+                                                    <div
+                                                        key={label}
+                                                        className="flex justify-between text-xs border-b border-dashed border-[#edf1f6] pb-1"
+                                                    >
+                                                        <span className="font-bold text-[#6b7da0]">
+                                                            {label}
+                                                        </span>
+
+                                                        <span className="font-semibold text-[#0f2244]">
+                                                            {value || "-"}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* RIGHT */}
+                                        <div className="p-4 space-y-3 print:w-[80%]">
+
+                                            <div>
+                                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6b7da0] mb-1">
+                                                    Impression
+                                                </p>
+
+                                                <div className="rounded-lg bg-gray-100 p-3 text-sm text-[#1a2a45]">
+                                                    {followup.impression || "-"}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6b7da0] mb-1">
+                                                    Instructions
+                                                </p>
+
+                                                <div className="rounded-lg bg-gray-100 p-3 text-sm text-[#1a2a45] whitespace-pre-wrap">
+                                                    {followup.instruction || "-"}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-end items-center gap-2 pr-5 py-2">
+                                                <span className="text-[11px] font-semibold text-[#6b7da0]">
+                                                    Follow-up Date
+                                                </span>
+
+                                                <span className="font-semibold bg-gray-200 w-[100px] px-2 rounded-lg text-[#0f2244] text-xs">
+                                                    {followup.followup_date
+                                                        ? formatDate(followup.followup_date)
+                                                        : "-"}
+                                                </span>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+
+                    {!isSaved && (
+                        <>
+                            {/* NEW FOLLOW-UP EDITABLE */}
+                            < div className="rounded-2xl border border-[#b0dede] bg-[#ffffff]">
+
+                                <div className="grid grid-cols-1 lg:grid-cols-[150px_1fr]">
+                                    {/* LEFT INFO */}
+                                    <div className="border-r border-[#dce3ef] p-2">
+                                        <div className="flex items-center mb-5 gap-2">
+                                            <p className="text-[12px] font-bold text-[#6b7da0]">Date: </p>
+                                            <p className="font-semibold text-[#0f2244] text-xs">{formatDate(new Date())}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            {[
+                                                ["BP", form.bp],
+                                                ["TEMP", form.temp],
+                                                ["CR", form.cr],
+                                                ["RR", form.rr],
+                                                ["WT", form.wt],
+                                                ["HT", form.ht],
+                                            ].map(([label, value]) => (
+
+                                                <div
+                                                    key={label}
+                                                    className="flex justify-between text-xs border-b border-dashed border-[#edf1f6] pb-1"
+                                                >
+                                                    <span className="font-bold text-[#6b7da0]">
+                                                        {label}
+                                                    </span>
+
+                                                    <span className="font-semibold text-[#0f2244]">
+                                                        {value || "-"}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                    </div>
+                                    <div className="p-2">
+                                        <div className="p-2 bg-gray-100 rounded-xl h-[50px] text-[12px]">
+                                            <p className="text-black">{form.followup.impression}</p>
+                                        </div>
+                                        <div className="p-2 bg-gray-100 rounded-xl h-[150px] text-[12px]">
+                                            <p className="text-black">{form.followup.instruction}</p>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 justify-end pr-5 py-2">
+                                            <p className="text-[12px] text-[#6b7da0] font-bold">Follow-up Date</p>
+                                            <p className="font-semibold bg-gray-200 w-[100px] px-2 rounded-lg text-[#0f2244] text-xs">{formatDate(form?.followup.follow_up_date)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div >

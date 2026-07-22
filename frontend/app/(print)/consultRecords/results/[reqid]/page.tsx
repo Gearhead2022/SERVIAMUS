@@ -7,7 +7,7 @@ import RoleGuard from "@/guards/RoleGuard";
 import ConsultResultDocument from "@/components/Modal/NestedModal/ModalPreview/MedicalFormPreview";
 import Button from "@/components/ui/Button";
 
-import { useConsultationPrint, useConsultationRxPrint, useMedicalCertificatePrint } from "@/hooks/Consultation/useConsultation";
+import { useConsultationPrint, useConsultationRxPrint, useFollowupPrint, useMedicalCertificatePrint } from "@/hooks/Consultation/useConsultation";
 import { getApiErrorMessage } from "@/utils/api-error";
 import SweetAlert from "@/utils/SweetAlert";
 
@@ -67,7 +67,7 @@ export default function ConsultationResultPrintPage() {
     const doctorId = Number(searchParams.get("doctorId"));
     const patientName = searchParams.get("patientName") ?? '';
     const type =
-        (searchParams.get("type") as "consult-result" | "prescription" | "med-cert") ??
+        (searchParams.get("type") as "consult-result" | "prescription" | "med-cert" | "followup-result") ??
         "consult-result";
 
     const template =
@@ -77,6 +77,7 @@ export default function ConsultationResultPrintPage() {
     const { data: consultationData, error: consultationError, isLoading: consultationLoading } = useConsultationPrint(reqid);
     const { data: prescriptionData, error: prescriptionError, isLoading: prescriptionLoading } = useConsultationRxPrint(reqid);
     const { data: medicalCertificateData, error: medCertError, isLoading: medCertLoading } = useMedicalCertificatePrint(reqid);
+    const { data: followupData, error: followupError, isLoading: followupLoading } = useFollowupPrint(reqid);
 
     const documentRef = useRef<HTMLDivElement | null>(null);
 
@@ -86,6 +87,8 @@ export default function ConsultationResultPrintPage() {
 
     const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
+
+    console.log("PRINT FORM", prescriptionData);
 
     const printConfigs = {
         "consult-result": {
@@ -113,6 +116,15 @@ export default function ConsultationResultPrintPage() {
             fileName: medicalCertificateData
                 ? getConsultationResultPdfFileName('med-cert', medicalCertificateData, patientName)
                 : "medical-certificate.pdf",
+        },
+
+        "followup-result": {
+            data: followupData,
+            loading: followupLoading,
+            error: followupError,
+            fileName: followupData
+                ? getConsultationResultPdfFileName('followup-result', followupData, patientName)
+                : "medical-followup.pdf",
         },
     } as const;
 
@@ -339,9 +351,24 @@ export default function ConsultationResultPrintPage() {
                                 No consultation record found.
                             </div>
                         )
+                    ) : type === "followup-result" ? (
+                        followupData ? (
+                            <div ref={documentRef}>
+                                <ConsultResultDocument
+                                    type={'followup-result'}
+                                    form={followupData}
+                                    doctorId={doctorId}
+                                    isSaved={true}
+                                />
+                            </div>
+                        ) : (
+                            <div className="rounded-3xl border border-[#c8e4de] bg-white px-6 py-10 text-center text-sm text-[#5f8a83]">
+                                No follow up record found.
+                            </div>
+                        )
                     ) : (
                         <div className="rounded-3xl border border-[#c8e4de] bg-white px-6 py-10 text-center text-sm text-[#5f8a83]">
-                            No consultation record found.
+                            No follow up record found.
                         </div>
                     )}
                 </div>

@@ -9,6 +9,7 @@ import {
 import { RequestProps, VitalSignProps } from "@/types/RequestTypes";
 import { PatientProps } from "@/types/PatientTypes";
 import { useGetDoctorById } from "@/hooks/Consultation/useConsultation";
+import { formatDate, formatDateTime } from "@/utils/Date";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -137,8 +138,9 @@ const ViewConsultationModal: React.FC<ViewConsultationModalProps> = ({
 }) => {
     const consultation = request.consult?.consultation;
     const currentVitals = request.consult?.vitals;
+    const initialConsults = request.consult?.initialConsultation[0];
 
-    // console.log('patient', patient)
+    console.log('patient', initialConsults)
 
     const statusMeta = STATUS_MAP[request.status] ?? STATUS_MAP.WAITING;
     const StatusIcon = statusMeta.icon;
@@ -246,9 +248,11 @@ const ViewConsultationModal: React.FC<ViewConsultationModalProps> = ({
                             <MetaRow icon={User} label="Age" value={`${patient.age} years old`} />
                             <MetaRow icon={Calendar} label="Consultation Date" value={
                                 consultation?.consultation_date
-                                    ? new Date(consultation.consultation_date).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })
-                                    : undefined
-                            } />
+                                    ? formatDate(consultation?.consultation_date)
+                                    : initialConsults?.consultation_date ?
+                                        formatDate(initialConsults?.consultation_date)
+                                        : undefined}
+                            />
                         </div>
                     </div>
                 </div>
@@ -328,10 +332,10 @@ const ViewConsultationModal: React.FC<ViewConsultationModalProps> = ({
                         />
                         <MetaRow icon={Clock} label="Consultation Date"
                             value={consultation?.consultation_date
-                                ? new Date(consultation.consultation_date).toLocaleDateString("en-PH", {
-                                    month: "long", day: "numeric", year: "numeric",
-                                })
-                                : undefined}
+                                ? formatDate(consultation?.consultation_date)
+                                : initialConsults?.consultation_date ?
+                                    formatDate(initialConsults?.consultation_date)
+                                    : undefined}
                         />
                     </div>
                 </div>

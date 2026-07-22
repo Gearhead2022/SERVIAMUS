@@ -4,11 +4,13 @@ export function mapPrescriptionToPrisma(
     data: PrescriptionValues,
     patientId: number,
     consultId: number,
-    doctorId: number
+    doctorId: number,
+    followup_id: number | null,
 ) {
     return {
         // ─── IDENTIFIERS ───────────────────
         consultation_id: consultId,
+        followup_id: followup_id ?? null,
         patient_id: patientId,
         doctor_id: doctorId,
         // ─── NOTES ─────────────────────────
@@ -23,20 +25,8 @@ export function mapPrescriptionToPrisma(
             strength:
                 medicine.strength ?? "",
 
-            form:
-                medicine.form ?? "",
-
-            dose:
-                medicine.dose ?? "",
-
-            frequency:
-                medicine.frequency ?? "",
-
-            route:
-                medicine.route ?? "",
-
-            duration:
-                medicine.duration ?? "",
+            brand_name:
+                medicine.brand_name ?? "",
 
             quantity:
                 medicine.quantity ?? "",

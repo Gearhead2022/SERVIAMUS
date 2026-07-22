@@ -463,6 +463,8 @@ const ViewPatientHistoryModal: React.FC<{
         search: debouncedSearch,
     });
 
+    // console.log('dipoeta', consultationList)
+
     const { data: medCertList } = useAllMedCertRecords({
         patient_id: patient?.patient_id ?? 0,
         search: debouncedSearch,

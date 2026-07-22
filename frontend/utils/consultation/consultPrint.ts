@@ -2,7 +2,7 @@ type ConsultPrintRouteOptions = {
     autoDownload?: boolean;
     autoPrint?: boolean;
     doctorId?: number;
-    type?: "consult-result" | "prescription" | "med-cert";
+    type?: "consult-result" | "prescription" | "med-cert" | "followup-result";
     patientName?: string;
 };
 

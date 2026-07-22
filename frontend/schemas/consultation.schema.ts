@@ -85,25 +85,9 @@ export const medicineSchema = z.object({
     .string()
     .optional(),
 
-  form: z
+  brand_name: z
     .string()
-    .min(1, "Dosage form is required"),
-
-  dose: z
-    .string()
-    .min(1, "Dose is required"),
-
-  frequency: z
-    .string()
-    .min(1, "Frequency is required"),
-
-  duration: z
-    .string()
-    .min(1, "Duration is required"),
-
-  route: z
-    .string()
-    .min(1, "Route is required"),
+    .optional(),
 
   instruction: z
     .string()
@@ -117,6 +101,7 @@ export const medicineSchema = z.object({
 export const prescriptionSchema = z.object({
   patient_id: z.number(),
   consultation_id: z.number(),
+  followup_id: z.number().nullable(),
   doctor_id: z.number(),
   gen_notes: z.string().optional(),
   issued_date: z.string(),
@@ -163,6 +148,9 @@ export const followUpSchema = z.object({
 });
 
 export const patientFollowUpConsultationSchema = z.object({
+  consultation_id: z.number(),
+  vs_id: z.number(),
+  patient_id: z.number,
   name: z.string().min(1),
   consultation_date: z.string().min(1),
   address: z.string().min(1),
@@ -225,15 +213,7 @@ export const patientFollowUpConsultationSchema = z.object({
 
   follow_up_date: z.string().optional(),
 
-  followups: z
-    .array(followUpSchema)
-    .min(1, "At least one follow-up is required")
-    .refine(
-      (flwps) => flwps.every((f) => f.consultation_id != null),
-      {
-        message: "Every follow-up must be linked to a consultation.",
-      }
-    ),
+  followup: followUpSchema
 });
 
 export type RegisterFollowupFormValues = z.infer<typeof patientFollowUpConsultationSchema>;

@@ -1,19 +1,12 @@
 import { PatientProps } from "@/types/PatientTypes";
 import { PrescriptionValues } from "@/schemas/consultation.schema";
-import {
-    ConsultationProps,
-    PrescriptionProps,
-} from "@/types/ConsultationTypes";
+import { ConsultationProps, PrescriptionProps } from "@/types/ConsultationTypes";
 import { RegisterPayload } from "@/types/AuthTypes";
 
 const EMPTY_MED = () => ({
     medicine_name: "",
     strength: "",
-    form: "",
-    dose: "",
-    frequency: "",
-    route: "",
-    duration: "",
+    brand_name: "",
     quantity: "",
     instruction: "",
 });
@@ -27,6 +20,7 @@ export function normalizePrescriptionDefaults(
     return {
         patient_id: patient?.patient_id ?? 0,
         consultation_id: consult?.consultation_id ?? 0,
+        followup_id: consult?.followup_id ?? null,
 
         // IMPORTANT: DO NOT force doctor here
         doctor_id: doctor?.user_id ?? 0,
@@ -38,11 +32,7 @@ export function normalizePrescriptionDefaults(
             ? prescription.medicines.map(m => ({
                 medicine_name: m.medicine_name ?? "",
                 strength: m.strength ?? "",
-                form: m.form ?? "",
-                dose: m.dose ?? "",
-                frequency: m.frequency ?? "",
-                route: m.route ?? "",
-                duration: m.duration ?? "",
+                brand_name: m.brand_name ?? "",
                 quantity: m.quantity ?? "",
                 instruction: m.instruction ?? "",
             }))

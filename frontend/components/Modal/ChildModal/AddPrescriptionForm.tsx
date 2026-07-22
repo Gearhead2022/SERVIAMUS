@@ -1,14 +1,13 @@
 "use client";
 
 import {
-    Plus, Trash2, Pill, Printer, AlertCircle
+    Plus, Trash2, Pill, AlertCircle
 } from "lucide-react";
-import { useEffect } from "react";
+
 import { PatientProps } from "@/types/PatientTypes";
 import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
-import { useForm, UseFormRegister, useFieldArray, FieldErrors, Controller, Control, FieldArrayWithId } from "react-hook-form";
+import { useForm, UseFormRegister, useFieldArray, FieldErrors, Control, FieldArrayWithId } from "react-hook-form";
 import { PrescriptionValues, prescriptionSchema } from "@/schemas/consultation.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ConsultationProps } from "@/types/ConsultationTypes";
@@ -37,12 +36,6 @@ interface PrescriptionModalProps {
     doctor?: RegisterPayload;
     onPreview: (data: PrescriptionValues) => void;
 }
-
-//   CONSTANTS
-const FORMS = ["Tablet", "Capsule", "Syrup/Suspension", "Drops", "Cream/Ointment", "Patch", "Injection", "Inhaler", "Suppository"];
-const ROUTES = ["Oral", "Topical", "Sublingual", "Intravenous", "Intramuscular", "Subcutaneous", "Rectal", "Ophthalmic", "Otic", "Nasal"];
-const FREQS = ["Once daily", "Twice daily", "Three times daily", "Four times daily", "Every 6 hours", "Every 8 hours", "Every 12 hours", "As needed (PRN)", "Before meals", "After meals", "At bedtime", "Once weekly"];
-const DURATIONS = ["3 days", "5 days", "7 days", "10 days", "14 days", "1 month", "2 months", "3 months", "Continuous", "Until finished"];
 
 const EMPTY_MED = (): MedicineEntry => ({
     presc_id: Math.random().toString(36).slice(2),
@@ -95,11 +88,6 @@ function MedicineCard({
                     <span className="text-[12px] font-bold uppercase tracking-wider" style={{ color: "#0f2244" }}>
                         Rx {index + 1}
                     </span>
-                    {/* {med.name && (
-                        <span className="text-[12px] font-semibold" style={{ color: "#6b7da0" }}>
-                            — {med.name} {med.strength}
-                        </span>
-                    )} */}
                 </div>
                 {!isOnly && (
                     <button type="button" onClick={() => onRemove()}
@@ -113,16 +101,16 @@ function MedicineCard({
             <div className="p-5 space-y-4">
                 {/* Row 1: Name + Strength + Form */}
                 <div className="grid grid-cols-12 gap-3">
-                    <Field label="Medicine / Generic NameMedicine / Generic Name" className="col-span-5">
+                    <Field label="Medicine / Generic NameMedicine / Generic Name" className="col-span-8">
                         <Input
-                            className="col-span-5"
+                            className="col-span-7"
                             type="text"
                             placeholder="e.g. Amoxicillin, Metformin"
                             {...register(`medicines.${index}.medicine_name`)}
                             error={errors?.medicines?.[index]?.medicine_name?.message}
                         />
                     </Field>
-                    <Field label="Strength" className="col-span-3">
+                    <Field label="Strength" className="col-span-4">
                         <Input
                             className="col-span-3"
                             type="text"
@@ -131,108 +119,20 @@ function MedicineCard({
                             error={errors?.medicines?.[index]?.strength?.message}
                         />
                     </Field>
-                    <Field label="Dosage Form" className="col-span-4">
-                        <Controller
-                            control={control}
-                            name={`medicines.${index}.form`}
-                            render={({ field }) => (
-                                <Select
-                                    {...field}
-                                    value={field.value ?? ""}
-                                    onChange={(e) => field.onChange(e.target.value)}
-                                    error={errors?.medicines?.[index]?.form?.message}
-                                >
-                                    <option value="">— Select —</option>
-                                    {FORMS.map((f) => (
-                                        <option key={f} value={f}>
-                                            {f}
-                                        </option>
-                                    ))}
-                                </Select>
-                            )}
-                        />
-                    </Field>
                 </div>
 
                 {/* Row 2: Dose + Frequency + Route */}
                 <div className="grid grid-cols-12 gap-3">
-                    <Field label="Dose / Quantity per Take" className="col-span-4">
+                    <Field label="Brand Name" className="col-span-6">
                         <Input
                             className="col-span-3"
                             type="text"
-                            placeholder="e.g. 1 tablet, 5ml"
-                            {...register(`medicines.${index}.dose`)}
-                            error={errors?.medicines?.[index]?.dose?.message}
+                            placeholder="e.g. Dolfenal, Ibuprofen"
+                            {...register(`medicines.${index}.brand_name`)}
+                            error={errors?.medicines?.[index]?.brand_name?.message}
                         />
                     </Field>
-                    <Field label="Frequency" className="col-span-4">
-                        <Controller
-                            control={control}
-                            name={`medicines.${index}.frequency`}
-                            render={({ field }) => (
-                                <Select
-                                    {...field}
-                                    value={field.value ?? ""}
-                                    onChange={(e) => field.onChange(e.target.value)}
-                                    error={errors?.medicines?.[index]?.frequency?.message}
-                                >
-                                    <option value="">— Select —</option>
-                                    {FREQS.map((f) => (
-                                        <option key={f} value={f}>
-                                            {f}
-                                        </option>
-                                    ))}
-                                </Select>
-                            )}
-                        />
-                    </Field>
-                    <Field label="Route" className="col-span-4">
-                        <Controller
-                            control={control}
-                            name={`medicines.${index}.route`}
-                            render={({ field }) => (
-                                <Select
-                                    {...field}
-                                    value={field.value ?? ""}
-                                    onChange={(e) => field.onChange(e.target.value)}
-                                    error={errors?.medicines?.[index]?.route?.message}
-                                >
-                                    <option value="">— Select —</option>
-                                    {ROUTES.map((f) => (
-                                        <option key={f} value={f}>
-                                            {f}
-                                        </option>
-                                    ))}
-                                </Select>
-                            )}
-                        />
-                    </Field>
-                </div>
-
-                {/* Row 3: Duration + Total Qty */}
-                <div className="grid grid-cols-12 gap-3">
-                    <Field label="Duration" className="col-span-4">
-                        <Controller
-                            control={control}
-                            name={`medicines.${index}.duration`}
-                            render={({ field }) => (
-                                <Select
-                                    {...field}
-                                    value={field.value ?? ""}
-                                    onChange={(e) => field.onChange(e.target.value)}
-                                    error={errors?.medicines?.[index]?.duration?.message}
-                                >
-                                    <option value="">— Select —</option>
-                                    {DURATIONS.map((f) => (
-                                        <option key={f} value={f}>
-                                            {f}
-                                        </option>
-                                    ))}
-                                </Select>
-                            )}
-                        />
-                    </Field>
-                    <Field label="Total Quantity Dispensed" className="col-span-4">
+                    <Field label="Total Quantity Dispensed" className="col-span-6">
                         <Input
                             className="col-span-4"
                             type="text"
@@ -242,9 +142,8 @@ function MedicineCard({
                         />
                     </Field>
                     <Field label="Special Instructions" className="col-span-12 mt-0">
-                        <Input
-                            className="col-span-4"
-                            type="text"
+                        <Textarea
+                            className="col-span-4 h-[70px]"
                             placeholder="e.g. Take after meals, avoid alcohol, take with full glass of water"
                             {...register(`medicines.${index}.instruction`)}
                             error={errors?.medicines?.[index]?.instruction?.message}
@@ -256,10 +155,11 @@ function MedicineCard({
     );
 }
 
-export default function PrescriptionModal({ patient, consult, onClose, doctor, onPreview,
-}: PrescriptionModalProps) {
+export default function PrescriptionModal({ patient, consult, onClose, doctor, onPreview }: PrescriptionModalProps) {
 
     const rxDate = formattedIsoPH();
+
+    // console.log('data passed', consult)
 
     const form = useForm<PrescriptionValues>({
         resolver: zodResolver(prescriptionSchema),
@@ -270,13 +170,10 @@ export default function PrescriptionModal({ patient, consult, onClose, doctor, o
 
     const medicines = form.watch("medicines");
 
-
     const { fields, append, remove } = useFieldArray({
         control,
         name: "medicines",
     });
-
-    console.log('errors', form)
 
     const handlePreview = () => {
         const values = form.getValues();
@@ -294,8 +191,7 @@ export default function PrescriptionModal({ patient, consult, onClose, doctor, o
                 className="relative flex flex-col bg-white rounded-2xl w-full overflow-hidden font-['DM_Sans']"
                 style={{
                     boxShadow: "0 24px 80px rgba(15,34,68,0.28)",
-                }}
-            >
+                }}>
                 <div className="flex-shrink-0 flex items-center justify-between px-7 py-3 flex-wrap gap-2"
                     style={{ background: "#f7f8fc", borderBottom: "1px solid #dce3ef" }}>
                     <div className="flex items-center gap-4">

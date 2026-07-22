@@ -91,8 +91,8 @@ function VitalsRow<T extends FieldValues>({
               )}
               placeholder={f.ph}
               className={`w-full text-center text-sm rounded-md px-2 py-2 border outline-none transition ${teal
-                ? "bg-[#e0f4f4] border-[#b0dede] focus:border-[#0e7c7b] focus:shadow-[0_0_0_3px_rgba(14,124,123,0.1)] focus:bg-white"
-                : "bg-[#f0f3fa] border-[#dce3ef] focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white"
+                ? "bg-[#f0f3fa] border-[#dce3ef] focus:border-[#1a3560] focus:shadow-[0_0_0_3px_rgba(26,53,96,0.1)] focus:bg-white disabled:cursor-not-allowed disabled"
+                : "bg-[#e0f4f4] border-[#b0dede] focus:border-[#0e7c7b] focus:shadow-[0_0_0_3px_rgba(14,124,123,0.1)] focus:bg-white"
                 } text-[#1a2a45]`}
               readOnly={readonly}
             />
@@ -601,6 +601,29 @@ const RequestForm: React.FC<{
                 render={({ field }) => (
                   <Select
                     options={initialConsultOptions}
+                    className="w-[70%]"
+                    styles={{
+                      control: (base, state) => ({
+                        ...base,
+                        boxShadow: "none",
+                        borderColor: "#dce3ef",
+                        "&:hover": {
+                          borderColor: "#dce3ef",
+                        },
+                      }),
+
+                      option: (base, state) => ({
+                        ...base,
+                        backgroundColor: "white", // remove default blue
+                        color: "#1a2a45",
+                        padding: 0,               // your custom layout already has padding
+                        cursor: "pointer",
+
+                        ":active": {
+                          backgroundColor: "#ccd9e7",
+                        },
+                      }),
+                    }}
 
                     value={
                       initialConsultOptions?.find(
@@ -612,21 +635,43 @@ const RequestForm: React.FC<{
                       field.onChange(selected?.value ?? null)
                     }
 
-                    formatOptionLabel={(option) => (
-                      <div>
-                        <div className="font-semibold">
-                          {option.label}
-                        </div>
+                    formatOptionLabel={(option, { context, selectValue }) => {
+                      const isSelected = selectValue.some(
+                        (item) => item.value === option.value
+                      );
 
-                        <div className="text-xs text-gray-500">
-                          Initial: {formatDate(option.consultation_date)}
-                        </div>
+                      return (
+                        <div
+                          className={`flex items-start justify-between gap-4 w-full rounded-lg p-2 transition-colors
+                           ${context === "menu" && isSelected
+                              ? "bg-slate-200"
+                              : "hover:bg-slate-100"
+                            }`}>
+                          <div>
+                            <div className="min-w-0 flex gap-2 mb-1">
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6b7da0] mt-1">
+                                Chief Complaint:
+                              </p>
+                              <p className="truncate text-[15px] font-semibold text-[#1a2a45]">
+                                {option.label}
+                              </p>
+                            </div>
+                            <p className="mt-1 text-xs text-[#6b7280]">
+                              Dr. {option.doctor.name}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end shrink-0">
+                            <span className="text-[10px] uppercase tracking-wider text-gray-600/70">
+                              Initial Visit
+                            </span>
 
-                        <div className="text-xs text-gray-500">
-                          {option.doctor.name}
+                            <span className="mt-1 rounded-md bg-[#eef2f7] px-2 py-1 text-md font-medium text-[#0f2244]">
+                              {formatDate(option.consultation_date)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    }}
                   />
                 )}
               />

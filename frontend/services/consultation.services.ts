@@ -1,5 +1,5 @@
 import api from "./axios";
-import { ConsultationResultProps, MedicalCertificateProps, Status, RequestTypes, CreatePrescriptionPayload } from "@/types/ConsultationTypes";
+import { ConsultationResultProps, MedicalCertificateProps, Status, RequestTypes, CreatePrescriptionPayload, CreateFollowupPayload } from "@/types/ConsultationTypes";
 
 export const consultationResults = async (
   data: ConsultationResultProps
@@ -229,6 +229,11 @@ export const getMedicalCertificatePrint = async (req_id: number) => {
   return res.data;
 }
 
+export const getFollowupPrint = async (req_id: number) => {
+  const res = await api.get(`/api/consultation/${req_id}/getFollowupRecordByIdz`);
+  return res.data;
+}
+
 //added 07-91-26
 
 export const getFollowupRecords = async (cons_id: number) => {
@@ -238,5 +243,18 @@ export const getFollowupRecords = async (cons_id: number) => {
 
 export const getInitialConsultations = async (patient_id: number) => {
   const res = await api.get(`/api/consultation/${patient_id}/consultation-cases`);
+  return res.data.data;
+}
+
+export const consultationFollowupResults = async (
+  data: CreateFollowupPayload
+) => {
+  // console.log('datra', data)
+  const res = await api.post("/api/consultation/createFollowup", data);
+  return res.data.data;
+};
+
+export const getInitialConsultationWithPrevFollowups = async (patient_id: number, consultation_id: number) => {
+  const res = await api.get(`/api/consultation/${patient_id}/patient/${consultation_id}/followups`);
   return res.data.data;
 }

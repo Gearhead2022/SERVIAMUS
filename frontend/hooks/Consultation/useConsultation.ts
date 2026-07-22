@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { consultationResults, createPrescription, fetchAllConsultationRequest, getAllPatientConsultationList, getAllPatientMedCertList, getConsultationById, getConsultationPrint, getConsultationRecord, getConsultationRecordhistory, getConsultationRxPrint, getDoctorInfo, getFollowupRecords, getInitialConsultations, getLaboratoryRecordHistory, getLabRequestByName, getMedicalCertificatePrint, getMedicalCertificateRecordhistory, getPatientPrescription, getPrescriptionRecordhistory, getRequestPerWeek, getStatisticsRecord, medicalCertificateResult, updateStatus } from "@/services/consultation.services";
+import { consultationFollowupResults, consultationResults, createPrescription, fetchAllConsultationRequest, getAllPatientConsultationList, getAllPatientMedCertList, getConsultationById, getConsultationPrint, getConsultationRecord, getConsultationRecordhistory, getConsultationRxPrint, getDoctorInfo, getFollowupPrint, getFollowupRecords, getInitialConsultations, getInitialConsultationWithPrevFollowups, getLaboratoryRecordHistory, getLabRequestByName, getMedicalCertificatePrint, getMedicalCertificateRecordhistory, getPatientPrescription, getPrescriptionRecordhistory, getRequestPerWeek, getStatisticsRecord, medicalCertificateResult, updateStatus } from "@/services/consultation.services";
 import SweetAlert from "@/utils/SweetAlert";
-import { ConsultationResultProps, Status, PrescriptionProps, ConsultationProps, MedicalCertificateProps, RequestTypes, LabRequestItems, ConsultationHistoryRecordsProps, medCertHistoryRecordsProps, ConsultationRequestProps, ConsultationWithRequestProps, FollowupConsultationResultProps, InitialConsultationProps } from "@/types/ConsultationTypes";
+import { ConsultationResultProps, Status, PrescriptionProps, ConsultationProps, MedicalCertificateProps, RequestTypes, LabRequestItems, ConsultationHistoryRecordsProps, medCertHistoryRecordsProps, ConsultationRequestProps, ConsultationWithRequestProps, FollowupConsultationResultProps, InitialConsultationProps, InitialConsultationWithPrevFollowupsProps } from "@/types/ConsultationTypes";
 import { PatientProps } from "@/types/PatientTypes";
 import { getRequestData } from "@/services/request.services";
-import { MedCertFormValues, patientConsultationSchema, PrescriptionValues } from "@/schemas/consultation.schema";
+import { MedCertFormValues, patientConsultationSchema, PrescriptionValues, RegisterFollowupFormValues } from "@/schemas/consultation.schema";
 import z from "zod";
 import { RegisterPayload } from "@/types/AuthTypes";
 import { LaboratoryItems, LaboratoryProps, PaginationMeta, RequestProps } from "@/types/RequestTypes";
@@ -96,6 +96,7 @@ export const useConsultaion = () => {
       queryClient.invalidateQueries({ queryKey: ['consultation'] });
       queryClient.invalidateQueries({ queryKey: ['request'] });
       queryClient.invalidateQueries({ queryKey: ['queue'] });
+
     },
 
     onError: (error: unknown) => {
@@ -332,6 +333,14 @@ export const useMedicalCertificatePrint = (req_id: number) => {
   });
 };
 
+export const useFollowupPrint = (req_id: number) => {
+  return useQuery<RegisterFollowupFormValues>({
+    queryKey: ["consultation", "followup-print", req_id],
+    queryFn: () => getFollowupPrint(req_id),
+    enabled: !!req_id,
+  });
+};
+
 export const useFollowupRecords = (cons_id: number) => {
   return useQuery<FollowupConsultationResultProps>({
     queryKey: ['consultation', "follow-up", cons_id],
@@ -347,5 +356,38 @@ export const useGetInitialConsultations = (patient_id: number) => {
     queryKey: ["consultation", "labRequests", patient_id],
     queryFn: () => getInitialConsultations(patient_id),
     enabled: !!patient_id
+  });
+};
+
+export const useConsultaionFollowup = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: consultationFollowupResults,
+
+    onSuccess: () => {
+      SweetAlert.successAlert(
+        "Success",
+        "Patient request registered successfully"
+      );
+      queryClient.invalidateQueries({ queryKey: ['consultation'] });
+      queryClient.invalidateQueries({ queryKey: ['request'] });
+      queryClient.invalidateQueries({ queryKey: ['queue'] });
+    },
+
+    onError: (error: unknown) => {
+      SweetAlert.errorAlert(
+        "Registration Failed",
+        error instanceof Error ? error.message : "Something went wrong"
+      );
+    }
+  });
+};
+
+export const useGetInitialConsultationWithFollowups = (patient_id: number, consultation_id: number) => {
+  return useQuery<InitialConsultationWithPrevFollowupsProps>({
+    queryKey: ["consultation", "prev-follow-ups", patient_id, consultation_id],
+    queryFn: () => getInitialConsultationWithPrevFollowups(patient_id, consultation_id),
+    enabled: !!patient_id || !!consultation_id
   });
 };

@@ -1,5 +1,5 @@
 import type { ConsultationPrintDTO } from "@/types/ConsultationTypes";
-import { MedCertFormValues, patientConsultationSchema, PrescriptionValues } from "@/schemas/consultation.schema";
+import { MedCertFormValues, patientConsultationSchema, PrescriptionValues, RegisterFollowupFormValues } from "@/schemas/consultation.schema";
 import z from "zod";
 type RegisterConsultationFormValues = z.infer<typeof patientConsultationSchema>;
 
@@ -105,6 +105,12 @@ const DOCUMENT_SIZES = {
         width: "4.9in", // B6 width
         minWidth: 520,
     },
+
+    "followup-result": {
+        width: "8.27in", // A4
+        minWidth: 794,
+    },
+
 } as const;
 
 const PDF_ENDPOINT = "/api/consult/result/pdf";
@@ -117,17 +123,19 @@ const sanitizeFilePart = (value: string) =>
         .trim();
 
 export const getConsultationResultPdfFileName = (
-    type: "consult-result" | "prescription" | "med-cert",
+    type: "consult-result" | "prescription" | "med-cert" | "followup-result",
     request:
         | RegisterConsultationFormValues
         | MedCertFormValues
-        | PrescriptionValues,
+        | PrescriptionValues
+        | RegisterFollowupFormValues,
     patientName: string
 ) => {
     const documentNames = {
         "consult-result": "consultation",
         "prescription": "prescription",
         "med-cert": "medical-certificate",
+        "followup-result": "followup",
     };
 
     return `${sanitizeFilePart(String(patientName ?? "patient"))}-${sanitizeFilePart(
@@ -386,7 +394,7 @@ export const buildConsultationResultPdf = async ({
 }: {
     element: HTMLElement;
     fileName: string;
-    type: "consult-result" | "prescription" | "med-cert"
+    type: "consult-result" | "prescription" | "med-cert" | "followup-result"
 }) => {
     const html = await createPdfRenderSnapshot(element, type);
 
@@ -416,7 +424,7 @@ export const downloadConsultationResultPdf = async ({
 }: {
     element: HTMLElement;
     fileName: string;
-    type: "consult-result" | "prescription" | "med-cert"
+    type: "consult-result" | "prescription" | "med-cert" | "followup-result"
 }) => {
     const pdfBlob = await buildConsultationResultPdf({
         element,
