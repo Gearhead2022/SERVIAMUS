@@ -505,7 +505,6 @@ const Dashboard = () => {
     setSelectedRequest(request); setCurrentPatient(patient);
     setModalType(type); setModalView(true); setIsOpenModal(true); setSelectedPatient(patient);
   };
-
   // console.log('current form data', followupFormData);
 
   const handleRequestAction = async (
@@ -527,6 +526,7 @@ const Dashboard = () => {
       return;
     } else {
       localStorage.removeItem("request_id"); localStorage.removeItem(key); setCurrentRequestId(null);
+      setCurrentPatient(undefined);
     }
   };
 
