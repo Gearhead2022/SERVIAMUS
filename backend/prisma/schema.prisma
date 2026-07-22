@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
 }
 
 model Users {
@@ -40,6 +40,8 @@ model Users {
   chemistry_results_as_pathologist          ChemistryResult[]           @relation("ChemistryResultPathologist")
   ogtt_results_as_medtech                   OgttResult[]                @relation("OgttResultMedTech")
   ogtt_results_as_pathologist               OgttResult[]                @relation("OgttResultPathologist")
+  fobt_results_as_medtech                   FOBTResult[]                @relation("FOBTResultMedTech")
+  fobt_results_as_pathologist               FOBTResult[]                @relation("FOBTResultPathologist")
   medical_certificate_request_as_doctor     MedicalCertificateRequest[] @relation("MedicalCertificateRequestDoctor")
   consultation_request_as_doctor            ConsultationRequest[]       @relation("ConsultationRequestDoctor")
   notification                              Notification[]
@@ -378,6 +380,7 @@ model LaboratoryRequestItem {
   hba1c_result              HbA1cResult?
   chemistry_result          ChemistryResult?
   ogtt_result               OgttResult?
+  fobt_result                FOBTResult?
 
   @@index([laboratory_request_id])
   @@index([status])
@@ -725,6 +728,7 @@ model Patients {
   hba1c_results               HbA1cResult[]
   chemistry_results           ChemistryResult[]
   ogtt_results                OgttResult[]
+  fobt_results                FOBTResult[]
   medical_certificate_results MedicalCertificateResult[]
   queue                       Queue[]
 
@@ -839,4 +843,30 @@ enum NotificationType {
   APPROVED
   REJECTED
   SYSTEM
+}
+
+model FOBTResult {
+  fobt_id          Int       @id @default(autoincrement())
+  patient_id       Int
+  lab_id           Int       @unique
+  test_name        String?   @db.VarChar(100)
+  method           String?   @db.VarChar(100)
+  specimen         String?   @db.VarChar(100)
+  result          String?   @db.Text
+  day_of_fever     String?   @db.VarChar(50)
+  med_tech_user_id Int?
+  pth_user_id      Int?
+  result_date      DateTime  @default(now()) @db.Date
+  created_at       DateTime  @default(now())
+  updated_at       DateTime? @updatedAt
+
+  patient     Patients              @relation(fields: [patient_id], references: [patient_id])
+  lab         LaboratoryRequestItem @relation(fields: [lab_id], references: [item_id], onDelete: Cascade)
+  med_tech    Users?                @relation("FOBTResultMedTech", fields: [med_tech_user_id], references: [user_id])
+  pathologist Users?                @relation("FOBTResultPathologist", fields: [pth_user_id], references: [user_id])
+
+  @@index([patient_id])
+  @@index([med_tech_user_id])
+  @@index([pth_user_id])
+  @@map("FOBT_results")
 }

@@ -150,7 +150,7 @@ const PatientForm: React.FC<{ patient?: PatientProps | null, onClose: () => void
             <Input
               label="Religion"
               type="text"
-              placeholder="Years"
+              placeholder="e.g. Roman Catholic"
               {...register("religion")}
               error={errors.religion?.message}
             />

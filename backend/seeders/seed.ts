@@ -18,12 +18,12 @@ async function main() {
     // await seedUsers(prisma);
     // await seedLaboratory(prisma);
     await seedServices(prisma);
-    // await seedConsultationRecords(prisma);
-    // await seedMedicalCertificateRequest(prisma);
-    // await seedPrescriptions(prisma);
-    // await seedPatients(prisma);
-    // await seedVitals(prisma);
-    // await seedConsultations(prisma);
+    await seedConsultationRecords(prisma);
+    await seedMedicalCertificateRequest(prisma);
+    await seedPrescriptions(prisma);
+    await seedPatients(prisma);
+    await seedVitals(prisma);
+    await seedConsultations(prisma);
 
     console.log("Full database seeded");
 }

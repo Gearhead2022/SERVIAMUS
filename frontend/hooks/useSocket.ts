@@ -19,7 +19,7 @@ type NotificationData = {
 type NotificationHandler = (data: NotificationData) => void;
 
 const ENTITY_QUERY_MAP: Record<EntityType, ReadonlyArray<readonly string[]>> = {
-    request: [["request"], ["lab"], ["queue"], ["billing"], ["labRequests"], ["dashboard"]],
+    request: [ ["lab"], ["billing"], ["dashboard"]], //["queue"],["request"], ["labRequests"]
     consultation: [["consultation"], ["consultation", "list"], ["queue"], ["dashboard"]],
     lab: [["lab"], ["laboratory"], ["billing"], ["request"], ["queue"], ["dashboard"]],
     billing: [["billing"], ["dashboard"]],
@@ -118,7 +118,7 @@ export default function useSocket(onNotification?: NotificationHandler) {
         socket.on("consultation:updated", handleConsultationUpdated);
         socket.on("consultation:deleted", handleConsultationDeleted);
         socket.on("lab:updated", handleLabUpdated);
-        socket.on("lab.deleted", handleLabDeleted);
+        socket.on("lab:deleted", handleLabDeleted);
         socket.on("billing:updated", handleBillingUpdated);
         socket.on("billing:deleted", handleBillingDeleted);
         socket.on("admin:updated", handleUsersUpdated);

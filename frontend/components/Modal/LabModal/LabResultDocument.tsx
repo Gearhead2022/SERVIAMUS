@@ -1038,7 +1038,7 @@ function SerologyDocument({ request, form }: Props) {
   const template = resolveLabTemplate(request);
 
   return (
-    <PreviewShell title={template.label.toUpperCase()} form={form}>
+    <PreviewShell title= {template.label.toUpperCase()} form={form}>
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
         <div className="overflow-hidden rounded-xl border border-slate-300">
@@ -1093,7 +1093,7 @@ function SerologyDocument({ request, form }: Props) {
 
 function FecalOccultBloodDocument({ request, form }: Props) {
   return (
-    <PreviewShell title="FECAL OCCULT BLOOD TEST" form={form}>
+    <PreviewShell title="Clinical Microscopy" subTitle="(Fecal Occult Blood Test)" form={form}>
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
         <div className="overflow-hidden rounded-xl border border-slate-300">
@@ -1148,7 +1148,7 @@ function FecalOccultBloodDocument({ request, form }: Props) {
 
 function Hba1cDocument({ request, form }: Props) {
   return (
-    <PreviewShell title="HBA1C" form={form}>
+    <PreviewShell title="Clinical Chemistry" subTitle="(HBA1C)" form={form}>
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
         <div className="overflow-hidden rounded-xl border border-slate-300">
