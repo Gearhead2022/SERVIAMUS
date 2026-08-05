@@ -915,7 +915,7 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
 
                 <div className="px-2 py-2.5 flex items-center justify-end gap-2 tabular-nums border-r border-slate-200">
                   <span className="text-nowrap">{getValue(form, row.fieldName, rowFallback)}</span>
-                  <span className="text-slate-700">mg/dL</span>
+                  <span className="text-slate-700">{row?.label === 'SGPT' ? 'U/L' : 'mg/dL'}</span>
                 </div>
 
                 <div className="px-2 py-2.5 flex justify-end gap-2 border-r border-slate-500">
@@ -949,14 +949,14 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
                       ? getValue(form, row.conversionFieldName, rowFallback)
                       : ""}
                   </span>
-                  <span className="text-slate-700">{row.label !== 'SGPT' ? 'mg/dL' : ''}</span>
+                  <span className="text-slate-700">{row.label !== 'SGPT' ? 'mmol/L' : ''}</span>
                 </div>
 
                 <div className="px-2 py-2.5 flex justify-end gap-2">
                   {ref?.label && (<div className="text-left tabular-nums">
-                    <div> {ref?.label && row.label !== 'SGPT' ? ref.label : ''}</div>
+                    <div> {ref?.label && row.label !== 'SGPT' ? ref.label + ' (' + (row.label !== 'SGPT' ? 'mmol/L' : '') + ')' : ''}</div>
                     {ref2?.label && (
-                      <div>{ref2?.label && row.label !== 'SGPT' ? ref2.label : ''}</div>
+                      <div>{ref2?.label && row.label !== 'SGPT' ? ref2.label + ' (' + (row.label !== 'SGPT' ? 'mmol/L' : '') + ')' : ''}</div>
                     )}
                   </div>
                   )}
@@ -968,9 +968,9 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
                   </div>
 
                   <div className="text-right tabular-nums ">
-                    <div>{row?.label === 'SGPT' ? '' : 'mg/dL'}</div>
+                    <div>{row?.label === 'SGPT' ? '' : 'mmol/L'}</div>
                     {ref2 && (
-                      <div>{row?.label === 'SGPT' ? '' : 'mg/dL'}</div>
+                      <div>{row?.label === 'SGPT' ? '' : ''}</div>
                     )}
                   </div>
                 </div>
