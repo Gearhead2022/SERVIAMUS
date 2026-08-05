@@ -360,13 +360,13 @@ export default function DashboardPage() {
   };
 
   const acceptRequest = async (request: LabRequest) => {
-    if (!request.isPaid) {
-      SweetAlert.errorAlert(
-        "Payment Required",
-        "This laboratory request is locked until the cashier marks the bill as paid."
-      );
-      return;
-    }
+    // if (!request.isPaid )  {
+    //   SweetAlert.errorAlert(
+    //     "Payment Required",
+    //     "This laboratory request is locked until the cashier marks the bill as paid."
+    //   );
+    //   return;
+    // }
 
     try {
       setBusyRequestId(request.labId);
@@ -929,8 +929,10 @@ export default function DashboardPage() {
                               <span className={getStatusBadgeClasses(item.requestStatus)}>
                                 Patient: {item.requestStatus}
                               </span>
-                              <span className={item.isPaid ? "billing-paid" : "billing-unpaid"}>
-                                {item.isPaid ? "Paid" : "Unpaid"}
+                              <span className= "Paid">
+                              {/* // {item.isPaid ? "billing-paid" : "billing-unpaid"} */}
+                              "Paid"  
+                               {/* {item.isPaid ? "Paid" : "Unpaid"} */}
                               </span>
                             </div>
 
@@ -941,7 +943,10 @@ export default function DashboardPage() {
                               </p>
                             </div>
 
-                            <div className="grid gap-2 text-xs sm:grid-cols-2">
+                            <div>
+                              <p className="text-xs text-[#7a8fa8]"></p>
+                            </div>
+                            {/* <div className="grid gap-2 text-xs sm:grid-cols-2">
                               <div className="info-tile">
                                 <p className="info-tile-label">Template</p>
                                 <p className="info-tile-value">{template.label}</p>
@@ -952,7 +957,7 @@ export default function DashboardPage() {
                                   {item.billingCode ?? "Not assigned"} · {formatCurrency(item.billingTotal)}
                                 </p>
                               </div>
-                            </div>
+                            </div> */}
 
                             <div className="space-y-0.5">
                               <p className="text-xs text-[#4a607a]">
@@ -978,22 +983,23 @@ export default function DashboardPage() {
                               </div>
                             </div>
 
-                            {!item.isPaid ? (
+                            {/* {!item.isPaid ? (
                               <p className="locked-note">🔒 Locked until cashier posts payment.</p>
-                            ) : null}
+                            ) : null} */}
                           </div>
 
                           <Button
                             type="button"
                             onClick={() => acceptRequest(item)}
-                            disabled={busyRequestId === item.labId || !item.isPaid}
+                            // disabled={busyRequestId === item.labId || !item.isPaid}
                             className="min-w-[148px] shrink-0"
                           >
-                            {busyRequestId === item.labId
+                            {/* {busyRequestId === item.labId
                               ? "Accepting…"
                               : item.isPaid
                                 ? "Accept Request"
-                                : "Awaiting Payment"}
+                                : "Awaiting Payment"}  */}
+                                Accept Request
                           </Button>
                         </div>
                       </div>

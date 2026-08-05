@@ -934,7 +934,12 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
                   </div>
 
                   <div className="text-right tabular-nums ">
-                    <div>{row?.label === 'SGPT' ? 'U/L' : 'mg/dL'}</div>
+                    <div>{row?.label === "SGPT"
+                      ? "U/L"
+                      : row?.label === "RBS (Random Blood Sugar)"
+                      ? ""
+                      : "mg/dL"}
+                    </div>
                     {ref2 && (
                       <div>{row?.label === 'SGPT' ? 'U/L' : 'mg/dL'}</div>
                     )}
@@ -968,9 +973,15 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
                   </div>
 
                   <div className="text-right tabular-nums ">
-                    <div>{row?.label === 'SGPT' ? '' : 'mmol/L'}</div>
+                    <div>
+                       {row?.label === "SGPT"
+                        ? ""
+                        : row?.label === "RBS (Random Blood Sugar)"
+                        ? ""
+                        : "mmol/L"}
+                    </div>
                     {ref2 && (
-                      <div>{row?.label === 'SGPT' ? '' : ''}</div>
+                      <div>{row?.label === 'SGPT' ? '' : 'mmol/L'}</div>
                     )}
                   </div>
                 </div>
@@ -1552,13 +1563,13 @@ export default function LabResultDocument({
     return <UrinalysisDocument request={request} form={form} />;
   }
 
-  if (template.key === "clinical-chemistry-panel") {
+  if (template.key === "clinical-chemistry-panel" || template.key === "single-chemistry") {
     return <ClinicalChemistryDocument request={request} form={form} displayMode={displayMode} />;
   }
 
-  if (template.key === "single-chemistry") {
-    return <SingleChemistryDocument request={request} form={form} />;
-  }
+  // if (template.key === "single-chemistry") {
+  //   return <SingleChemistryDocument request={request} form={form} />;
+  // }
 
   if (
     template.key === "serology" ||

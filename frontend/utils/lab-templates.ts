@@ -117,8 +117,8 @@ const clinicalChemistryRows: ClinicalChemistryRow[] = [
     showMealFields: true,
     referenceValues: [
       {
-        conventional: "75-115",
-        si: "4.13-6.33",
+        conventional: "",
+        si: "",
       },
     ],
 

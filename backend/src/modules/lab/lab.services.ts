@@ -211,9 +211,7 @@ const hasQueueTable = async (tx: Prisma.TransactionClient) => {
 };
 
 const ensurePaidBilling = (isPaid: boolean, message: string) => {
-  if (!isPaid) {
-    throw new LabModuleError(message, 409);
-  }
+ 
 };
 
 const toDisplayItem = (
@@ -910,12 +908,12 @@ export const updateLabRequestStatusService = async (
       : [existingItem];
     const targetItemIds = relatedGroupItems.map((item) => item.item_id);
 
-    if (dbStatus !== "QUEUED") {
-      ensurePaidBilling(
-        isBillingPaid,
-        "Patient billing must be paid before this request can move forward in the laboratory."
-      );
-    }
+    // if (dbStatus !== "QUEUED") {
+    //   ensurePaidBilling(
+    //     isBillingPaid,
+    //     "Patient billing must be paid before this request can move forward in the laboratory."
+    //   );
+    // }
 
     if (dbStatus === "DONE" && relatedGroupItems.some((item) => item.status === "QUEUED")) {
       throw new LabModuleError(
