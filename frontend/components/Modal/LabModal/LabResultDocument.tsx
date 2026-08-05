@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { LabRequest, LabResultPayload } from "@/types/LabTypes";
 import {
   formatLabResultValue,
@@ -140,21 +140,33 @@ function PreviewFieldv2({
 }) {
   return (
     <div
-      className="result-field min-w-0 flex gap-1 pb-4"
+      className="result-field min-w-0 grid grid-cols-[max-content_minmax(0,1fr)] items-baseline gap-x-2 pb-2"
       style={{
         gridColumn: `span ${col} / span ${col}`,
       }}
     >
-      <p className="result-label text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700">
-        {label} :
+      <p className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700">
+        {label}:
       </p>
 
-      <p className="result-value break-words font-bold text-[13px] leading-4 text-gray-600 border-b w-20 indent-5">
-        {value.toUpperCase()}
+      <p className="min-w-0 overflow-hidden break-words [overflow-wrap:anywhere] border-b border-slate-500 pb-0.5 text-[13px] font-bold leading-4 text-gray-600">
+        {value || "—"}
       </p>
     </div>
   );
 }
+
+// The document is printed on US Letter with the print-only @page rule below.
+// Keep these values aligned so the fitting calculation matches the actual
+// printable area.
+const PAGE_HEIGHT_IN = 11;
+const PAGE_MARGIN_IN = 0.25;
+const DPI = 96;
+const MAX_CONTENT_HEIGHT_PX = (PAGE_HEIGHT_IN - PAGE_MARGIN_IN * 2) * DPI;
+
+// Do not clip a result just to force a page break away. Existing lab forms fit
+// before this limit; it only protects readability for unusually large input.
+const MIN_SCALE = 0.65;
 
 function PreviewShell({
   title,
@@ -168,72 +180,140 @@ function PreviewShell({
   form: LabResultPayload;
 }) {
   const personnelDisplay = getLabResultPersonnelDisplay(form);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // IMPORTANT: we use the CSS `zoom` property here, not `transform: scale()`.
+  // `transform` only affects paint — it does NOT shrink the element's layout
+  // box, so the parent still reserves (and the print engine still paginates
+  // based on) the FULL unscaled height. That's why a transform-based version
+  // of this can visually "look" smaller on screen but still spill onto extra
+  // printed pages. `zoom` actually changes the box's layout size, so the
+  // page genuinely gets shorter and pagination is correct. (Well supported
+  // in Chromium — which is what `window.print()` / Puppeteer / most
+  // browser-based PDF pipelines use.)
+  useLayoutEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    // Reset to natural size before measuring, then apply the new zoom
+    // immediately (before paint) so there's no visible flash between sizes.
+    // The compensating explicit height keeps the visible sheet height fixed:
+    // the signatures and CURA PERSONALIS remain at the page bottom even when
+    // a longer result must be scaled down.
+    el.style.zoom = "1";
+    el.style.height = "auto";
+    el.style.minHeight = "0";
+    const naturalHeight = el.scrollHeight;
+    const nextScale = naturalHeight
+      ? Math.max(MIN_SCALE, Math.min(1, MAX_CONTENT_HEIGHT_PX / naturalHeight))
+      : 1;
+
+    el.style.zoom = String(nextScale);
+    const layoutHeight = MAX_CONTENT_HEIGHT_PX / nextScale;
+    el.style.height = `${layoutHeight}px`;
+    el.style.minHeight = `${layoutHeight}px`;
+  }, [children]);
 
   return (
     <div
       data-lab-result-document
-      className="result-paper mx-auto w-full max-w-[8in] min-h-[10.3in] bg-white p-5 text-sm shadow-xl flex flex-col print:shadow-none print:p-0"
-    >
-      <header className="result-header pb-3">
-        <div className="grid grid-cols-[4.1rem_1fr_3.1rem] items-center gap-4 pb-2 border-b-2 border-blue-300">
-          <div className="flex justify-center">
-            <Image
-              src="/images/serviamus.jpeg"
-              alt="Serviamus logo"
-              width={58}
-              height={58}
-              className="h-17 w-17 rounded-full object-cover"
-              priority
-              unoptimized
+      className="result-paper mx-auto w-full max-w-[8in] bg-white p-5 text-sm shadow-xl print:shadow-none print:p-0">
+      <style>{`
+        @media print {
+          @page {
+            size: Letter portrait;
+            margin: 0.25in;
+          }
+
+          [data-lab-result-document] {
+            width: 8in !important;
+            max-width: none !important;
+            margin: 0 auto !important;
+            break-after: avoid-page;
+            page-break-after: avoid;
+          }
+
+          [data-lab-result-document],
+          [data-lab-result-document] * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+      `}</style>
+      <div
+        ref={contentRef}
+        className="result-scale-wrapper flex flex-col"
+        style={{
+          zoom: 1,
+          height: `${MAX_CONTENT_HEIGHT_PX}px`,
+          minHeight: `${MAX_CONTENT_HEIGHT_PX}px`,
+        }}
+      >
+        <header className="result-header pb-3">
+          <div className="grid grid-cols-[4.1rem_1fr_3.1rem] items-center gap-4 pb-2 border-b-2 border-blue-300">
+            <div className="flex justify-center">
+              <Image
+                src="/images/serviamus.jpeg"
+                alt="Serviamus logo"
+                width={58}
+                height={58}
+                className="h-17 w-17 rounded-full object-cover"
+                priority
+                unoptimized
+              />
+            </div>
+            <div className="min-w-0 text-center"
+              style={{
+                fontFamily: "'Times New Roman', Times, serif",
+              }}>
+              <h1 className="result-title text-[19px] font-bold uppercase leading-tight tracking-[1.5px] text-blue-800">
+                SERVIAMUS MEDICAL CLINIC AND LABORATORY, INC.
+              </h1>
+              <p className="result-subtitle text-[10px] text-gray-700">
+                Puer Sanctus VI Building, Corner Rosario-Verbena Streets, Brgy. 33, Bacolod City, Negros Occidental, Philippines, 6100
+              </p>
+              <p className="result-subtitle text-[10px] text-gray-700">
+                Mobile No. (034) 4746678 | 09369513486
+              </p>
+            </div>
+            <div aria-hidden="true" className="h-14 w-14" />
+          </div>
+          <h2 className="result-department mt-3 text-center text-lg font-bold tracking-[0.1em] text-amber-600">
+            {title}
+          </h2>
+          <h2 className="result-department text-center text-sm font-semibold tracking-[0.28em] text-gray-600">
+            {subTitle ? (subTitle) : ''}
+          </h2>
+        </header>
+        <main className="result-body flex min-h-0 flex-1 flex-col">
+          {children}
+        </main>
+        <footer className="result-footer-group mt-auto shrink-0">
+          <div className="result-footer flex justify-between gap-5 border-t border-slate-200 pt-4 pb-5 text-[14px]">
+            <PersonnelFooterBlock
+              label={personnelDisplay.pathologist.primaryLine}
+              primaryLine={personnelDisplay.pathologist.licenseNo ?? ''}
+              secondaryLine={'Pathologist'}
+            />
+            <PersonnelFooterBlock
+              label={personnelDisplay.medTech.primaryLine}
+              primaryLine={personnelDisplay.medTech.licenseNo ?? ''}
+              secondaryLine={'Medical Technologist'}
+              textAlign="right"
             />
           </div>
-          <div className="min-w-0 text-center"
-            style={{
-              fontFamily: "'Times New Roman', Times, serif",
-            }}>
-            <h1 className="result-title text-[19px] font-bold uppercase leading-tight tracking-[1.5px] text-blue-800">
-              SERVIAMUS MEDICAL CLINIC AND LABORATORY, INC.
+          <div className="border-t-2 border-blue-400 pt-4 text-center">
+            <h1
+              className="font-bold tracking-[0.35em] text-blue-800 flex items-center justify-center"
+              style={{
+                fontFamily: "'Times New Roman', serif",
+                fontSize: "14px",
+              }}
+            >
+              CURA PERSONALIS
             </h1>
-            <p className="result-subtitle text-[10px] text-gray-700">
-              Puer Sanctus VI Building, Corner Rosario-Verbena Streets, Brgy. 33, Bacolod City, Negros Occidental, Philippines, 6100
-            </p>
-            <p className="result-subtitle text-[10px] text-gray-700">
-              Mobile No. (034) 4746678 | 09369513486
-            </p>
           </div>
-          <div aria-hidden="true" className="h-14 w-14" />
-        </div>
-        <h2 className="result-department mt-3 text-center text-lg font-bold tracking-[0.1em] text-amber-600">
-          {title}
-        </h2>
-        <h2 className="result-department text-center text-sm font-semibold tracking-[0.28em] text-gray-600">
-          {subTitle ? (subTitle) : ''}
-        </h2>
-      </header>
-      {children}
-      <footer className="result-footer mt-auto pb-5 flex justify-between gap-6 border-t border-slate-200 pt-4 text-[14px]">
-        <PersonnelFooterBlock
-          label={personnelDisplay.pathologist.primaryLine}
-          primaryLine={personnelDisplay.pathologist.licenseNo ?? ''}
-          secondaryLine={'Pathologist'}
-        />
-        <PersonnelFooterBlock
-          label={personnelDisplay.medTech.primaryLine}
-          primaryLine={personnelDisplay.medTech.licenseNo ?? ''}
-          secondaryLine={'Medical Technologist'}
-          textAlign="right"
-        />
-      </footer>
-      <div className="pt-4 mb-0 border-t-2 border-blue-400 text-center">
-        <h1
-          className="font-bold tracking-[0.35em] text-blue-800 flex items-center justify-center"
-          style={{
-            fontFamily: "'Times New Roman', serif",
-            fontSize: "14px",
-          }}
-        >
-          CURA PERSONALIS
-        </h1>
+        </footer>
       </div>
     </div>
   );
@@ -483,7 +563,7 @@ function CbcDocument({ request, form }: Props) {
           </div>
         </div>
       </Section>
-      <div className="text-blue-500 mt-auto italic font-bold tracking-wide text-center">
+      <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500">
         <h2>REMARKS: {getValue(form, "remarks")}</h2>
       </div>
     </PreviewShell>
@@ -535,7 +615,7 @@ function BloodTypingDocument({ request, form }: Props) {
         </div>
       </Section>
 
-      <div className="text-blue-500 mt-auto italic font-bold tracking-wide text-center">
+      <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500">
         <h2>
           REMARKS: {getValue(form, "remarks")}
         </h2>
@@ -674,7 +754,7 @@ function ParasitologyDocument({ request, form }: Props) {
         </div>
       </Section>
 
-      <p className="result-remarks mt-auto text-sm font-bold text-blue-600 italic font-bold tracking-wide text-center">
+      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
         REMARKS : {getValue(form, "remarks")}
       </p>
     </PreviewShell>
@@ -847,7 +927,7 @@ function UrinalysisDocument({ request, form }: Props) {
         </div>
       </Section>
 
-      <div className="text-blue-500 mt-auto italic font-bold tracking-wide text-center uppercase">
+      <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500 uppercase">
         <h2>REMARKS: {getValue(
           form,
           "remarks",
@@ -959,9 +1039,9 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
 
                 <div className="px-2 py-2.5 flex justify-end gap-2">
                   {ref?.label && (<div className="text-left tabular-nums">
-                    <div> {ref?.label && row.label !== 'SGPT' ? ref.label + ' (' + (row.label !== 'SGPT' ? 'mmol/L' : '') + ')' : ''}</div>
+                    <div> {ref?.label && row.label !== 'SGPT' ? ref.label + (row.label !== 'SGPT' ? '' : '') : ''}</div>
                     {ref2?.label && (
-                      <div>{ref2?.label && row.label !== 'SGPT' ? ref2.label + ' (' + (row.label !== 'SGPT' ? 'mmol/L' : '') + ')' : ''}</div>
+                      <div>{ref2?.label && row.label !== 'SGPT' ? ref2.label  + (row.label !== 'SGPT' ? '' : '') : ''}</div>
                     )}
                   </div>
                   )}
@@ -992,14 +1072,14 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
       </Section>
       {
         showMealFields ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="mt-5 grid gap-8 sm:grid-cols-2">
             <PreviewFieldv2 label="Last Meal" value={getValue(form, "last_meal")} />
             <PreviewFieldv2 label="Time Taken" value={getValue(form, "time_taken")} />
           </div>
         ) : null
       }
 
-      <div className="text-blue-500 mt-auto italic font-bold tracking-wide text-center">
+      <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500">
         <h2>REMARKS: {getValue(form, "remarks")}</h2>
       </div>
     </PreviewShell >
@@ -1038,7 +1118,7 @@ function SingleChemistryDocument({ request, form }: Props) {
           ]}
         />
       </Section>
-      <p className="result-remarks mt-auto text-sm font-bold text-blue-600 italic font-bold tracking-wide text-center">
+      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
         REMARKS : {getValue(form, "remarks")}
       </p>
     </PreviewShell>
@@ -1095,7 +1175,7 @@ function SerologyDocument({ request, form }: Props) {
           </p>
         </div>
       </Section>
-      <p className="result-remarks mt-auto text-sm font-bold text-blue-600 italic font-bold tracking-wide text-center">
+      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
         REMARKS : {getValue(form, "remarks")}
       </p>
     </PreviewShell>
@@ -1150,7 +1230,7 @@ function FecalOccultBloodDocument({ request, form }: Props) {
           </div>
         </div>
       </Section>
-      <p className="result-remarks mt-auto text-sm font-bold text-blue-600 italic font-bold tracking-wide text-center">
+      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
         REMARKS : {getValue(form, "remarks")}
       </p>
     </PreviewShell>
@@ -1254,7 +1334,7 @@ function Hba1cDocument({ request, form }: Props) {
           ))}
         </div>
       </Section>
-      <p className="result-remarks mt-auto text-sm font-bold text-blue-600 italic font-bold tracking-wide text-center">
+      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
         REMARKS : {getValue(form, "remarks", "No additional remarks")}
       </p>
     </PreviewShell>
@@ -1342,7 +1422,7 @@ function ChemistryPanelDocument({ request, form, displayMode = "preview" }: Prop
           </div>
         </div>
       </Section>
-      <p className="result-remarks mt-auto text-sm font-bold text-blue-600 italic font-bold tracking-wide text-center">
+      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
         REMARKS : {getValue(form, "remarks", "No additional remarks")}
       </p>
     </PreviewShell>
@@ -1501,7 +1581,7 @@ function OgttDocument({ request, form }: Props) {
         </div>
       </Section>
 
-      <div className="text-blue-500 mt-auto italic font-bold tracking-wide text-center">
+      <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500">
         <h2>REMARKS: {getValue(form, 'remarks', "____")}</h2>
       </div>
     </PreviewShell>
