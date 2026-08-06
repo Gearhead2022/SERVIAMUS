@@ -176,9 +176,9 @@ const ConsultationFields: EncodingField[] = [
 ];
 
 const clinicalChemistryTests: ClinicalChemistryTest[] = [
-  { value: "FBS", label: "Fasting Blood Sugar (FBS)", testName: "FBS", schemaKey: "FBS", fields: [{ key: "FBS", label: "FASTING BLOOD SUGAR (FBS)" }] },
-  { value: "RBS", label: "Random Blood Sugar (RBS)", testName: "RBS", schemaKey: "RBS", fields: [{ key: "RBS", label: "RANDOM BLOOD SUGAR (RBS)" }] },
-  { value: "BUN", label: "Urea (BUN)", testName: "BUN", schemaKey: "BUN", fields: [{ key: "BUN", label: "UREA (BUN)" }] },
+  { value: "FBS", label: "Fasting Blood Sugar (FBS)", testName: "FBS", schemaKey: "FBS", fields: [{ key: "fbs", label: "FASTING BLOOD SUGAR (FBS)" }] },
+  { value: "RBS", label: "Random Blood Sugar (RBS)", testName: "RBS", schemaKey: "RBS", fields: [{ key: "rbs", label: "RANDOM BLOOD SUGAR (RBS)" }] },
+  { value: "BUN", label: "Urea (BUN)", testName: "BUN", schemaKey: "BUN", fields: [{ key: "bun", label: "UREA (BUN)" }] },
   { value: "creatinine", label: "Creatinine", testName: "Creatinine", schemaKey: "clinical_chemistry", fields: [{ key: "creatinine", label: "Creatinine" }] },
   { value: "uric_acid", label: "Uric Acid", testName: "Uric Acid", schemaKey: "uricacid", fields: [{ key: "uric_acid", label: "Uric Acid" }] },
   { value: "cholesterol", label: "Total Cholesterol", testName: "Total Cholesterol", schemaKey: "totalcholesterol", fields: [{ key: "cholesterol", label: "CHOLESTEROL" }] },
