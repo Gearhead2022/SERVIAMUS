@@ -121,7 +121,7 @@ export default function ClinicalChemistryModal({
     ? testRows.filter((row) => fieldNames.includes(row.name))
     : testRows;
   const showMealFields = visibleRows.some(
-    (row) => row.name === "FBS" || row.name === "RBS"
+    (row) => row.name === "FBS" || row.name === "RBS" 
   );
   // console.log('field names', fieldNames)
 

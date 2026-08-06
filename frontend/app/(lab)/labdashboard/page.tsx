@@ -929,11 +929,11 @@ export default function DashboardPage() {
                               <span className={getStatusBadgeClasses(item.requestStatus)}>
                                 Patient: {item.requestStatus}
                               </span>
-                              <span className= "Paid">
-                              {/* // {item.isPaid ? "billing-paid" : "billing-unpaid"} */}
-                              "Paid"  
-                               {/* {item.isPaid ? "Paid" : "Unpaid"} */}
-                              </span>
+                              {/* <span className= "Paid">
+                              {item.isPaid ? "billing-paid" : "billing-unpaid"}
+                                
+                                {item.isPaid ? "Paid" : "Unpaid"}
+                              </span> */}
                             </div>
 
                             <div>
