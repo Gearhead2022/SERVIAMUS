@@ -1,12 +1,11 @@
 import { Router } from "express";
+import { authLoginController, authRegisterController, authRoleController } from "./authentication.controller";
 
-import {
-  authRoleController,
-  authLoginController,
-  authRegisterController
-} from "./authentication.controller";
+
 
 const router = Router();
+
+
 
 // PUBLIC ROUTES
 router.post(

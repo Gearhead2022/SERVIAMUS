@@ -122,9 +122,19 @@ export async function POST(request: NextRequest) {
             height: 1810,
             width: 1280,
         });
-        await page.setContent(createPdfDocument(html), {
-            waitUntil: "networkidle0",
-        });
+  await page.setContent(html, {
+  waitUntil: "load",
+});
+
+await page.evaluate(async () => {
+  await document.fonts.ready;
+});
+
+await page.pdf({
+  path: "output.pdf",
+  format: "A4",
+  printBackground: true,
+});
         await page.emulateMediaType("screen");
         await page.evaluate(async () => {
             if ("fonts" in document) {

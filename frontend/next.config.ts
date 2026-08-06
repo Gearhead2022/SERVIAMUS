@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
         "192.168.1.251",
         "192.168.1.251:3006",
         "192.168.1.251:5006",
-
+        "https://serviamusmedicalclinic.org",
     ]
 
 };

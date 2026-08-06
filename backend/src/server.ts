@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
-import protectedRoutes from '../src/routes/protected';
+import protectedRoutes from './routes/protected';
 import authentocationRoutes from './modules/authentication/authentication.routes';
 import { errorHandler } from "./middlewares/error.middleware";
 
@@ -14,7 +14,7 @@ import * as cookie from "cookie";
 
 dotenv.config();
 
-const PORT = Number(process.env.PORT) || 5006;
+const PORT = Number(process.env.PORT) || 5003;
 
 const app = express();
 

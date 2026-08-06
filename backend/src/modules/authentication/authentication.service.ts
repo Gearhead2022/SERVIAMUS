@@ -42,6 +42,7 @@ export const registerUser = async (payload: iRegister) => {
  * LOGIN USER
  */
 export const loginUser = async (username: string, password: string) => {
+      console.log("Authentication service loaded");
   const user = await prisma.users.findUnique({
     where: { username },
     include: {

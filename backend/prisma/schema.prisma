@@ -415,7 +415,7 @@ model HematologyResult {
   others2            String?   @db.Text
   med_tech_user_id   Int?
   pth_user_id        Int?
-  result_date        DateTime  @default(now()) @db.Date
+  result_date        DateTime  @default(now()) 
   created_at         DateTime  @default(now())
   updated_at         DateTime? @updatedAt
 
@@ -441,7 +441,7 @@ model SerologyResult {
   day_of_fever     String?   @db.VarChar(50)
   med_tech_user_id Int?
   pth_user_id      Int?
-  result_date      DateTime  @default(now()) @db.Date
+  result_date      DateTime  @default(now())
   created_at       DateTime  @default(now())
   updated_at       DateTime? @updatedAt
 
@@ -478,7 +478,7 @@ model ParasitologyResult {
   others                  String?   @db.Text
   med_tech_user_id        Int?
   pth_user_id             Int?
-  result_date             DateTime  @default(now()) @db.Date
+  result_date             DateTime  @default(now())
   created_at              DateTime  @default(now())
   updated_at              DateTime? @updatedAt
 
@@ -518,7 +518,7 @@ model UrinalysisResult {
   others           String?   @db.Text
   med_tech_user_id Int?
   pth_user_id      Int?
-  result_date      DateTime  @default(now()) @db.Date
+  result_date      DateTime  @default(now()) 
   created_at       DateTime  @default(now())
   updated_at       DateTime? @updatedAt
 
@@ -560,7 +560,7 @@ model ClinicalChemistryResult {
   time_taken           String?   @db.VarChar(100)
   med_tech_user_id     Int?
   pth_user_id          Int?
-  result_date          DateTime  @default(now()) @db.Date
+  result_date          DateTime  @default(now()) 
   created_at           DateTime  @default(now())
   updated_at           DateTime? @updatedAt
 
@@ -587,7 +587,7 @@ model HbA1cResult {
   result_interpretation String?   @db.Text
   med_tech_user_id      Int?
   pth_user_id           Int?
-  result_date           DateTime  @default(now()) @db.Date
+  result_date           DateTime  @default(now()) 
   created_at            DateTime  @default(now())
   updated_at            DateTime? @updatedAt
 
@@ -613,7 +613,7 @@ model ChemistryResult {
   others           String?   @db.Text
   med_tech_user_id Int?
   pth_user_id      Int?
-  result_date      DateTime  @default(now()) @db.Date
+  result_date      DateTime  @default(now()) 
   created_at       DateTime  @default(now())
   updated_at       DateTime? @updatedAt
 
@@ -643,7 +643,7 @@ model OgttResult {
   three_hour_after_load_conv String?   @db.VarChar(50)
   med_tech_user_id           Int?
   pth_user_id                Int?
-  result_date                DateTime  @default(now()) @db.Date
+  result_date                DateTime  @default(now())
   created_at                 DateTime  @default(now())
   updated_at                 DateTime? @updatedAt
 
@@ -856,7 +856,7 @@ model FOBTResult {
   day_of_fever     String?   @db.VarChar(50)
   med_tech_user_id Int?
   pth_user_id      Int?
-  result_date      DateTime  @default(now()) @db.Date
+  result_date      DateTime  @default(now())
   created_at       DateTime  @default(now())
   updated_at       DateTime? @updatedAt
 

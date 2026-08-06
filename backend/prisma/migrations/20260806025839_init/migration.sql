@@ -109,11 +109,24 @@ CREATE TABLE `consultation_records` (
     `occupation` VARCHAR(100) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NULL,
-    `vitallSignVs_id` INTEGER NULL,
 
     UNIQUE INDEX `consultation_records_patient_id_key`(`patient_id`),
     INDEX `consultation_records_patient_id_idx`(`patient_id`),
     PRIMARY KEY (`phr_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `consultation_follow_up` (
+    `followup_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `consultation_id` INTEGER NOT NULL,
+    `follow_up_date` DATETIME(3) NOT NULL,
+    `vs_id` INTEGER NULL,
+    `impression` TEXT NULL,
+    `instruction` TEXT NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `consultation_follow_up_followup_id_idx`(`followup_id`),
+    PRIMARY KEY (`followup_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -137,7 +150,9 @@ CREATE TABLE `consultation_request` (
     `cons_id` INTEGER NOT NULL AUTO_INCREMENT,
     `req_id` INTEGER NOT NULL,
     `vs_id` INTEGER NOT NULL,
+    `case_consultation_id` INTEGER NULL,
     `physician` INTEGER NOT NULL,
+    `is_follow_up` BOOLEAN NOT NULL DEFAULT false,
 
     UNIQUE INDEX `consultation_request_req_id_key`(`req_id`),
     PRIMARY KEY (`cons_id`)
@@ -175,6 +190,7 @@ CREATE TABLE `med_cert_results` (
 CREATE TABLE `prescriptions` (
     `presc_id` INTEGER NOT NULL AUTO_INCREMENT,
     `consultation_id` INTEGER NOT NULL,
+    `followup_id` INTEGER NULL,
     `patient_id` INTEGER NOT NULL,
     `doctor_id` INTEGER NOT NULL,
     `gen_notes` VARCHAR(191) NULL,
@@ -190,11 +206,7 @@ CREATE TABLE `prescription_items` (
     `presc_id` INTEGER NOT NULL,
     `medicine_name` VARCHAR(191) NOT NULL,
     `strength` VARCHAR(191) NULL,
-    `form` VARCHAR(191) NOT NULL,
-    `dose` VARCHAR(191) NOT NULL,
-    `frequency` VARCHAR(191) NOT NULL,
-    `route` VARCHAR(191) NOT NULL,
-    `duration` VARCHAR(191) NOT NULL,
+    `brand_name` VARCHAR(191) NOT NULL,
     `quantity` VARCHAR(191) NULL,
     `instruction` VARCHAR(191) NULL,
 
@@ -591,6 +603,29 @@ CREATE TABLE `Notification` (
     PRIMARY KEY (`notif_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `FOBT_results` (
+    `fobt_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `patient_id` INTEGER NOT NULL,
+    `lab_id` INTEGER NOT NULL,
+    `test_name` VARCHAR(100) NULL,
+    `method` VARCHAR(100) NULL,
+    `specimen` VARCHAR(100) NULL,
+    `result` TEXT NULL,
+    `day_of_fever` VARCHAR(50) NULL,
+    `med_tech_user_id` INTEGER NULL,
+    `pth_user_id` INTEGER NULL,
+    `result_date` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NULL,
+
+    UNIQUE INDEX `FOBT_results_lab_id_key`(`lab_id`),
+    INDEX `FOBT_results_patient_id_idx`(`patient_id`),
+    INDEX `FOBT_results_med_tech_user_id_idx`(`med_tech_user_id`),
+    INDEX `FOBT_results_pth_user_id_idx`(`pth_user_id`),
+    PRIMARY KEY (`fobt_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- AddForeignKey
 ALTER TABLE `user_roles` ADD CONSTRAINT `user_roles_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -610,13 +645,16 @@ ALTER TABLE `consultation` ADD CONSTRAINT `consultation_vs_id_fkey` FOREIGN KEY 
 ALTER TABLE `consultation` ADD CONSTRAINT `consultation_phr_id_fkey` FOREIGN KEY (`phr_id`) REFERENCES `consultation_records`(`phr_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `consultation` ADD CONSTRAINT `consultation_cons_id_fkey` FOREIGN KEY (`cons_id`) REFERENCES `consultation_request`(`cons_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `consultation` ADD CONSTRAINT `consultation_cons_id_fkey` FOREIGN KEY (`cons_id`) REFERENCES `consultation_request`(`cons_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `consultation_records` ADD CONSTRAINT `consultation_records_patient_id_fkey` FOREIGN KEY (`patient_id`) REFERENCES `patients`(`patient_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `consultation_records` ADD CONSTRAINT `consultation_records_vitallSignVs_id_fkey` FOREIGN KEY (`vitallSignVs_id`) REFERENCES `vital_signs`(`vs_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `consultation_follow_up` ADD CONSTRAINT `consultation_follow_up_consultation_id_fkey` FOREIGN KEY (`consultation_id`) REFERENCES `consultation`(`consultation_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `consultation_follow_up` ADD CONSTRAINT `consultation_follow_up_vs_id_fkey` FOREIGN KEY (`vs_id`) REFERENCES `vital_signs`(`vs_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `request` ADD CONSTRAINT `request_patient_id_fkey` FOREIGN KEY (`patient_id`) REFERENCES `patients`(`patient_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -629,6 +667,9 @@ ALTER TABLE `consultation_request` ADD CONSTRAINT `consultation_request_vs_id_fk
 
 -- AddForeignKey
 ALTER TABLE `consultation_request` ADD CONSTRAINT `consultation_request_physician_fkey` FOREIGN KEY (`physician`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `consultation_request` ADD CONSTRAINT `consultation_request_case_consultation_id_fkey` FOREIGN KEY (`case_consultation_id`) REFERENCES `consultation`(`consultation_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `med_cert_request` ADD CONSTRAINT `med_cert_request_req_id_fkey` FOREIGN KEY (`req_id`) REFERENCES `request`(`req_id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -650,6 +691,9 @@ ALTER TABLE `prescriptions` ADD CONSTRAINT `prescriptions_patient_id_fkey` FOREI
 
 -- AddForeignKey
 ALTER TABLE `prescriptions` ADD CONSTRAINT `prescriptions_doctor_id_fkey` FOREIGN KEY (`doctor_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `prescriptions` ADD CONSTRAINT `prescriptions_followup_id_fkey` FOREIGN KEY (`followup_id`) REFERENCES `consultation_follow_up`(`followup_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `prescription_items` ADD CONSTRAINT `prescription_items_presc_id_fkey` FOREIGN KEY (`presc_id`) REFERENCES `prescriptions`(`presc_id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -776,3 +820,15 @@ ALTER TABLE `Payment` ADD CONSTRAINT `Payment_billing_id_fkey` FOREIGN KEY (`bil
 
 -- AddForeignKey
 ALTER TABLE `Notification` ADD CONSTRAINT `Notification_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `FOBT_results` ADD CONSTRAINT `FOBT_results_patient_id_fkey` FOREIGN KEY (`patient_id`) REFERENCES `patients`(`patient_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `FOBT_results` ADD CONSTRAINT `FOBT_results_lab_id_fkey` FOREIGN KEY (`lab_id`) REFERENCES `laboratory_request_items`(`item_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `FOBT_results` ADD CONSTRAINT `FOBT_results_med_tech_user_id_fkey` FOREIGN KEY (`med_tech_user_id`) REFERENCES `users`(`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `FOBT_results` ADD CONSTRAINT `FOBT_results_pth_user_id_fkey` FOREIGN KEY (`pth_user_id`) REFERENCES `users`(`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;

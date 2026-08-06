@@ -22,6 +22,7 @@ export const authRoleController = async (req: Request, res: Response) => {
 
 export const authLoginController = async (req: Request, res: Response) => {
   try {
+    console.log("Authentication controller loaded");
     const { username, password } = req.body;
 
     // ✅ FIXED

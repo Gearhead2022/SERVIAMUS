@@ -14,6 +14,8 @@ import EncodingRoutes from "../modules/encoding/encoding.routes";
 
 const router = Router();
 
+
+
 router.use('/api', authenticate);
 
 router.use("/billing", BillingRoutes); // Cashier billing routes
