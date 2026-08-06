@@ -170,7 +170,7 @@ const ConsultationFields: EncodingField[] = [
   { key: "cr", label: "CR", placeholder: "80" },
   { key: "rr", label: "RR", placeholder: "18" },
   { key: "wt", label: "Weight", placeholder: "60 kg" },
-  { key: "ht", label: "Height", placeholder: "165 cm" },
+  { key: "ht", label: "Height", placeholder: "165 cm" }, 
   { key: "impression", label: "Impression", type: "textarea" },
   { key: "instruction", label: "Instruction / Plan", type: "textarea" },
 ];

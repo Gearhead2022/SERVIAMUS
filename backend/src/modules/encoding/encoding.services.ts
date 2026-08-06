@@ -393,7 +393,7 @@ export const saveEncodingFollowUpService = async (
     return tx.consultationFollowUp.create({
       data: {
         consultation_id: consultation.consultation_id,
-        followup_date: followupDate,
+        follow_up_date: followupDate,
         vs_id: vitals.vs_id,
         impression: payload.impression?.trim() || null,
         instruction: payload.instruction?.trim() || null,

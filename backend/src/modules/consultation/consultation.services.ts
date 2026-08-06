@@ -818,11 +818,7 @@ export const getPatientPrescription = async (consultation_id: number) => {
             item_id: true,
             medicine_name: true,
             strength: true,
-            form: true,
-            dose: true,
-            frequency: true,
-            route: true,
-            duration: true,
+            brand_name: true,
             quantity: true,
             instruction: true,
           }
