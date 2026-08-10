@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "start": "node dist/server.js",
     "seed": "tsx prisma/seed.ts"
+    
   },
   "prisma": {
     "seed": "tsx seeders/seed.ts"

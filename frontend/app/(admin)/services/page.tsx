@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
     Search, ChevronDown, Edit2, Check,
-    PackageCheck, Stethoscope, TestTube2, FileCheck, ToggleLeft, ToggleRight, Calendar, Hash, Ban,
+    PackageCheck, Stethoscope, TestTube2, FileCheck, ToggleLeft, ToggleRight, Calendar, Hash, Ban, Plus
 } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import Pagination from "@/components/Pagination";
@@ -12,6 +12,8 @@ import SummaryCards from "@/components/ui/SummaryCards";
 import { useGetAllServices } from "@/hooks/admin/useAdmin";
 import { ServiceRecord } from "@/hooks/admin/useAdmin";
 import EditServiceModal from "@/components/Modal/ChildModal/EditServicesModal";
+import Button from "@/components/ui/Button";
+
 
 // ── Shared style tokens ───────────────────────────────────────────────────────
 
@@ -21,6 +23,7 @@ const CATEGORY_META: Record<string, { label: string; color: string; bg: string; 
     certificate: { label: "Certificate", color: "#0e7c7b", bg: "#e0f4f4", icon: FileCheck },
     other: { label: "Other", color: "#6b7da0", bg: "#f0f3fa", icon: PackageCheck },
 };
+
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -37,6 +40,7 @@ function TableHead({ cols }: { cols: string[] }) {
                 ))}
             </tr>
         </thead>
+        
     );
 }
 
@@ -238,7 +242,8 @@ const ServicesManagementPage = () => {
                         </h1>
                         <p className="text-black/60 text-sm">Manage service catalog, prices, and availability</p>
                     </div>
-                    {/* <button
+
+                    <button
                         type="button"
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-bold text-white transition-all"
                         style={{
@@ -247,7 +252,7 @@ const ServicesManagementPage = () => {
                         }}
                     >
                         <Plus size={15} /> Add Service
-                    </button> */}
+                    </button>
                 </div>
 
                 <div className="px-8 py-2 space-y-5">

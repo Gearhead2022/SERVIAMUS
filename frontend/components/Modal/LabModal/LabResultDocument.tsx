@@ -183,7 +183,7 @@ function PreviewShell({
   const contentRef = useRef<HTMLDivElement>(null);
 
   // IMPORTANT: we use the CSS `zoom` property here, not `transform: scale()`.
-  // `transform` only affects paint — it does NOT shrink the element's layout
+  // `transform` only affects  nt — it does NOT shrink the element's layout
   // box, so the parent still reserves (and the print engine still paginates
   // based on) the FULL unscaled height. That's why a transform-based version
   // of this can visually "look" smaller on screen but still spill onto extra
@@ -213,6 +213,26 @@ function PreviewShell({
     el.style.height = `${layoutHeight}px`;
     el.style.minHeight = `${layoutHeight}px`;
   }, [children]);
+
+  const departmentColors: Record<string, string> = {
+  "CLINICAL CHEMISTRY": "text-[#699d4c]",
+  "CLINICAL MICROSCOPY": "text-[#c9c040]",
+  "HEMATOLOGY": "text-[#c73535]",
+  "SEROLOGY": "text-[#cc750b]",
+  "CHEMISTRY": "text-[#699d4c]",
+  "URINALYSIS": "text-[#c9c040]",
+  "PARASITOLOGY": "text-[#c9c040]",
+  "FECAL OCCULT BLOOD TEST": "text-[#c9c040]",
+  "OGTT": "text-[#699d4c]",
+  "BLOOD TYPING": "text-[#c73535]",
+  "HEPATITIS B SURFACE ANTIGEN (HBS AG)": "text-[#cc750b]",
+  "DENGUE NS1": "text-[#cc750b]",
+  "CLINICAL-CHEMISTRY": "text-[#699d4c]",
+  "PREGNANCY TEST (URINE)": "text-[#cc750b]",
+  "PREGNANCY TEST (SERUM)": "text-[#cc750b]",
+};
+
+const textColor = departmentColors[title] ?? "text-slate-700";
 
   return (
     <div
@@ -278,7 +298,7 @@ function PreviewShell({
             </div>
             <div aria-hidden="true" className="h-14 w-14" />
           </div>
-          <h2 className="result-department mt-3 text-center text-lg font-bold tracking-[0.1em] text-amber-600">
+          <h2 className={`result-department mt-3 text-center text-lg font-bold tracking-[0.1em] ${textColor}`}>
             {title}
           </h2>
           <h2 className="result-department text-center text-sm font-semibold tracking-[0.28em] text-gray-600">
