@@ -174,6 +174,7 @@ const ConsultationFields: EncodingField[] = [
   { key: "impression", label: "Impression", type: "textarea" },
   { key: "instruction", label: "Instruction / Plan", type: "textarea" },
 ];
+<p>tobe deleted</p>
 
 const clinicalChemistryTests: ClinicalChemistryTest[] = [
   { value: "FBS", label: "Fasting Blood Sugar (FBS)", testName: "FBS", schemaKey: "FBS", fields: [{ key: "FBS", label: "FASTING BLOOD SUGAR (FBS)" }] },
