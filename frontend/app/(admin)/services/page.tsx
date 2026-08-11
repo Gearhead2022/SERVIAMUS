@@ -243,16 +243,20 @@ const ServicesManagementPage = () => {
                         <p className="text-black/60 text-sm">Manage service catalog, prices, and availability</p>
                     </div>
 
-                    <button
+                    {/* <button
                         type="button"
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-bold text-white transition-all"
                         style={{
                             background: "linear-gradient(135deg, #0f2244 0%, #1a3560 100%)",
                             boxShadow: "0 4px 16px rgba(15,34,68,0.25)",
                         }}
+                        onclick={() => {
+                            setSelectedService(null);
+                            setShowServiceModal(true);
+                        }
                     >
                         <Plus size={15} /> Add Service
-                    </button>
+                    </button> */}
                 </div>
 
                 <div className="px-8 py-2 space-y-5">

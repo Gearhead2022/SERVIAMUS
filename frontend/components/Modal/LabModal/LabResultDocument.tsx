@@ -1099,6 +1099,10 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
         ) : null
       }
 
+      <div className="mt-10 text-center text-sm font italic tracking-wide text-black">
+        <h2> {getValue(form, "note")} </h2>
+      </div>
+
       <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500">
         <h2>REMARKS: {getValue(form, "remarks")}</h2>
       </div>

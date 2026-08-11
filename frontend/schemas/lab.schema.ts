@@ -31,6 +31,8 @@ const createDynamicSchema = (fields: DynamicSchemaField[]) =>
     )
   );
 
+  
+
 export const clinicalChemistrySchema = z.object({
   FBS: numericResult("FBS"),
   FBS_conv: numericResult("FBS conversion"),
@@ -46,15 +48,24 @@ export const clinicalChemistrySchema = z.object({
   cholesterol_conv: numericResult("Total cholesterol conversion"),
   hdl_cholesterol: numericResult("HDL cholesterol"),
   hdl_cholesterol_conv: numericResult("HDL cholesterol conversion"),
-  ldl_cholesterol: numericResult("LDL cholesterol"),
-  ldl_cholesterol_conv: numericResult("LDL cholesterol conversion"),
+  ldl_cholesterol: z.union([
+  z.number().finite("LDL cholesterol"),
+  z.literal("N/A"),
+  ]),
+  ldl_cholesterol_conv: z.union([
+  z.number().finite("LDL cholesterol conversion"),
+  z.literal("N/A"),
+  ]),
   triglycerides: numericResult("Triglycerides"),
   triglycerides_conv: numericResult("Triglycerides conversion"),
   sgpt: numericResult("SGPT"),
   last_meal: optionalText(),
   time_taken: optionalText(),
-  remarks: optionalText()
-});
+  note: optionalText(),
+  remarks: optionalText(),
+}
+);
+
 
 export type ClinicalChemistryFormValues = z.infer<typeof clinicalChemistrySchema>;
 
@@ -80,6 +91,7 @@ export const clinicalChemistryDefaultValues: ClinicalChemistryFormValues = {
   sgpt: 0,
   last_meal: "",
   time_taken: "",
+  note: "THE FRIEDWALD FORMULA FOR THE COMPUTATION OF LDL CHOLESTEROL IS NOT APPLICABLE FOR TRIGLYCERIDES LEVEL ABOVE 400 MG/DL. DIRECT DETERMINATION OF LDL CHOLESTEROL IS RECOMMENDED.",
   remarks: "PLEASE CORRELATE CLINICALLY FOR APPROPRIATE INTERPRETATION OF RESULTS"
 };
 

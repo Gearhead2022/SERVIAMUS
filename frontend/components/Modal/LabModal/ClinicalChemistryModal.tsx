@@ -85,6 +85,8 @@ const testRows: TestRow[] = [
   { label: "SGPT", name: "sgpt" },
 ];
 
+
+
 function hasConversion(
   row: TestRow
 ): row is TestRow & {
@@ -104,7 +106,7 @@ function resolveConversionValue(
     ? rawValue
     : Number(rawValue);
 
-  if (isNaN(numericValue)) return "";
+  if (isNaN(numericValue)) return "N/A";
 
   return calculateConversion
     ? calculateConversion(numericValue)
@@ -162,6 +164,71 @@ export default function ClinicalChemistryModal({
     });
   }, [getValues, setValue, watchedResultValues]);
 
+  const lipidProfileFields = [
+  "cholesterol",
+  "hdl_cholesterol",
+  "ldl_cholesterol",
+  "triglycerides",
+];
+const isLipidProfile =
+  Boolean(fieldNames?.length) &&
+  lipidProfileFields.every((field) => fieldNames?.includes(field));
+
+  const [totalCholesterol, hdlCholesterol, triglycerides] = useWatch({
+  control,
+  name: ["cholesterol", "hdl_cholesterol", "triglycerides"],
+});
+
+useEffect(() => {
+  if (!isLipidProfile) return;
+
+  const total = Number(totalCholesterol);
+  const hdl = Number(hdlCholesterol);
+  const tg = Number(triglycerides);
+
+  if (![total, hdl, tg].every(Number.isFinite)) return;
+
+  if (tg >= 400) {
+  setValue("ldl_cholesterol", "N/A", {
+    shouldDirty: true,
+    shouldValidate: true,
+  });
+
+  setValue("ldl_cholesterol_conv", "N/A", {
+    shouldDirty: true,
+    shouldValidate: true,
+  });
+
+  return;
+}
+
+  const calculatedLdl = Math.round(total - hdl - (tg / 5));
+
+  setValue("ldl_cholesterol", calculatedLdl, {
+    shouldDirty: true,
+    shouldValidate: true,
+  });
+  
+}, [
+  isLipidProfile,
+  totalCholesterol,
+  hdlCholesterol,
+  triglycerides,
+  setValue,
+]);
+
+const isLdlNotAvailable =
+  isLipidProfile && Number(triglycerides) >= 400;
+
+  
+
+  const ldlValue = useWatch({
+  control,
+  name: "ldl_cholesterol",
+});
+
+const showLdlRemarks = ldlValue === "N/A";
+
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
@@ -183,17 +250,32 @@ export default function ClinicalChemistryModal({
           </div>
 
           {visibleRows.map((row) => (
+            
             <div
               key={row.name}
               className="grid grid-cols-[1fr_6.5rem_6.5rem] items-center px-4 py-2 border-b border-slate-100 last:border-0"
             >
+              
               <span className="text-sm text-slate-700">{row.label}</span>
+              
               <Input
                 placeholder="-"
-                className="mx-1"
+                className="mr-1"
                 inputMode="decimal"
-                {...register(row.name, { valueAsNumber: true })}
-                error={errors[row.name]?.message}
+                readOnly={row.name === "ldl_cholesterol" && isLipidProfile}
+                {...register(
+                  row.name,
+                  row.name === "ldl_cholesterol"
+                  ? {
+                      setValueAs: (value) =>
+                        value === "N/A"
+                          ? "N/A"
+                          : value === ""
+                            ? NaN
+                            : Number(value),
+                    }
+                  : { valueAsNumber: true }
+              )}
               />
               {row.convName ? (
                 <Input
@@ -202,8 +284,19 @@ export default function ClinicalChemistryModal({
                   inputMode="decimal"
                   readOnly
                   tabIndex={-1}
-                  {...register(row.convName, { valueAsNumber: true })}
-                  error={errors[row.convName]?.message}
+                  {...register(
+                  row.convName,
+                  row.convName === "ldl_cholesterol_conv"
+                    ? {
+                        setValueAs: (value) =>
+                          value === "N/A"
+                            ? "N/A"
+                            : value === ""
+                              ? NaN
+                              : Number(value),
+                      }
+                    : { valueAsNumber: true }
+                )}
                 />
               ) : (
                 <div />
@@ -230,11 +323,21 @@ export default function ClinicalChemistryModal({
           ))}
         </div>
       ) : null}
+          {showLdlRemarks && (
+      <div className="mt-4">
+        <Input
+          label="Note"
+          placeholder="Enter LDL remarks"
+          {...register("note")}
+          error={errors.note?.message}
+        />
+      </div>
+    )}
 
       <div className="mt-4">
         <Input
           label="Remarks"
-          placeholder="Enter ogtt remarks"
+          placeholder="Enter Clinical Chemistry remarks"
           {...register("remarks")}
           error={errors.remarks?.message}
         />

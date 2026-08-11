@@ -73,7 +73,10 @@ body {
 }
 
 @media print {
-
+ @page {
+    size: Letter portrait;
+    margin: 0.25in;
+  }
   html,
   body {
     margin: 0 !important;

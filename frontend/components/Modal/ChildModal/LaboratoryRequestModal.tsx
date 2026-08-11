@@ -45,6 +45,7 @@ const TEST_OPTIONS = [
     {
         label: "Clinical Chemistry",
         options: [
+            { label: "Try", value: "lol" },
             { label: "Fasting Blood Sugar", value: "FBS" },
             { label: "Random Blood Sugar", value: "Random Blood Sugar" },
             { label: "Urea (BUN)", value: "Urea (BUN)" },
