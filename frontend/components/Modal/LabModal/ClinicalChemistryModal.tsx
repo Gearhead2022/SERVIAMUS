@@ -99,14 +99,29 @@ function hasConversion(
 const calculatedRows = testRows.filter(hasConversion);
 
 function resolveConversionValue(
-  rawValue: string | number,
+  rawValue: unknown,
   calculateConversion?: (value: number) => number
 ) {
+  if (rawValue === "N/A") {
+    return "N/A";
+  }
+
+  // Clearing a number input produces NaN through valueAsNumber. That is an
+  // empty result, not a laboratory value of "N/A"; leave its conversion blank.
+  if (
+    rawValue === "" ||
+    rawValue === null ||
+    rawValue === undefined ||
+    (typeof rawValue === "number" && Number.isNaN(rawValue))
+  ) {
+    return "";
+  }
+
   const numericValue = typeof rawValue === "number"
     ? rawValue
     : Number(rawValue);
 
-  if (isNaN(numericValue)) return "N/A";
+  if (!Number.isFinite(numericValue)) return "";
 
   return calculateConversion
     ? calculateConversion(numericValue)
@@ -151,8 +166,14 @@ export default function ClinicalChemistryModal({
         watchedResultValues[index] ?? getValues(name),
         calculateConversion
       );
+      const currentConversionValue = getValues(convName);
+      const conversionIsAlreadyEmpty =
+        nextConversionValue === "" &&
+        (currentConversionValue === "" ||
+          (typeof currentConversionValue === "number" &&
+            Number.isNaN(currentConversionValue)));
 
-      if (getValues(convName) === nextConversionValue) {
+      if (conversionIsAlreadyEmpty || currentConversionValue === nextConversionValue) {
         return;
       }
 

@@ -1,6 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 
 export async function seedServices(prisma: PrismaClient) {
+
+    // Clear existing seeded data
+    await prisma.services.deleteMany();
+    await prisma.services.deleteMany();
+    await prisma.services.deleteMany();
+
+
     await prisma.services.createMany({
         data: [
             {

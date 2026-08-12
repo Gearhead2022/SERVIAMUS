@@ -27,6 +27,8 @@ type Props = {
   form: LabResultPayload;
 };
 
+
+
 function LabResultRow({
   label,
   value,
@@ -959,11 +961,21 @@ function UrinalysisDocument({ request, form }: Props) {
   );
 }
 
+
+
 function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: Props) {
   const fieldNames = resolveClinicalChemistryFieldNames(request);
   const rows = getClinicalChemistryRows(displayMode === "print" ? undefined : fieldNames);
   const showMealFields = shouldShowClinicalChemistryMealFields(request);
   const rowFallback = displayMode === "print" ? "0" : "____";
+
+  const triglycerides = getValue(form, "triglycerides");
+  const ldlCholesterol = getValue(form, "ldl_cholesterol");
+  const note = getValue(form, "note");
+
+  const showNote =
+    (Number(triglycerides) <= 400) ||
+    ldlCholesterol === "N/A";
 
   return (
     <PreviewShell title="CLINICAL CHEMISTRY" form={form}>
@@ -1100,9 +1112,11 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
         ) : null
       }
 
-      <div className="mt-10 text-center text-sm font italic tracking-wide text-black">
-        <h2> {getValue(form, "note")} </h2>
-      </div>
+      {showNote && note && (
+        <div className="mt-10 text-center text-sm italic tracking-wide text-black">
+          <h2>{note}</h2>
+        </div>
+      )}
 
       <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500">
         <h2>REMARKS: {getValue(form, "remarks")}</h2>
