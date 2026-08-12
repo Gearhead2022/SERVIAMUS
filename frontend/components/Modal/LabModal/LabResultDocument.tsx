@@ -974,8 +974,9 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
   const note = getValue(form, "note");
 
   const showNote =
-    (Number(triglycerides) <= 400) ||
-    ldlCholesterol === "N/A";
+    (Number(triglycerides) >= 400);
+
+
 
   return (
     <PreviewShell title="CLINICAL CHEMISTRY" form={form}>

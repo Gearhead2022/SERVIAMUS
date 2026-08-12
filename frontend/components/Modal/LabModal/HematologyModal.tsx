@@ -39,6 +39,12 @@ const differentialFields = [
   { label: "Basophils", name: "basophils" },
 ] as const;
 
+const additionalFields = [
+  { label: "Clotting Time", name: "clotting_time" },
+  { label: "Bleeding Time", name: "bleeding_time" },
+  { label: "Remarks", name: "remarks" },
+] as const;
+
 export default function HematologyModal({
   initialValues,
   onSubmit,
