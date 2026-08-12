@@ -196,6 +196,12 @@ export async function seedLaboratory(prisma: PrismaClient) {
                 category: "Clinical_Chemistry",
                 schema_key: "ionized",
             },
+            {
+                test_id: 32,
+                name: "2H-OGTT Gestational",
+                category: "Clinical_Chemistry",
+                schema_key: "twohOGTTv2",
+            },
         ],
         skipDuplicates: true,
     });

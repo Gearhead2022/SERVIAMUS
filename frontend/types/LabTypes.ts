@@ -50,6 +50,7 @@ export type LabSchemaKey =
   | "onehOGTT"
   | "twohOGTT"
   | "twohOGTTv2"
+  | "ogtt"
   | "FOBT"
   | "dengue"
   | "hbsag"

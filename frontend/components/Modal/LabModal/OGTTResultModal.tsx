@@ -52,6 +52,7 @@ export default function OGTTResultModal({
     control,
     register,
     handleSubmit,
+    getValues,
     setValue,
     formState: { errors },
   } = useForm<Record<string, unknown>>({
@@ -74,13 +75,21 @@ export default function OGTTResultModal({
         return;
       }
 
-      setValue(phase.conversionFieldName, calculateOgttConversion(numericValue), {
+      const nextConversionValue = calculateOgttConversion(numericValue);
+
+      // React Hook Form still notifies subscribers when setValue receives the
+      // same value. Avoid feeding the conversion update back into useWatch.
+      if (getValues(phase.conversionFieldName) === nextConversionValue) {
+        return;
+      }
+
+      setValue(phase.conversionFieldName, nextConversionValue, {
         shouldDirty: false,
         shouldTouch: false,
         shouldValidate: false,
       });
     });
-  }, [config.phases, setValue, watchedPhaseValues]);
+  }, [config.phases, getValues, setValue, watchedPhaseValues]);
 
   return (
     <form

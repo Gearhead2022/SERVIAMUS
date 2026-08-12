@@ -599,7 +599,7 @@ export default function DashboardPage() {
           color: #2563a8;
           letter-spacing: 0.04em;
         }
-        .category-chip {
+        .category-chip{
           font-size: 11px;
           font-weight: 500;
           padding: 3px 10px;

@@ -738,8 +738,10 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
     const ogttDetails =
       formValues.test_type === "50G"
         ? { schemaKey: "onehOGTT" as const, testName: "50G 1H-OGTT" }
-        : formValues.test_type === "75G" || formValues.test_type === "75Gv2"
-          ? { schemaKey: "twohOGTT" as const, testName: "75G 2H-OGTT" }
+        : formValues.test_type === "75G"
+          ? { schemaKey: "twohOGTT" as const, testName: "75G 2H-OGTT (Non-Gestational)" }
+          : formValues.test_type === "75Gv2"
+            ? { schemaKey: "twohOGTTv2" as const, testName: "75G 2H-OGTT (Gestational)" }
           : { schemaKey: "OGTT" as const, testName: "100G 3H-OGTT" };
 
     const labDetails =

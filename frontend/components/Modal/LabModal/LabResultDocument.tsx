@@ -230,6 +230,7 @@ function PreviewShell({
   "CLINICAL-CHEMISTRY": "text-[#699d4c]",
   "PREGNANCY TEST (URINE)": "text-[#cc750b]",
   "PREGNANCY TEST (SERUM)": "text-[#cc750b]",
+  
 };
 
 const textColor = departmentColors[title] ?? "text-slate-700";
@@ -1152,8 +1153,10 @@ function SingleChemistryDocument({ request, form }: Props) {
 function SerologyDocument({ request, form }: Props) {
   const template = resolveLabTemplate(request);
 
+
+  {template.label.toUpperCase()}
   return (
-    <PreviewShell title= {template.label.toUpperCase()} form={form}>
+    <PreviewShell title= "SEROLOGY" subTitle= {template.label.toUpperCase()} form={form}>
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
         <div className="overflow-hidden rounded-xl border border-slate-300">
@@ -1208,7 +1211,7 @@ function SerologyDocument({ request, form }: Props) {
 
 function FecalOccultBloodDocument({ request, form }: Props) {
   return (
-    <PreviewShell title="Clinical Microscopy" subTitle="(Fecal Occult Blood Test)" form={form}>
+    <PreviewShell title="CLINICAL MICROSCOPY" subTitle="(Fecal Occult Blood Test)" form={form}>
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
         <div className="overflow-hidden rounded-xl border border-slate-300">
@@ -1263,7 +1266,7 @@ function FecalOccultBloodDocument({ request, form }: Props) {
 
 function Hba1cDocument({ request, form }: Props) {
   return (
-    <PreviewShell title="Clinical Chemistry" subTitle="(HBA1C)" form={form}>
+    <PreviewShell title="CLINICAL CHEMISTRY" subTitle="(HBA1C)" form={form}>
       <PatientBlock request={request} />
       <Section title="TEST DETAILS">
         <div className="overflow-hidden rounded-xl border border-slate-300">
@@ -1492,8 +1495,10 @@ function OgttDocument({ request, form }: Props) {
       break;
   }
 
+// {template.apiCategory.toUpperCase()}
+
   return (
-    <PreviewShell title={template.apiCategory.toUpperCase()} subTitle={subTitle} form={form}>
+    <PreviewShell title="CLINICAL CHEMISTRY" subTitle={subTitle} form={form}>
       <PatientBlock request={request} />
 
       <Section title="TEST DETAILS">

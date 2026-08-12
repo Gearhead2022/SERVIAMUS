@@ -189,23 +189,34 @@ useEffect(() => {
   if (![total, hdl, tg].every(Number.isFinite)) return;
 
   if (tg >= 400) {
-  setValue("ldl_cholesterol", "N/A", {
-    shouldDirty: true,
-    shouldValidate: true,
-  });
+    if (getValues("ldl_cholesterol") !== "N/A") {
+      setValue("ldl_cholesterol", "N/A", {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: true,
+      });
+    }
 
-  setValue("ldl_cholesterol_conv", "N/A", {
-    shouldDirty: true,
-    shouldValidate: true,
-  });
+    if (getValues("ldl_cholesterol_conv") !== "N/A") {
+      setValue("ldl_cholesterol_conv", "N/A", {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: true,
+      });
+    }
 
-  return;
-}
+    return;
+  }
 
   const calculatedLdl = Math.round(total - hdl - (tg / 5));
 
+  if (getValues("ldl_cholesterol") === calculatedLdl) {
+    return;
+  }
+
   setValue("ldl_cholesterol", calculatedLdl, {
-    shouldDirty: true,
+    shouldDirty: false,
+    shouldTouch: false,
     shouldValidate: true,
   });
   
@@ -214,13 +225,9 @@ useEffect(() => {
   totalCholesterol,
   hdlCholesterol,
   triglycerides,
+  getValues,
   setValue,
 ]);
-
-const isLdlNotAvailable =
-  isLipidProfile && Number(triglycerides) >= 400;
-
-  
 
   const ldlValue = useWatch({
   control,

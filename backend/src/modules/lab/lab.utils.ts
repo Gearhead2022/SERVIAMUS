@@ -44,6 +44,7 @@ export type LabSchemaKey =
   | "OGTT"
   | "onehOGTT"
   | "twohOGTT"
+  | "twohOGTTv2"
   | "FOBT"
   | "dengue"
   | "hbsag"
@@ -207,6 +208,16 @@ const knownLabSchemaDefinitions: Record<LabSchemaKey, KnownLabSchemaDefinition> 
       "75g ogtt",
       "75g-ogtt",
       "75 grams ogtt",
+    ],
+  },
+  twohOGTTv2: {
+    apiCategory: "clinical-chemistry",
+    category: "Clinical_Chemistry",
+    aliases: [
+      "2h ogtt gestational",
+      "2h-ogtt gestational",
+      "75g ogtt gestational",
+      "75g-ogtt gestational",
     ],
   },
   FOBT: {
@@ -466,6 +477,7 @@ const clinicalChemistrySchemaKeys = new Set<LabSchemaKey>([
   "totalcholesterol",
   "triglycerides",
   "twohOGTT",
+  "twohOGTTv2",
   "uricacid",
 ]);
 const combinedClinicalChemistrySchemaKeys = new Set<LabSchemaKey>([

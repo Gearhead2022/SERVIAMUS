@@ -56,6 +56,7 @@ const knownSchemaKeys = new Set<LabSchemaKey>([
   "OGTT",
   "onehOGTT",
   "twohOGTT",
+  "twohOGTTv2",
   "ogtt",
   "FOBT",
   "general",
@@ -321,6 +322,7 @@ export const upsertStructuredLabResult = async ({
     resolvedSchemaKey === "OGTT" ||
     resolvedSchemaKey === "onehOGTT" ||
     resolvedSchemaKey === "twohOGTT" ||
+    resolvedSchemaKey === "twohOGTTv2" ||
     resolvedSchemaKey === "ogtt"
   ) {
     const data = {
@@ -329,7 +331,7 @@ export const upsertStructuredLabResult = async ({
         trimFormValue(form, "test_type") ??
         (resolvedSchemaKey === "onehOGTT"
           ? "50G-OGTT"
-          : resolvedSchemaKey === "twohOGTT"
+          : resolvedSchemaKey === "twohOGTT" || resolvedSchemaKey === "twohOGTTv2"
             ? "75G-OGTT"
             : "100G-OGTT"),
       fbs: trimFormValue(form, "FBS", "fbs"),

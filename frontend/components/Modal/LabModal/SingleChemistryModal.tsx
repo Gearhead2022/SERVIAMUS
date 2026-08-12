@@ -64,6 +64,7 @@ export default function SingleChemistryModal({
     control,
     register,
     handleSubmit,
+    getValues,
     setValue,
     formState: { errors },
   } = useForm<Record<string, unknown>>({
@@ -88,18 +89,23 @@ export default function SingleChemistryModal({
       return;
     }
 
-    setValue(
-      config.conversionFieldName,
-      roundConversionValue(numericValue * config.conversionFactor),
-      {
-        shouldDirty: false,
-        shouldTouch: false,
-        shouldValidate: false,
-      }
+    const nextConversionValue = roundConversionValue(
+      numericValue * config.conversionFactor
     );
+
+    if (getValues(config.conversionFieldName) === nextConversionValue) {
+      return;
+    }
+
+    setValue(config.conversionFieldName, nextConversionValue, {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: false,
+    });
   }, [
     config.conversionFactor,
     config.conversionFieldName,
+    getValues,
     setValue,
     watchedResult,
   ]);

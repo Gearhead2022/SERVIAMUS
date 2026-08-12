@@ -108,6 +108,14 @@ export async function seedServices(prisma: PrismaClient) {
                 created_at: new Date(),
             },
             {
+                reference_id: 32,
+                service_name: '2H-OGTT Gestational',
+                price: 320,
+                category: "LABORATORY",
+                date: new Date(),
+                created_at: new Date(),
+            },
+            {
                 reference_id: 14,
                 service_name: 'OGTT',
                 price: 280,

@@ -172,6 +172,7 @@ const syncEncodedResultDate = async (
     schemaKey === "OGTT" ||
     schemaKey === "onehOGTT" ||
     schemaKey === "twohOGTT" ||
+    schemaKey === "twohOGTTv2" ||
     schemaKey === "ogtt"
   ) {
     await tx.ogttResult.updateMany({

@@ -292,7 +292,7 @@ const RequestForm: React.FC<{
         { label: "LDL-Cholesterol", value: "LDL-Cholesterol" },
         { label: "Triglycerides", value: "Triglycerides" },
         { label: "50g OGGT", value: "1H-OGTT" },
-        { label: "75g OGGT (Gestational)", value: "2H-OGTT" },
+        { label: "75g OGGT (Gestational)", value: "2H-OGTT Gestational" },
         { label: "75g OGGT (Non-Gestational)", value: "OGTT 75G" },
         { label: "100g OGGT", value: "OGTT" },
         { label: "SGPT", value: "Serum Glutamic Pyruvic Transaminase" },
