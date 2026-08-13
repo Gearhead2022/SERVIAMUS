@@ -397,6 +397,51 @@ function CompactFieldGrid({
   );
 }
 
+function BloodTypingResultSection({
+  form,
+  showOthers = true,
+}: Pick<Props, "form"> & { showOthers?: boolean }) {
+  return (
+    <Section title="BLOOD TYPING">
+      <div className="overflow-hidden rounded-2xl border border-slate-700">
+        <div className="grid grid-cols-2 border-b border-slate-700 text-center">
+          <div className="border-r border-slate-700">
+            <div className="border-b border-slate-400 bg-slate-100 px-4 py-1 text-xs font-bold uppercase text-slate-700">
+              ABO Type
+            </div>
+
+            <div className="px-4 py-1 text-center text-sm font-semibold text-slate-700">
+              {getValue(form, "abo_type", "____")}
+            </div>
+          </div>
+
+          <div>
+            <div className="border-b border-slate-400 bg-slate-100 px-4 py-1 text-xs font-bold uppercase text-slate-700">
+              Rh Type
+            </div>
+
+            <div className="px-4 py-1 text-center text-sm font-semibold text-slate-700">
+              {getValue(form, "rh_type", "____")}
+            </div>
+          </div>
+        </div>
+
+        {showOthers && (
+          <div>
+            <div className="border-b border-slate-400 bg-slate-100 px-4 py-1 text-xs font-bold uppercase tracking-wider text-slate-700">
+              Others
+            </div>
+
+            <div className="min-h-[10px] px-4 py-2 text-sm text-slate-700">
+              {getValue(form, "others2", "No additional remarks")}
+            </div>
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+}
+
 function CbcDocument({ request, form }: Props) {
   return (
     <PreviewShell title="HEMATOLOGY" form={form}>
@@ -542,14 +587,14 @@ function CbcDocument({ request, form }: Props) {
               },
               {
                 label: "Clotting Time (CT)",
-                value: "",
-                unit: "",
+                value: getValue(form, "clotting_time"),
+                unit: "Minutes",
                 reference: "3-5 Minutes",
               },
               {
                 label: "Bleeding Time (BT)",
-                value: "",
-                unit: "",
+                value: getValue(form, "bleeding_time"),
+                unit: "Minutes",
                 reference: "1-3 Minutes",
               },
               {
@@ -559,9 +604,9 @@ function CbcDocument({ request, form }: Props) {
                 reference: "",
                 style: 'font-bold border-none'
               },
-            ].map((item) => (
+            ].map((item, index) => (
               <div
-                key={item.label}
+                key={`${item.label}-${index}`}
                 className="grid grid-cols-[1.4fr_0.8fr_0.8fr_1fr] border-t border-slate-300 text-[12px] text-slate-700"
               >
                 <div className={`px-4 border-r border-slate-300 flex items-center py-[.8] ${item.style} ${item.label === '' ? 'py-2' : ''}`}>
@@ -586,62 +631,9 @@ function CbcDocument({ request, form }: Props) {
           </div>
         </div>
       </Section>
+      <BloodTypingResultSection form={form} showOthers={false} />
       <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500">
         <h2>REMARKS: {getValue(form, "remarks")}</h2>
-      </div>
-    </PreviewShell>
-  );
-}
-
-function BloodTypingDocument({ request, form }: Props) {
-  return (
-    <PreviewShell title="BLOOD TYPING" form={form}>
-      <PatientBlock request={request} />
-
-      <Section title="BLOOD TYPE">
-        <div className="overflow-hidden rounded-2xl border border-slate-700">
-
-          {/* ABO + RH */}
-          <div className="grid grid-cols-2 border-b border-slate-700 text-center">
-            <div className="border-r border-slate-700">
-              <div className="bg-slate-100 px-4 py-1 text-xs font-bold uppercase border-b border-slate-400 text-slate-700">
-                ABO Type
-              </div>
-
-              <div className="px-4 py-1 text-center text-sm font-semibold text-slate-700">
-                {getValue(form, "abo_type", "____")}
-              </div>
-            </div>
-
-            <div>
-              <div className="bg-slate-100 px-4 py-1 text-xs font-bold uppercase border-b border-slate-400 text-slate-700">
-                Rh Type
-              </div>
-
-              <div className="px-4 py-1 text-center text-sm font-semibold text-slate-700">
-                {getValue(form, "rh_type", "____")}
-              </div>
-            </div>
-          </div>
-
-          {/* Others */}
-          <div>
-            <div className="bg-slate-100 px-4 py-1 text-xs font-bold uppercase tracking-wider border-b border-slate-400 text-slate-700">
-              Others
-            </div>
-
-            <div className="px-4 py-2 text-sm text-slate-700 min-h-[10px]">
-              {getValue(form, "others2", "No additional remarks")}
-            </div>
-          </div>
-
-        </div>
-      </Section>
-
-      <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500">
-        <h2>
-          REMARKS: {getValue(form, "remarks")}
-        </h2>
       </div>
     </PreviewShell>
   );
@@ -1671,12 +1663,8 @@ export default function LabResultDocument({
 }: Props) {
   const template = resolveLabTemplate(request);
 
-  if (template.key === "cbc") {
+  if (template.key === "cbc" || template.key === "blood-typing") {
     return <CbcDocument request={request} form={form} />;
-  }
-
-  if (template.key === "blood-typing") {
-    return <BloodTypingDocument request={request} form={form} />;
   }
 
   if (template.key === "parasitology") {

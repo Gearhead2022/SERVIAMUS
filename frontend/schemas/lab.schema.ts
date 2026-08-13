@@ -113,6 +113,8 @@ export const cbcSchema = z.object({
   basophils: numericResult("Basophils"),
   others1: optionalText(),
   others2: optionalText(),
+  bleeding_time: numericResult("Bleeding time"),
+  clotting_time: numericResult("Clotting time"),
   remarks: optionalText(),
 });
 
@@ -136,6 +138,8 @@ export const cbcDefaultValues: CbcFormValues = {
   basophils: 0,
   others1: "",
   others2: "",
+  bleeding_time: 0,
+  clotting_time: 0,
   remarks: "PLEASE CORRELATE CLINICALLY FOR APPROPRIATE INTERPRETATION OF RESULTS",
 };
 

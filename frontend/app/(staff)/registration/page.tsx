@@ -6,7 +6,7 @@ import PatientCard from "@/components/PatientCard";
 import PatientActionModal from "@/components/Modal/ChildModal/PatientActionModal";
 import ModalHeader from "@/components/Modal/ModalHeader";
 import AddPatientForm from "@/components/Modal/ChildModal/AddPatientForm";
-import { useGetAllpatient, useGetPrevVitalSigns } from "@/hooks/Patient/usePatientRegistration";
+import { useDeletePatient, useGetAllpatient, useGetPrevVitalSigns } from "@/hooks/Patient/usePatientRegistration";
 import { PatientProps } from "@/types/PatientTypes";
 import RoleGuard from "@/guards/RoleGuard";
 import AddRequestForm from "@/components/Modal/NestedModal/AddRequestForm";
@@ -25,6 +25,7 @@ import { LabRequest } from "@/types/LabTypes";
 import { openLabPrintPage } from "@/utils/lab-print";
 import LabResultPreview from "@/components/Modal/LabModal/LabResultPreview";
 import { openConsultPrintPage } from "@/utils/consultation/consultPrint";
+import SweetAlert from "@/utils/SweetAlert";
 
 const RegistrationPage = () => {
   const { user } = useAuth();
@@ -71,6 +72,20 @@ const RegistrationPage = () => {
 
   const closeAll = () => {
     setSelectedPatient(null);
+  };
+  const { mutateAsync: deletePatientMutation } = useDeletePatient(closeAll);
+
+  const handleDeletePatient = async (patient: PatientProps) => {
+    if (!patient.patient_id) return;
+
+    const confirmed = await SweetAlert.confirmationAlert2(
+      "Delete patient?",
+      `This will permanently remove ${patient.name} if the record has no medical history.`,
+    );
+
+    if (!confirmed) return;
+
+    await deletePatientMutation(patient.patient_id);
   };
 
   const closeNested = () => {
@@ -160,6 +175,7 @@ const RegistrationPage = () => {
               onClose={closeAll}
               actionTitle={setModalTitle}
               onRequestAction={() => { setActiveAction("request"); }}
+              onDeletePatient={handleDeletePatient}
               onViewProfile={() => { setActiveAction("profile"); }}
               onEditPatient={() => { setActiveAction("edit"); }}
               onViewHistory={() => { setActiveAction("history"); }}

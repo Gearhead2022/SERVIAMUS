@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createPatient, fetchAllPatient, fetchPatientById, updatePatient } from "@/services/patient.services";
+import { createPatient, deletePatient, fetchAllPatient, fetchPatientById, updatePatient } from "@/services/patient.services";
 import SweetAlert from "@/utils/SweetAlert";
 import { getApiErrorMessage } from "@/utils/api-error";
 import { CreateRequestProps, PaginationMeta, RequestProps, VitalSignProps } from "@/types/RequestTypes";
@@ -239,5 +239,29 @@ export const useLastRecord = (patientId: number) => {
     queryKey: ["patient", "last-record", patientId],
     queryFn: () => getLastRecord(patientId),
     enabled: !!patientId,
+  });
+};
+
+export const useDeletePatient = (closeModal: () => void) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deletePatient,
+
+    onSuccess: () => {
+      SweetAlert.successAlert(
+        "Success",
+        "Patient deleted successfully"
+      );
+      queryClient.invalidateQueries({ queryKey: ["patient"] });
+      closeModal();
+    },
+
+    onError: (error: unknown) => {
+      SweetAlert.errorAlert(
+        "Delete Failed",
+        getApiErrorMessage(error, "Unable to delete the patient.")
+      );
+    }
   });
 };

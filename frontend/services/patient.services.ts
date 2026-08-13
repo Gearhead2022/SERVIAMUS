@@ -28,3 +28,8 @@ export const updatePatient = async (
   const res = await api.put(`/api/patient/${patientId}/patientUpdate`, data);
   return res.data.data;
 };
+
+export const deletePatient = async (patientId: number) => {
+  const res = await api.delete(`/api/patient/${patientId}/patientDelete`);
+  return res.data.data;
+};

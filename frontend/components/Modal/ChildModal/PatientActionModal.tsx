@@ -18,6 +18,7 @@ interface PatientActionModalProps {
   onClose: () => void;
   actionTitle: (label: string) => void;
   onRequestAction: (patient: PatientProps) => void;
+  onDeletePatient: (patient: PatientProps) => void;
   onEditPatient: (patient: PatientProps) => void;
   onViewProfile: (patient: PatientProps) => void;
   onViewHistory: (patient: PatientProps) => void;
@@ -28,6 +29,7 @@ const PatientActionModal = ({
   onClose,
   actionTitle,
   onRequestAction,
+  onDeletePatient,
   onEditPatient,
   onViewProfile,
   onViewHistory,
@@ -67,7 +69,7 @@ const PatientActionModal = ({
       description: "Delete patient on list",
       icon: <Trash2Icon className="w-5 h-5" />,
       color: "text-[#c8102e] bg-[#fdf0f2] hover:bg-[#c8102e] hover:text-white",
-      onClick: () => onEditPatient(patient),
+      onClick: () => onDeletePatient(patient),
     },
   ];
 

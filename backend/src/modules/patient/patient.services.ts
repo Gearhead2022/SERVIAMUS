@@ -168,3 +168,48 @@ export const updatePatient = async (patientId: number, payload: PatientPayload) 
 
   return normalizePatient(patient as PatientRecord, supportsPhilhealthColumn);
 };
+
+export const deletePatient = async (patientId: number) => {
+  const patient = await prisma.patients.findUnique({
+    where: { patient_id: patientId },
+    select: {
+      patient_id: true,
+      _count: {
+        select: {
+          request: true,
+          vitals: true,
+          consultations: true,
+          prescriptions: true,
+          hematology_results: true,
+          serology_results: true,
+          parasitology_results: true,
+          urinalysis_results: true,
+          clinical_chemistry_results: true,
+          hba1c_results: true,
+          chemistry_results: true,
+          ogtt_results: true,
+          fobt_results: true,
+          medical_certificate_results: true,
+          queue: true,
+        },
+      },
+    },
+  });
+
+  if (!patient) {
+    throw new Error("Patient not found");
+  }
+
+  const hasMedicalHistory = Object.values(patient._count).some((count) => count > 0);
+
+  if (hasMedicalHistory) {
+    throw new Error(
+      "Patients with medical records, requests, or laboratory results cannot be deleted."
+    );
+  }
+
+  return prisma.patients.delete({
+    where: { patient_id: patientId },
+    select: { patient_id: true },
+  });
+};

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getAllPatients, addPatient, getPatientById, updatePatient } from "./patient.services";
+import { addPatient, deletePatient, getAllPatients, getPatientById, updatePatient } from "./patient.services";
 import { getIO } from "../../socket";
 
 const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR"] as const;
@@ -107,6 +107,40 @@ export const updatePatientController = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const deletePatientController = async (req: Request, res: Response) => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const patientId = parseInt(id, 10);
+
+    if (isNaN(patientId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid patient ID",
+      });
+    }
+
+    const patient = await deletePatient(patientId);
+    const payload = {
+      patientId: patient.patient_id,
+      reason: "patient-deleted",
+    };
+    const io = getIO();
+
+    io.to([...WORKFLOW_ROOMS]).emit("request:updated", payload);
+    io.to([...WORKFLOW_ROOMS]).emit("admin:updated", payload);
+
+    return res.status(200).json({
+      success: true,
+      data: patient,
+    });
+  } catch (error: any) {
+    return res.status(error.message === "Patient not found" ? 404 : 400).json({
       success: false,
       message: error.message,
     });
