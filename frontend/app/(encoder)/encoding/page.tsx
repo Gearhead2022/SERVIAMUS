@@ -935,48 +935,20 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
 
   return (
     <RoleGuard allowedRoles={["ENCODER"]}>
-      <main className="min-h-screen scroll-smooth bg-[#eef2f7] font-['DM_Sans'] text-[#14233d]">
-        <header className="border-b border-[#1c3760] bg-[#0f2244] text-white">
-          <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-5 py-6 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-[#83d6d1] shadow-inner">
-                <FilePlusCorner size={21} />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#83d6d1]">
-                  Encoder workspace
-                </p>
-                <h1 className="mt-1 font-['DM_Serif_Display'] text-3xl leading-none text-white sm:text-[2rem]">
-                  Records Encoding
-                </h1>
-                <p className="mt-2 text-sm text-[#c8d5e9]">
-                  Select a patient, choose a record type, then save a complete clinical record.
-                </p>
-              </div>
-            </div>
+      <main className="min-h-full scroll-smooth bg-[#eef2f7] font-['DM_Sans'] text-[#14233d]">
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9bb0cf]">
-                  Signed in as
-                </p>
-                <p className="mt-0.5 text-sm font-semibold text-white">
-                  {user?.name ?? "Encoder"}
-                </p>
-              </div>
-              {canAddPatient(user?.roles) && (
-                <Button
-                  icon={<Plus size={18} />}
-                  variant="addPatient"
-                  type="button"
-                  onClick={() => setShowPatientForm((current) => !current)}
-                >
-                  {showPatientForm ? "Hide Patient Form" : "Add Patient"}
-                </Button>
-              )}
-            </div>
+         <div className="flex w-full items-center justify-end px-6 py-4">
+            {canAddPatient(user?.roles) && (
+              <Button
+                icon={<Plus size={18} />}
+                variant="addPatient"
+                type="button"
+                onClick={() => setShowPatientForm((current) => !current)}
+              >
+                {showPatientForm ? "Hide Patient Form" : "Add Patient"}
+              </Button>
+            )}
           </div>
-        </header>
 
         <div className="mx-auto grid w-full max-w-7xl gap-6 px-5 py-6 sm:px-8 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
           <aside className="space-y-5">
@@ -1153,34 +1125,6 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                       </div>
                     </div>
 
-                    <div className="mt-5 grid max-w-xl grid-cols-2 gap-2 rounded-xl border border-[#dce3ef] bg-white p-1.5">
-                      <button
-                        type="button"
-                        onClick={() => updateSelectedOption("initial-consultation")}
-                        aria-pressed={selectedOption.group === "consultation"}
-                        className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0e7c7b] ${
-                          selectedOption.group === "consultation"
-                            ? "bg-[#0e7c7b] text-white shadow-sm"
-                            : "text-[#50617f] hover:bg-[#eff6f4] hover:text-[#0e7c7b]"
-                        }`}
-                      >
-                        <ClipboardPenLine size={16} />
-                        Consultation
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateSelectedOption("lab-clinical-chemistry")}
-                        aria-pressed={selectedOption.group === "lab"}
-                        className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c8102e] ${
-                          selectedOption.group === "lab"
-                            ? "bg-[#c8102e] text-white shadow-sm"
-                            : "text-[#50617f] hover:bg-[#fff1f3] hover:text-[#c8102e]"
-                        }`}
-                      >
-                        <FlaskConical size={16} />
-                        Laboratory
-                      </button>
-                    </div>
                   </div>
 
                   <Select
@@ -1251,14 +1195,14 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                     )} */}
 
                     {selectedOption.group === "lab" && (
-                      <div className="grid gap-4 rounded-xl border border-[#f1d2d9] bg-[#fffafb] p-4 md:grid-cols-[minmax(0,240px)_1fr] md:items-end">
+                      <div className="grid gap-4 rounded-xl  p-4 md:grid-cols-[minmax(0,240px)_1fr] md:items-end">
                         <Input
                           label="Result date"
                           type="date"
                           value={labResultDate}
                           onChange={(event) => setLabResultDate(event.target.value)}
                         />
-                        <div
+                        {/* <div
                           aria-disabled="true"
                           className="flex min-h-[44px] items-center gap-3 rounded-lg border border-dashed border-[#e5b9c3] bg-white px-3 py-2 text-sm text-[#6b7da0]"
                         >
@@ -1269,7 +1213,7 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                             <span className="block font-semibold text-[#14233d]">External result reference</span>
                             <span className="text-xs">File attachment will appear here.</span>
                           </span>
-                        </div>
+                        </div> */}
                       </div>
                     )}
 

@@ -23,6 +23,7 @@ frontend/.next/
 frontend/out/
 frontend/build
 backend/dist/
+backend/uploads/
 
 # ------------------------
 # Environment files

@@ -215,6 +215,16 @@ export const uploadExternalLabAttachmentController = async (req: Request, res: R
       description: getAttachmentHeaderValue(req.header("x-description")),
     });
 
+    const doctorUserIds = await resolveUsersByRoleNames(["DOCTOR"]);
+    await createNotification({
+      userIds: doctorUserIds,
+      type: "SYSTEM",
+      title: "External Laboratory Result Attached",
+      message: `An external laboratory result is now available for patient ID ${patientId}.`,
+      entity: "lab-attachment",
+      entity_id: attachment.attachment_id,
+    });
+
     emitLabUpdated({ labId: labId ?? undefined, patientId, reason: "external-result-attached" });
     return res.status(201).json({ success: true, data: attachment });
   } catch (error) {

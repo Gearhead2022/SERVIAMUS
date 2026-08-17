@@ -16,6 +16,7 @@ import Select from "@/components/ui/Select";
 import ModalHeader from "@/components/Modal/ModalHeader";
 import LabResultEditor from "@/components/Modal/LabModal/LabResultEditor";
 import LabResultPreview from "@/components/Modal/LabModal/LabResultPreview";
+import ExternalLabAttachmentWorkspace from "@/components/Modal/LabModal/ExternalLabAttachmentWorkspace";
 import {
   useLabRequests,
   useSaveLabResult,
@@ -121,6 +122,7 @@ export default function DashboardPage() {
     "pending" | "done"
   >("pending");
   const [showAllRequestPreviews, setShowAllRequestPreviews] = useState(false);
+  const [workspaceTab, setWorkspaceTab] = useState<"requests" | "external-results">("requests");
   const {
     data: requests = [],
     error: labRequestsError,
@@ -858,6 +860,31 @@ export default function DashboardPage() {
 
       <div className="lab-dashboard min-h-full p-5 md:p-7">
         <div className="mx-auto max-w-7xl space-y-6">
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#dce8ed] bg-white p-2 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setWorkspaceTab("requests")}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${workspaceTab === "requests" ? "bg-[#0f1e3c] text-white shadow-sm" : "text-[#4a607a] hover:bg-[#f0f4f8]"}`}
+            >
+              Clinic requests
+            </button>
+            <button
+              type="button"
+              onClick={() => setWorkspaceTab("external-results")}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${workspaceTab === "external-results" ? "bg-[#0e7c7b] text-white shadow-sm" : "text-[#4a607a] hover:bg-[#f0f4f8]"}`}
+            >
+              External results
+            </button>
+          </div>
+
+          {workspaceTab === "external-results" ? (
+            <ExternalLabAttachmentWorkspace
+              canUpload
+              description="Attach a result received from another laboratory directly to the correct patient. This does not create or change an in-clinic laboratory request."
+              title="External laboratory results"
+            />
+          ) : (
+            <div className="space-y-6">
 
           {/* ── Stat Cards ── */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1292,6 +1319,8 @@ export default function DashboardPage() {
               </div>
             ) : null}
           </section>
+            </div>
+          )}
         </div>
       </div>
     </>

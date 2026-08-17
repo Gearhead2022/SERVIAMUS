@@ -11,7 +11,8 @@ import {
   ReceiptText,
   WalletCards,
   BriefcaseMedical,
-  FilePlusCorner
+  FilePlusCorner,
+  Paperclip
 } from "lucide-react";
 
 export interface MenuItem {
@@ -75,6 +76,13 @@ export const MENU_ITEMS: MenuItem[] = [
     iconOnly: <History size={30} />,
     roles: ["DOCTOR", "ADMIN"]
   },
+  {
+    label: "External Lab References",
+    path: "/externalLabReferences",
+    icon: <Paperclip size={18} />,
+    iconOnly: <Paperclip size={30} />,
+    roles: ["DOCTOR"]
+  },
 
   // ───────────────── LAB ─────────────────
   {
@@ -89,7 +97,7 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/labrecords",
     icon: <FlaskConical size={18} />,
     iconOnly: <FlaskConical size={30} />,
-    roles: ["LAB", "LABORATORY"]
+    roles: ["LAB", "LABORATORY", "ENCODER", "ADMIN"]
   },
 
   // ───────────────── STAFF ─────────────────

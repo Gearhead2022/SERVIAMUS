@@ -30,7 +30,6 @@ import {
   resolveLabTemplate,
 } from "@/utils/lab-templates";
 import SweetAlert from "@/utils/SweetAlert";
-import ExternalLabAttachments from "./ExternalLabAttachments";
 
 type Props = {
   request: LabRequest;
@@ -224,13 +223,6 @@ export default function LabResultEditor({ request, onSubmit, onCancel }: Props) 
         onPathologistChange={setPathologistUserId}
         pathologistOptions={pathologistUsers}
         pathologistUserId={pathologistUserId}
-      />
-      <ExternalLabAttachments
-        canUpload
-        labId={request.labId}
-        patientCode={request.patientId}
-        patientId={request.rawPatientId}
-        patientName={request.patientName}
       />
       {editor}
     </div>
