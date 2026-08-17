@@ -151,7 +151,7 @@ export default function NotificationDropdown({ open, setOpen }: Props) {
             return;
         }
 
-        await markAllAsRead({ user_id: user.user_id });
+        await markAllAsRead();
     };
 
     const ref = useRef<HTMLDivElement>(null);

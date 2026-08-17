@@ -54,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Clean role routing (no duplicates, first match wins)
     if (normalizedRoles.includes("ADMIN")) return router.replace("/dashboard");
+    if (normalizedRoles.includes("ENCODER")) return router.replace("/encoding");
     if (normalizedRoles.includes("DOCTOR")) return router.replace("/docDashboard");
     if (normalizedRoles.includes("LAB") || normalizedRoles.includes("LABORATORY")) {
       return router.replace("/labdashboard");

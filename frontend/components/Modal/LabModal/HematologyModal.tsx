@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { BloodTypingFields } from "./BloodTypingModal";
 import {
   cbcDefaultValues,
   cbcSchema,
@@ -13,6 +14,7 @@ import { LabResultPayload } from "@/types/LabTypes";
 import { mergeLabFormDefaults } from "@/utils/lab";
 
 type Props = {
+  includeBloodTyping?: boolean;
   initialValues?: LabResultPayload | null;
   onSubmit: (form: CbcFormValues) => void;
   onCancel: () => void;
@@ -42,6 +44,7 @@ const differentialFields = [
 ] as const;
 
 export default function HematologyModal({
+  includeBloodTyping = false,
   initialValues,
   onSubmit,
   onCancel,
@@ -104,6 +107,14 @@ export default function HematologyModal({
           </div>
         </div>
       </div>
+
+      {includeBloodTyping && (
+        <BloodTypingFields
+          errors={errors}
+          includeOthers={false}
+          register={register}
+        />
+      )}
 
       <Input
         label="Overall Others"

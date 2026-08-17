@@ -835,8 +835,42 @@ const shouldUseChemistryPanelTemplate = (request: LabTemplateRequestContext) => 
   return currentItemFieldNames.length > 0 && allFieldNames.length > 0;
 };
 
+const shouldUseCombinedHematologyTemplate = (request: LabTemplateRequestContext) => {
+  const sourceTests = request.tests?.length ? request.tests : [request.testType];
+  const schemaKey = toKnownSchemaKey(request.schemaKey);
+  const hasCbc =
+    schemaKey === "CBC" ||
+    sourceTests.some((testName) => {
+      const normalizedTestName = normalizeTestType(testName);
+      return (
+        normalizedTestName.includes("cbc") ||
+        normalizedTestName.includes("complete blood count") ||
+        normalizedTestName.includes("blood count")
+      );
+    });
+  const hasBloodTyping =
+    schemaKey === "BT" ||
+    sourceTests.some((testName) => {
+      const normalizedTestName = normalizeTestType(testName);
+      return (
+        normalizedTestName.includes("blood typing") ||
+        normalizedTestName.includes("blood type")
+      );
+    });
+
+  return hasCbc && hasBloodTyping;
+};
+
 export const resolveLabTemplate = (request: LabTemplateRequestContext): LabTemplateDefinition => {
   const schemaKey = toKnownSchemaKey(request.schemaKey);
+
+  if (shouldUseCombinedHematologyTemplate(request)) {
+    return {
+      apiCategory: "hematology",
+      key: "hematology-panel",
+      label: "Hematology",
+    };
+  }
 
   // Frontend morphing starts here: backend groups the workflow entry, then the
   // template resolver decides which result form component should render for it.

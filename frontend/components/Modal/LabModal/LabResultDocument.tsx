@@ -443,6 +443,9 @@ function BloodTypingResultSection({
 }
 
 function CbcDocument({ request, form }: Props) {
+  const isBloodTypingOnly = resolveLabTemplate(request).key === "blood-typing";
+  const measurementFallback = isBloodTypingOnly ? "0" : undefined;
+
   return (
     <PreviewShell title="HEMATOLOGY" form={form}>
       <PatientBlock request={request} />
@@ -469,52 +472,52 @@ function CbcDocument({ request, form }: Props) {
             {[
               {
                 label: "Hemoglobin",
-                value: getValue(form, "Hemoglobin"),
+                value: getValue(form, "Hemoglobin", measurementFallback),
                 unit: "g/L",
                 reference: "M: 130-180 g/L",
                 reference_2: "F: 120-160 g/L"
               },
               {
                 label: "Hematocrit",
-                value: getValue(form, "Hematocrit"),
+                value: getValue(form, "Hematocrit", measurementFallback),
                 unit: "L/L",
                 reference: "M: 0.40-0.54 L/L",
                 reference_2: "F: 0.37-0.47 L/L"
               },
               {
                 label: "RBC Count",
-                value: getValue(form, "rbc_count"),
+                value: getValue(form, "rbc_count", measurementFallback),
                 unit: "×10¹²/L",
                 reference: "M: 4.5-6.2 × 10¹² L/L",
                 reference_2: "F: 0.37-0.47 × 10¹² L/L"
               },
               {
                 label: "WBC Count",
-                value: getValue(form, "wbc_count"),
+                value: getValue(form, "wbc_count", measurementFallback),
                 unit: " ×10⁹/L",
                 reference: "4.5-10 ×10⁹/L",
               },
               {
                 label: "Platelet Count",
-                value: getValue(form, "platelet_count"),
+                value: getValue(form, "platelet_count", measurementFallback),
                 unit: " ×10⁹/L",
                 reference: "150-450 ×10⁹/L",
               },
               {
                 label: "Others: MCV",
-                value: getValue(form, "others_mcv"),
+                value: getValue(form, "others_mcv", measurementFallback),
                 unit: "fL",
                 reference: "82-98 fL",
               },
               {
                 label: "MCHC",
-                value: getValue(form, "mchc"),
+                value: getValue(form, "mchc", measurementFallback),
                 unit: "g/dL",
                 reference: "32-36 g/dL",
               },
               {
                 label: "Reticulocyte Count",
-                value: getValue(form, "reticulocyte_count"),
+                value: getValue(form, "reticulocyte_count", measurementFallback),
                 unit: "%",
                 reference: "0.5-1.5 %",
               },
@@ -533,43 +536,43 @@ function CbcDocument({ request, form }: Props) {
               },
               {
                 label: "Neutrophils",
-                value: getValue(form, "nss_1"),
+                value: getValue(form, "nss_1", measurementFallback),
                 unit: "%",
                 reference: "55-65 %",
               },
               {
                 label: "Segmenters",
-                value: getValue(form, "nss_2"),
+                value: getValue(form, "nss_2", measurementFallback),
                 unit: "%",
                 reference: "50-60 %",
               },
               {
                 label: "Stab",
-                value: getValue(form, "nss_3"),
+                value: getValue(form, "nss_3", measurementFallback),
                 unit: "%",
                 reference: "0-5 %",
               },
               {
                 label: "Lymphocytes",
-                value: getValue(form, "lymphocytes"),
+                value: getValue(form, "lymphocytes", measurementFallback),
                 unit: "%",
                 reference: "25-35 %",
               },
               {
                 label: "Monocytes",
-                value: getValue(form, "monocytes"),
+                value: getValue(form, "monocytes", measurementFallback),
                 unit: "%",
                 reference: "4-8 %",
               },
               {
                 label: "Eosinophils",
-                value: getValue(form, "eosinophils"),
+                value: getValue(form, "eosinophils", measurementFallback),
                 unit: "%",
                 reference: "1-3 %",
               },
               {
                 label: "Basophils",
-                value: getValue(form, "basophils"),
+                value: getValue(form, "basophils", measurementFallback),
                 unit: "%",
                 reference: "0-1 %",
               },
@@ -587,13 +590,13 @@ function CbcDocument({ request, form }: Props) {
               },
               {
                 label: "Clotting Time (CT)",
-                value: getValue(form, "clotting_time"),
+                value: getValue(form, "clotting_time", measurementFallback),
                 unit: "Minutes",
                 reference: "3-5 Minutes",
               },
               {
                 label: "Bleeding Time (BT)",
-                value: getValue(form, "bleeding_time"),
+                value: getValue(form, "bleeding_time", measurementFallback),
                 unit: "Minutes",
                 reference: "1-3 Minutes",
               },
@@ -1663,7 +1666,11 @@ export default function LabResultDocument({
 }: Props) {
   const template = resolveLabTemplate(request);
 
-  if (template.key === "cbc" || template.key === "blood-typing") {
+  if (
+    template.key === "cbc" ||
+    template.key === "blood-typing" ||
+    template.key === "hematology-panel"
+  ) {
     return <CbcDocument request={request} form={form} />;
   }
 

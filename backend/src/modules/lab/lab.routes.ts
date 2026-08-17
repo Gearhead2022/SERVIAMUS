@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { authorize } from "../../middlewares/authorize.middleware";
 import {
   createLabRequestController,
@@ -13,6 +13,9 @@ import {
   searchPatientsController,
   updateLabRequestStatusController,
   getLabPreviewController,
+  downloadExternalLabAttachmentController,
+  getExternalLabAttachmentsController,
+  uploadExternalLabAttachmentController,
 } from "./lab.controller";
 import { authenticate } from "../../middlewares/auth.middleware";
 
@@ -45,6 +48,22 @@ router.get(
   "/patients/:patientId/records",
   authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "STAFF"]),
   getPatientLabRecordsController
+);
+router.get(
+  "/patients/:patientId/attachments",
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  getExternalLabAttachmentsController
+);
+router.get(
+  "/attachments/:attachmentId/file",
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  downloadExternalLabAttachmentController
+);
+router.post(
+  "/attachments",
+  authorize(["ADMIN", "LAB", "LABORATORY"]),
+  express.raw({ type: "application/octet-stream", limit: "10mb" }),
+  uploadExternalLabAttachmentController
 );
 router.post("/requests", authorize(["ADMIN", "DOCTOR"]), createLabRequestController);
 router.get("/requests", authorize(["ADMIN", "LAB", "LABORATORY"]), getLabRequestsController);

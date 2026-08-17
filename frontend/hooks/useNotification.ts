@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 export const useNotifications = (user_id: number) => {
     return useQuery({
         queryKey: ["notifications", user_id],
-        queryFn: () => getAllNotificationPerId(user_id),
+        queryFn: getAllNotificationPerId,
         enabled: !!user_id,
     });
 };
@@ -38,13 +38,13 @@ export const useMarkAllAsRead = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ user_id }: { user_id: number }) => markAllAsReadById(user_id),
+        mutationFn: markAllAsReadById,
 
-        onSuccess: (_, variables) => {
+        onSuccess: () => {
             toast.success("Notifications marked as read");
 
             queryClient.invalidateQueries({
-                queryKey: ["notifications", variables.user_id],
+                queryKey: ["notifications"],
             });
         },
 

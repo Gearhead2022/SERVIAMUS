@@ -69,7 +69,7 @@ const getEncoderName = async (
   }
 
   if (!userId) {
-    return "ADMIN";
+    return "ENCODER";
   }
 
   const user = await tx.users.findUnique({
@@ -77,7 +77,7 @@ const getEncoderName = async (
     select: { name: true },
   });
 
-  return user?.name?.trim() || "ADMIN";
+  return user?.name?.trim() || "ENCODER";
 };
 
 const syncEncodedResultDate = async (
@@ -230,12 +230,12 @@ export const saveEncodingConsultationService = async (
           where: {
             user_id: payload.userId,
             is_active: true,
-            roles: { some: { role: { role_name: "ADMIN" } } },
+            roles: { some: { role: { role_name: "ENCODER" } } },
           },
           select: { user_id: true },
         })
       : null;
-    if (!encoder) throw new Error("An active administrator account is required to save a consultation.");
+    if (!encoder) throw new Error("An active encoder account is required to save a consultation.");
 
     const fields = payload.fields;
     const consultationDate = parseEncodingDate(payload.consultationDate, "Consultation date");

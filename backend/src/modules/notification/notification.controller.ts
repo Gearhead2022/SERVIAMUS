@@ -3,12 +3,12 @@ import { getNotifications, markAsRead, markAllAsRead } from "../notification/not
 
 export const getNotificationsController = async (req: Request, res: Response) => {
     try {
-        const userId = Number(req.params.id);
+        const userId = req.user?.user_id;
 
-        if (!userId || isNaN(userId)) {
+        if (!userId) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid consultation_id",
+                message: "Invalid user.",
             });
         }
 
@@ -28,16 +28,17 @@ export const getNotificationsController = async (req: Request, res: Response) =>
 
 export const markAsReadController = async (req: Request, res: Response) => {
     try {
-        const notif_id = Number(req.params.id);
+        const notifId = Number(req.params.notificationId);
+        const userId = req.user?.user_id;
 
-        if (!notif_id || isNaN(notif_id)) {
+        if (!notifId || !userId) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid consultation_id",
+                message: "Invalid notification.",
             });
         }
 
-        const data = await markAsRead(notif_id)
+        const data = await markAsRead(notifId, userId)
 
         return res.status(201).json({
             success: true,
@@ -53,9 +54,9 @@ export const markAsReadController = async (req: Request, res: Response) => {
 
 export const markAllAsReadController = async (req: Request, res: Response) => {
     try {
-        const userId = req?.user?.user_id;
+        const userId = req.user?.user_id;
 
-        if (!userId || isNaN(userId)) {
+        if (!userId) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid user_id",

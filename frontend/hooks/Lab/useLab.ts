@@ -10,6 +10,9 @@ import {
   saveLabResult,
   updateLabRequestStatus,
   fetchLabResultPreview,
+  fetchExternalLabAttachments,
+  uploadExternalLabAttachment,
+  UploadExternalLabAttachmentPayload,
 } from "@/services/lab.service";
 import {
   LabRequest,
@@ -220,3 +223,31 @@ export const useLabResultPreview = (
       typeof labid === "number" &&
       labid > 0,
   });
+
+export const useExternalLabAttachments = (patientId?: number) =>
+  useQuery({
+    queryKey: ["lab", "external-attachments", patientId],
+    queryFn: () => fetchExternalLabAttachments(patientId as number),
+    enabled: typeof patientId === "number" && Number.isFinite(patientId) && patientId > 0,
+  });
+
+export const useUploadExternalLabAttachment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: UploadExternalLabAttachmentPayload) =>
+      uploadExternalLabAttachment(payload),
+    onSuccess: (_, payload) => {
+      queryClient.invalidateQueries({
+        queryKey: ["lab", "external-attachments", payload.patientId],
+      });
+      SweetAlert.successAlert("Attachment saved", "The external laboratory result is now linked to this patient.");
+    },
+    onError: (error: unknown) => {
+      SweetAlert.errorAlert(
+        "Upload Failed",
+        getApiErrorMessage(error, "Unable to attach the laboratory result.")
+      );
+    },
+  });
+};

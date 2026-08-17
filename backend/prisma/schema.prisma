@@ -45,13 +45,14 @@ model Users {
   medical_certificate_request_as_doctor     MedicalCertificateRequest[] @relation("MedicalCertificateRequestDoctor")
   consultation_request_as_doctor            ConsultationRequest[]       @relation("ConsultationRequestDoctor")
   notification                              Notification[]
+  external_lab_attachments                  ExternalLabAttachment[]     @relation("ExternalLabAttachmentUploader")
 
   @@map("users")
 }
 
 model RoleTypes {
   role_id   Int    @id @default(autoincrement())
-  role_name String @db.VarChar(50)
+  role_name String @unique @db.VarChar(50)
 
   role_desc String? @db.VarChar(100)
 
@@ -731,8 +732,31 @@ model Patients {
   fobt_results                FOBTResult[]
   medical_certificate_results MedicalCertificateResult[]
   queue                       Queue[]
+  external_lab_attachments    ExternalLabAttachment[]
 
   @@map("patients")
+}
+
+model ExternalLabAttachment {
+  attachment_id     Int      @id @default(autoincrement())
+  patient_id        Int
+  lab_id            Int?
+  uploaded_by       Int
+  file_name         String   @db.VarChar(255)
+  stored_name       String   @unique @db.VarChar(255)
+  mime_type         String   @db.VarChar(100)
+  file_size         Int
+  source_laboratory String?  @db.VarChar(150)
+  description       String?  @db.VarChar(500)
+  created_at        DateTime @default(now())
+
+  patient Patients @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
+  uploader Users   @relation("ExternalLabAttachmentUploader", fields: [uploaded_by], references: [user_id])
+
+  @@index([patient_id, created_at])
+  @@index([lab_id])
+  @@index([uploaded_by])
+  @@map("external_lab_attachments")
 }
 
 // Services

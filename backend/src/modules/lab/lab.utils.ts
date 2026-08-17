@@ -59,7 +59,8 @@ export type LabSchemaKey =
 
 export type CombinedLabResultFamily =
   | "chemistry-panel"
-  | "clinical-chemistry-panel";
+  | "clinical-chemistry-panel"
+  | "hematology-panel";
 
 type KnownLabSchemaDefinition = {
   apiCategory: ApiLabCategory;
@@ -575,6 +576,10 @@ export const resolveCombinedLabResultFamily = ({
 
   if (combinedChemistrySchemaKeys.has(resolvedSchemaKey)) {
     return "chemistry-panel";
+  }
+
+  if (resolvedSchemaKey === "CBC" || resolvedSchemaKey === "BT") {
+    return "hematology-panel";
   }
 
   return null;

@@ -65,6 +65,7 @@ export type LabSchemaKey =
 
 export type LabTemplateKey =
   | "clinical-chemistry-panel"
+  | "hematology-panel"
   | "cbc"
   | "blood-typing"
   | "parasitology"
@@ -173,6 +174,21 @@ export type PatientLabRecordFilters = {
   dateFrom?: string;
   dateTo?: string;
   recordGroup?: LabRecordGroup | "all";
+};
+
+export type ExternalLabAttachment = {
+  attachment_id: number;
+  patient_id: number;
+  lab_id?: number | null;
+  file_name: string;
+  mime_type: string;
+  file_size: number;
+  source_laboratory?: string | null;
+  description?: string | null;
+  created_at: string;
+  uploader: {
+    name: string;
+  };
 };
 
 export interface PatientLabRequestResponse {

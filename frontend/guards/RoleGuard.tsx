@@ -24,7 +24,7 @@ export default function RoleGuard({
     }
 
     const hasAccess = user?.roles.some((role : string) =>
-      allowedRoles.includes(role)
+      allowedRoles.includes(role.trim().toUpperCase())
     );
 
     if (!hasAccess) {

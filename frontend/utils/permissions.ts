@@ -10,7 +10,7 @@ export const hasRole = (
 };
 
 export const canAddPatient = (userRoles: string[] | undefined) => {
-    return hasRole(userRoles, ["STAFF", "ADMIN"]);
+    return hasRole(userRoles, ["STAFF", "ADMIN", "ENCODER"]);
 };
 
 export const canAccessBilling = (userRoles: string[] | undefined) => {

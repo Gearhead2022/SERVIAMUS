@@ -50,7 +50,7 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/encoding",
     icon: <FilePlusCorner size={18} />,
     iconOnly: <FilePlusCorner size={30} />,
-    roles: ["ADMIN"]
+    roles: ["ENCODER"]
   },
   // {
   //   label: "Settings",
@@ -112,7 +112,7 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/queue",
     icon: <Clock3 size={18} />,
     iconOnly: <Clock3 size={30} />,
-    roles: ["STAFF"]
+    roles: ["ADMIN"]
   },
 
   // ───────────────── CASHIER ─────────────────

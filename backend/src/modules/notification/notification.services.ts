@@ -79,9 +79,12 @@ export const getNotifications = async (userId: number) => {
 };
 
 // MARK ONE
-export const markAsRead = async (notifId: number) => {
-    return prisma.notification.update({
-        where: { notif_id: notifId },
+export const markAsRead = async (notifId: number, userId: number) => {
+    return prisma.notification.updateMany({
+        where: {
+            notif_id: notifId,
+            user_id: userId,
+        },
         data: { is_read: true },
     });
 };

@@ -89,9 +89,9 @@ export default function UserManagementPage() {
 
   const { data: roles, } = useAuthRoles();
 
-  const roleNames = roles?.map(
-    (role) => role.role_name
-  ) ?? [];
+  const roleNames = Array.from(
+    new Set(roles?.map((role) => role.role_name.trim().toUpperCase()) ?? [])
+  );
 
   const {
     data: userResponse,

@@ -1,6 +1,7 @@
 import api from "./axios";
 import {
   CreateLabRequestPayload,
+  ExternalLabAttachment,
   LabRequest,
   LabResultPayload,
   LabTestCatalogItem,
@@ -169,4 +170,47 @@ export const fetchLabResultPreview = async (
     request: LabRequest;
     form: LabResultPayload;
   };
+};
+
+export const fetchExternalLabAttachments = async (patientId: number) => {
+  const res = await api.get(`/api/lab/patients/${patientId}/attachments`);
+  return (res.data.data ?? []) as ExternalLabAttachment[];
+};
+
+export type UploadExternalLabAttachmentPayload = {
+  description?: string;
+  file: File;
+  labId?: number;
+  patientId: number;
+  sourceLaboratory?: string;
+};
+
+export const uploadExternalLabAttachment = async ({
+  description,
+  file,
+  labId,
+  patientId,
+  sourceLaboratory,
+}: UploadExternalLabAttachmentPayload) => {
+  const res = await api.post("/api/lab/attachments", file, {
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "x-description": encodeURIComponent(description?.trim() ?? ""),
+      "x-file-name": encodeURIComponent(file.name),
+      "x-file-type": file.type,
+      "x-source-laboratory": encodeURIComponent(sourceLaboratory?.trim() ?? ""),
+    },
+    params: { patientId, ...(labId ? { labId } : {}) },
+  });
+
+  return res.data.data as ExternalLabAttachment;
+};
+
+export const openExternalLabAttachment = async (attachmentId: number) => {
+  const res = await api.get(`/api/lab/attachments/${attachmentId}/file`, {
+    responseType: "blob",
+  });
+  const objectUrl = URL.createObjectURL(res.data as Blob);
+  window.open(objectUrl, "_blank", "noopener,noreferrer");
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 };

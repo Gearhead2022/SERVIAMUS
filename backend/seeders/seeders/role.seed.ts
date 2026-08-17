@@ -1,14 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 
 export async function seedRoles(prisma: PrismaClient) {
-    await prisma.roleTypes.createMany({
-        data: [
-            { role_name: "ADMIN" },
-            { role_name: "DOCTOR" },
-            { role_name: "LAB" },
-            { role_name: "STAFF" },
-            { role_name: "CASHIER" },
-        ],
-        skipDuplicates: true,
-    });
+    await Promise.all(
+        ["ADMIN", "DOCTOR", "LAB", "STAFF", "CASHIER", "ENCODER"].map(
+            (role_name) =>
+                prisma.roleTypes.upsert({
+                    where: { role_name },
+                    update: {},
+                    create: { role_name },
+                })
+        )
+    );
 }

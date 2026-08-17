@@ -373,7 +373,7 @@ export const upsertStructuredLabResult = async ({
   if (resolvedSchemaKey == "FOBT"){
     const data = {
       patient_id: patientId,
-      test_name: trimFormValue(form, "testname"),
+      test_name: trimFormValue(form, "testname", "test", "test_name"),
       method: trimFormValue(form, "method"),
       specimen: trimFormValue(form, "specimen"),
       day_of_fever: trimFormValue(form, "daysoffever"),

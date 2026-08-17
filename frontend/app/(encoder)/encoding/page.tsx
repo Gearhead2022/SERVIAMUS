@@ -50,10 +50,11 @@ type EncodingField = {
   label: string;
   type?: FieldType;
   placeholder?: string;
-   options?: {
+  options?: {
     value: string;
     label: string;
   }[];
+  readOnly?: boolean;
 };
 
 type EncodingSection = {
@@ -67,6 +68,13 @@ type ClinicalChemistryTest = {
   testName: string;
   schemaKey: LabSchemaKey;
   fields: EncodingField[];
+};
+
+type ConversionDefinition = {
+  field: string;
+  convertedField: string;
+  factor: number;
+  label: string;
 };
 
 type EncodingOption = {
@@ -174,9 +182,19 @@ const ConsultationFields: EncodingField[] = [
   { key: "impression", label: "Impression", type: "textarea" },
   { key: "instruction", label: "Instruction / Plan", type: "textarea" },
 ];
-<p>tobe deleted</p>
-
 const clinicalChemistryTests: ClinicalChemistryTest[] = [
+  {
+    value: "lipid-profile",
+    label: "Lipid Profile",
+    testName: "Lipid Profile",
+    schemaKey: "clinical_chemistry",
+    fields: [
+      { key: "cholesterol", label: "TOTAL CHOLESTEROL" },
+      { key: "hdl_cholesterol", label: "HDL-CHOLESTEROL" },
+      { key: "ldl_cholesterol", label: "LDL-CHOLESTEROL" },
+      { key: "triglycerides", label: "TRIGLYCERIDES" },
+    ],
+  },
   { value: "FBS", label: "Fasting Blood Sugar (FBS)", testName: "FBS", schemaKey: "FBS", fields: [{ key: "FBS", label: "FASTING BLOOD SUGAR (FBS)" }] },
   { value: "RBS", label: "Random Blood Sugar (RBS)", testName: "RBS", schemaKey: "RBS", fields: [{ key: "RBS", label: "RANDOM BLOOD SUGAR (RBS)" }] },
   { value: "BUN", label: "Urea (BUN)", testName: "BUN", schemaKey: "BUN", fields: [{ key: "BUN", label: "UREA (BUN)" }] },
@@ -188,6 +206,35 @@ const clinicalChemistryTests: ClinicalChemistryTest[] = [
   { value: "triglycerides", label: "Triglycerides", testName: "Triglycerides", schemaKey: "triglycerides", fields: [{ key: "triglycerides", label: "TRIGLYCERIDES" }] },
   { value: "sgpt", label: "ALT / SGPT", testName: "SGPT", schemaKey: "SGPT", fields: [{ key: "sgpt", label: "ALT/SGPT" }] },
 ];
+
+const conversionDefinitions: ConversionDefinition[] = [
+  { field: "FBS", convertedField: "FBS_conv", factor: 0.055, label: "FBS (mmol/L)" },
+  { field: "RBS", convertedField: "RBS_conv", factor: 0.055, label: "RBS (mmol/L)" },
+  { field: "BUN", convertedField: "BUN_conv", factor: 0.357, label: "BUN (mmol/L)" },
+  { field: "creatinine", convertedField: "creatinine_conv", factor: 88.4, label: "Creatinine (umol/L)" },
+  { field: "uric_acid", convertedField: "uric_acid_conv", factor: 0.059, label: "Uric Acid (mmol/L)" },
+  { field: "cholesterol", convertedField: "cholesterol_conv", factor: 0.026, label: "Total Cholesterol (mmol/L)" },
+  { field: "hdl_cholesterol", convertedField: "hdl_cholesterol_conv", factor: 0.026, label: "HDL-Cholesterol (mmol/L)" },
+  { field: "ldl_cholesterol", convertedField: "ldl_cholesterol_conv", factor: 0.026, label: "LDL-Cholesterol (mmol/L)" },
+  { field: "triglycerides", convertedField: "triglycerides_conv", factor: 0.011, label: "Triglycerides (mmol/L)" },
+  { field: "ionized_calcium", convertedField: "ionized_calcium_conv", factor: 4.0078, label: "Ionized Calcium (mg/dL)" },
+  { field: "fbs", convertedField: "FBS_conv", factor: 0.055, label: "FBS (mmol/L)" },
+  { field: "onehagl", convertedField: "onehagl_conv", factor: 0.055, label: "1 Hour After Load (mmol/L)" },
+  { field: "twohagl", convertedField: "twohagl_conv", factor: 0.055, label: "2 Hours After Load (mmol/L)" },
+  { field: "threehagl", convertedField: "threehagl_conv", factor: 0.055, label: "3 Hours After Load (mmol/L)" },
+];
+
+const conversionByField = new Map(
+  conversionDefinitions.map((definition) => [definition.field, definition])
+);
+
+const roundedConversion = (value: string, factor: number) => {
+  const numericValue = Number(value);
+
+  return Number.isFinite(numericValue)
+    ? String(Math.round(Math.abs(numericValue * factor) * 100) / 100)
+    : "";
+};
 
 const clinicalChemistryCommonFields: EncodingField[] = [
   { key: "last_meal", label: "Last Meal", placeholder: "e.g. 6 hours ago" },
@@ -290,6 +337,11 @@ const encodingOptions: EncodingOption[] = [
       { key: "pus_cells", label: "PUS CELLS" },
       { key: "rbc", label: "RBC" },
       { key: "bacteria", label: "BACTERIA" },
+      { key: "squamous_cell", label: "SQUAMOUS CELLS" },
+      { key: "round_cell", label: "ROUND CELLS" },
+      { key: "mucous", label: "MUCOUS THREADS" },
+      { key: "crystals", label: "CRYSTALS" },
+      { key: "casts", label: "CASTS" },
       { key: "others", label: "OTHER FINDINGS", type: "textarea" },
     ],
   },
@@ -311,6 +363,11 @@ const encodingOptions: EncodingOption[] = [
       { key: "hookworm", label: "HOOKWORM" },
       { key: "ascaris", label: "ASCARIS" },
       { key: "trichuris", label: "TRICHURIS" },
+      { key: "strongloides", label: "STRONGYLOIDES" },
+      { key: "histolytica_cyst", label: "E. HISTOLYTICA CYST" },
+      { key: "histolytica_trophozoite", label: "E. HISTOLYTICA TROPHOZOITE" },
+      { key: "coli_cyst", label: "E. COLI CYST" },
+      { key: "coli_trophozoite", label: "E. COLI TROPHOZOITE" },
       { key: "others", label: "OTHER FINDINGS", type: "textarea" },
     ],
   },
@@ -358,7 +415,7 @@ const encodingOptions: EncodingOption[] = [
       { key: "rbc_count", label: "RBC COUNT" },
       { key: "wbc_count", label: "WBC COUNT" },
       { key: "platelet_count", label: "PLATELET COUNT" },
-      { key: "others", label: "OTHERS:MCV" },
+      { key: "others_mcv", label: "OTHERS: MCV" },
       { key: "mchc", label: "MCHC" },
       { key: "reticulocyte_count", label: "RETICULOCYTE COUNT" },
       { key: "nss_1", label: "NEUTROPHILS SEGMENTERS STAB 1" },
@@ -520,13 +577,48 @@ const EncodingPage = () => {
     [formValues.chemistry_tests]
   );
 
+  const isLipidProfile = selectedClinicalChemistryTests.some(
+    (test) => test.value === "lipid-profile"
+  );
+
+  const selectedClinicalChemistryFields = useMemo(() => {
+    const fieldsByKey = new Map<string, EncodingField>();
+
+    selectedClinicalChemistryTests.forEach((test) => {
+      test.fields.forEach((field) => {
+        fieldsByKey.set(field.key, field);
+      });
+    });
+
+    return Array.from(fieldsByKey.values());
+  }, [selectedClinicalChemistryTests]);
+
   const visibleFields = useMemo(() => {
     if (selectedOption.value === "lab-clinical-chemistry") {
       const selector = selectedOption.fields[0] as EncodingField;
+      const showMealFields = selectedClinicalChemistryFields.some(
+        (field) => field.key === "FBS" || field.key === "RBS"
+      );
+      const resultFields = selectedClinicalChemistryFields.flatMap((field) => {
+        const conversion = conversionByField.get(field.key);
+        const isCalculatedLdl = isLipidProfile && field.key === "ldl_cholesterol";
+
+        return conversion
+          ? [
+              { ...field, readOnly: isCalculatedLdl },
+              {
+                key: conversion.convertedField,
+                label: conversion.label,
+                readOnly: true,
+              },
+            ]
+          : [field];
+      });
+
       return [
         selector,
-        ...clinicalChemistryCommonFields,
-        ...selectedClinicalChemistryTests.flatMap((test) => test.fields),
+        ...(showMealFields ? clinicalChemistryCommonFields : []),
+        ...resultFields,
       ];
     }
 
@@ -542,11 +634,26 @@ const EncodingPage = () => {
               ? ["test_type", "fbs", "onehagl", "twohagl", "threehagl"]
               : ["test_type"];
 
-      return fields.filter((field) => visibleKeys.includes(field.key));
+      return fields
+        .filter((field) => visibleKeys.includes(field.key))
+        .flatMap((field) => {
+          const conversion = conversionByField.get(field.key);
+
+          return conversion
+            ? [
+                field,
+                {
+                  key: conversion.convertedField,
+                  label: conversion.label,
+                  readOnly: true,
+                },
+              ]
+            : [field];
+        });
     }
 
     return selectedOption.fields;
-  }, [formValues.test_type, selectedClinicalChemistryTests, selectedOption]);
+  }, [formValues.test_type, isLipidProfile, selectedClinicalChemistryFields, selectedOption]);
 
   const renderedSections = useMemo(() => {
     if (visibleFields.every((item) => !isEncodingSection(item))) {
@@ -614,10 +721,45 @@ const EncodingPage = () => {
       return;
     }
 
-    setFormValues((current) => ({
-      ...current,
-      [key]: value,
-    }));
+    setFormValues((current) => {
+      const nextValues = {
+        ...current,
+        [key]: value,
+      };
+      const conversion = conversionByField.get(key);
+
+      if (conversion) {
+        nextValues[conversion.convertedField] = roundedConversion(
+          value,
+          conversion.factor
+        );
+      }
+
+      if (selectedOption.value === "lab-clinical-chemistry" && isLipidProfile) {
+        const totalCholesterol = Number(nextValues.cholesterol);
+        const hdlCholesterol = Number(nextValues.hdl_cholesterol);
+        const triglycerides = Number(nextValues.triglycerides);
+
+        if ([totalCholesterol, hdlCholesterol, triglycerides].every(Number.isFinite)) {
+          if (triglycerides >= 400) {
+            nextValues.ldl_cholesterol = "N/A";
+            nextValues.ldl_cholesterol_conv = "N/A";
+          } else {
+            const calculatedLdl = Math.round(
+              totalCholesterol - hdlCholesterol - triglycerides / 5
+            );
+
+            nextValues.ldl_cholesterol = String(calculatedLdl);
+            nextValues.ldl_cholesterol_conv = roundedConversion(
+              nextValues.ldl_cholesterol,
+              0.026
+            );
+          }
+        }
+      }
+
+      return nextValues;
+    });
   };
 
   const toggleClinicalChemistryTest = (testValue: string) => {
@@ -629,6 +771,17 @@ const EncodingPage = () => {
       if (selectedValues.has(testValue)) {
         selectedValues.delete(testValue);
       } else {
+        if (testValue === "lipid-profile") {
+          ["cholesterol", "hdl_cholesterol", "ldl_cholesterol", "triglycerides"].forEach(
+            (lipidTest) => selectedValues.delete(lipidTest)
+          );
+        } else if (
+          ["cholesterol", "hdl_cholesterol", "ldl_cholesterol", "triglycerides"].includes(
+            testValue
+          )
+        ) {
+          selectedValues.delete("lipid-profile");
+        }
         selectedValues.add(testValue);
       }
 
@@ -637,9 +790,21 @@ const EncodingPage = () => {
           .filter((test) => selectedValues.has(test.value))
           .flatMap((test) => test.fields.map((field) => field.key))
       );
+      const conversionKeys = new Set(
+        Array.from(visibleKeys).flatMap((key) => {
+          const conversion = conversionByField.get(key);
+          return conversion ? [conversion.convertedField] : [];
+        })
+      );
       const nextValues = Object.fromEntries(
         Object.entries(current).filter(
-          ([key]) => key === "chemistry_tests" || key === "last_meal" || key === "time_taken" || visibleKeys.has(key)
+          ([key]) =>
+            key === "chemistry_tests" ||
+            key === "last_meal" ||
+            key === "time_taken" ||
+            key === "note" ||
+            visibleKeys.has(key) ||
+            conversionKeys.has(key)
         )
       );
 
@@ -704,7 +869,17 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
 
     if (selectedOption.value === "lab-clinical-chemistry") {
       for (const test of selectedClinicalChemistryTests) {
-        const testFieldKeys = new Set(["last_meal", "time_taken", ...test.fields.map((field) => field.key)]);
+        const testFieldKeys = new Set([
+          "last_meal",
+          "time_taken",
+          "note",
+          ...test.fields.flatMap((field) => {
+            const conversion = conversionByField.get(field.key);
+            return conversion
+              ? [field.key, conversion.convertedField]
+              : [field.key];
+          }),
+        ]);
         const form: LabResultPayload = Object.fromEntries(
           Object.entries(formValues).filter(
             ([key, value]) => testFieldKeys.has(key) && value.trim() !== ""
@@ -759,40 +934,54 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
   };
 
   return (
-    <RoleGuard allowedRoles={["ADMIN"]}>
-      <main className="min-h-screen scroll-smooth bg-[#edf1f7] font-['DM_Sans'] text-[#14233d]">
-        <div className="border-b border-[#dce3ef] bg-white px-5 py-5 shadow-sm sm:px-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="mb-2 inline-flex items-center gap-2 rounded-lg bg-[#eff6f4] px-3 py-1 text-xs font-semibold text-[#0e7c7b]">
-                <FilePlusCorner size={14} />
-                Admin Encoding
+    <RoleGuard allowedRoles={["ENCODER"]}>
+      <main className="min-h-screen scroll-smooth bg-[#eef2f7] font-['DM_Sans'] text-[#14233d]">
+        <header className="border-b border-[#1c3760] bg-[#0f2244] text-white">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-5 py-6 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-[#83d6d1] shadow-inner">
+                <FilePlusCorner size={21} />
               </div>
-              <h1 className="font-['DM_Serif_Display'] text-3xl text-[#0f2244]">
-                Records Encoding
-              </h1>
-              <p className="mt-1 max-w-2xl text-sm text-[#6b7da0]">
-                Register archived patients and encode their medical records.
-              </p>
-            </div>   
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#83d6d1]">
+                  Encoder workspace
+                </p>
+                <h1 className="mt-1 font-['DM_Serif_Display'] text-3xl leading-none text-white sm:text-[2rem]">
+                  Records Encoding
+                </h1>
+                <p className="mt-2 text-sm text-[#c8d5e9]">
+                  Select a patient, choose a record type, then save a complete clinical record.
+                </p>
+              </div>
+            </div>
 
-            {canAddPatient(user?.roles) && (
-              <Button
-                icon={<Plus size={18} />}
-                variant="addPatient"
-                type="button"
-                onClick={() => setShowPatientForm((current) => !current)}
-              >
-                {showPatientForm ? "Hide Patient Form" : "Add Patient"}
-              </Button>
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9bb0cf]">
+                  Signed in as
+                </p>
+                <p className="mt-0.5 text-sm font-semibold text-white">
+                  {user?.name ?? "Encoder"}
+                </p>
+              </div>
+              {canAddPatient(user?.roles) && (
+                <Button
+                  icon={<Plus size={18} />}
+                  variant="addPatient"
+                  type="button"
+                  onClick={() => setShowPatientForm((current) => !current)}
+                >
+                  {showPatientForm ? "Hide Patient Form" : "Add Patient"}
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        </header>
 
-        <div className="mx-auto grid w-full max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[390px_minmax(0,1fr)] lg:items-start">
+        <div className="mx-auto grid w-full max-w-7xl gap-6 px-5 py-6 sm:px-8 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
           <aside className="space-y-5">
             {showPatientForm && (
-              <section className="overflow-hidden rounded-lg border border-[#dce3ef] bg-white shadow-sm">
+              <section className="overflow-hidden rounded-xl border border-[#dce3ef] bg-white shadow-sm">
                 <AddPatientForm
                   patient={null}
                   onClose={() => setShowPatientForm(false)}
@@ -801,23 +990,25 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
             )}
 
 
-            <section className="rounded-lg border border-[#dce3ef] bg-white p-5 shadow-sm lg:sticky lg:top-4">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0f2244] text-white">
-                  <Search size={18} />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-[#0f2244]">Patient</h2>
-                  <p className="text-xs text-[#6b7da0]">Search and select a record</p>
+            <section className="overflow-hidden rounded-xl border border-[#d8e1ef] bg-white shadow-sm lg:sticky lg:top-4">
+              <div className="border-b border-[#dce3ef] bg-[#f8fafc] px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0f2244] text-white">
+                    <Search size={18} />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-[#0f2244]">Patient context</h2>
+                    <p className="text-xs text-[#6b7da0]">This identity stays visible as you encode.</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-5 p-5">
                 <div>
-                  <Label>Patient</Label>
+                  <Label>Find patient</Label>
                   <ReactSelect
                     options={patientOptions}
-                    placeholder="Search patient..."
+                    placeholder="Search by name or patient code..."
                     isClearable
                     value={
                       patientOptions.find(
@@ -850,13 +1041,13 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
 
                       control: (base, state) => ({
                         ...base,
-                        borderRadius: "12px",
+                        borderRadius: "10px",
                         borderColor: state.isFocused ? "#0e7c7b" : "#dce3ef",
                         boxShadow: state.isFocused
                           ? "0 0 0 3px rgba(14,124,123,0.15)"
                           : "none",
-                        background: "#f4f6fb",
-                        minHeight: "42px",
+                        background: "#f8fafc",
+                        minHeight: "44px",
                         fontSize: "14px",
                         "&:hover": {
                           borderColor: "#0e7c7b",
@@ -872,22 +1063,48 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                   />
                 </div>
 
-                {selectedPatient && (
-                  <div className="rounded-lg border border-[#dce3ef] bg-[#f8fafc] p-4">
-                    <div className="mb-2 flex items-center gap-2 text-sm font-bold text-[#0f2244]">
-                      <UserRoundCheck size={16} />
-                      {selectedPatient.name}
+                {selectedPatient ? (
+                  <div className="relative overflow-hidden rounded-xl border border-[#b9dfdc] bg-[#f2fbfa] p-4">
+                    <div className="absolute inset-x-0 top-0 h-1 bg-[#0e7c7b]" />
+                    <div className="flex items-start gap-3 pt-1">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0e7c7b] text-white">
+                        <UserRoundCheck size={17} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#0e7c7b]">
+                          Selected patient
+                        </p>
+                        <p className="truncate text-base font-bold text-[#0f2244]">
+                          {selectedPatient.name}
+                        </p>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs text-[#50617f]">
-                      <span>Age: {selectedPatient.age ?? "-"}</span>
-                      <span>Sex: {selectedPatient.sex ?? "-"}</span>
-                      <span className="col-span-2">
-                        Contact: {selectedPatient.contact_number || "-"}
-                      </span>
-                      <span className="col-span-2">
-                        Address: {selectedPatient.address || "-"}
-                      </span>
-                    </div>
+                    <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 text-xs">
+                      <div>
+                        <dt className="font-semibold uppercase tracking-wide text-[#6b7da0]">Patient code</dt>
+                        <dd className="mt-1 font-semibold text-[#14233d]">{selectedPatient.patient_code || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold uppercase tracking-wide text-[#6b7da0]">Age / sex</dt>
+                        <dd className="mt-1 font-semibold text-[#14233d]">
+                          {selectedPatient.age ?? "-"} / {selectedPatient.sex ?? "-"}
+                        </dd>
+                      </div>
+                      <div className="col-span-2">
+                        <dt className="font-semibold uppercase tracking-wide text-[#6b7da0]">Address</dt>
+                        <dd className="mt-1 break-words font-medium leading-relaxed text-[#14233d]">
+                          {selectedPatient.address || "No address recorded"}
+                        </dd>
+                      </div>
+                      <div className="col-span-2">
+                        <dt className="font-semibold uppercase tracking-wide text-[#6b7da0]">Contact</dt>
+                        <dd className="mt-1 font-medium text-[#14233d]">{selectedPatient.contact_number || "-"}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-[#c6d1e3] bg-[#f8fafc] p-4 text-sm text-[#6b7da0]">
+                    Patient details will appear here after selection.
                   </div>
                 )}
               </div>
@@ -896,34 +1113,78 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
 
           </aside>
 
-          <section className="rounded-lg border border-[#dce3ef] bg-white shadow-sm">
+          <section className={`overflow-hidden rounded-xl border bg-white shadow-sm ${
+            selectedOption.group === "lab"
+              ? "border-[#f1d2d9]"
+              : "border-[#d8e1ef]"
+          }`}>
             <form onSubmit={handleSubmit} className="flex h-full flex-col">
-              <div className="border-b border-[#dce3ef] p-5">
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-lg text-white ${
-                        selectedOption.group === "lab" ? "bg-[#c8102e]" : "bg-[#0e7c7b]"
-                      }`}
-                    >
-                      {selectedOption.group === "lab" ? (
-                        <FlaskConical size={19} />
-                      ) : (
-                        <ClipboardPenLine size={19} />
-                      )}
+              <div className={`border-b p-5 sm:p-6 ${
+                selectedOption.group === "lab"
+                  ? "border-[#f1d2d9] bg-[#fffafb]"
+                  : "border-[#dce3ef] bg-[#fbfcfe]"
+              }`}>
+                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
+                  <div>
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white ${
+                          selectedOption.group === "lab" ? "bg-[#c8102e]" : "bg-[#0e7c7b]"
+                        }`}
+                      >
+                        {selectedOption.group === "lab" ? (
+                          <FlaskConical size={19} />
+                        ) : (
+                          <ClipboardPenLine size={19} />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#6b7da0]">
+                          Active record
+                        </p>
+                        <h2 className="mt-0.5 text-xl font-bold text-[#0f2244]">
+                          {selectedOption.label}
+                        </h2>
+                        <p className="mt-1 text-sm text-[#6b7da0]">
+                          {selectedOption.group === "lab"
+                            ? "Enter verified laboratory values and supporting details."
+                            : "Document a consultation history, assessment, and follow-up plan."}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-[#0f2244]">
-                        Encode Record
-                      </h2>
-                      <p className="text-sm text-[#6b7da0]">
-                        Data Category Selection
-                      </p>
+
+                    <div className="mt-5 grid max-w-xl grid-cols-2 gap-2 rounded-xl border border-[#dce3ef] bg-white p-1.5">
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedOption("initial-consultation")}
+                        aria-pressed={selectedOption.group === "consultation"}
+                        className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0e7c7b] ${
+                          selectedOption.group === "consultation"
+                            ? "bg-[#0e7c7b] text-white shadow-sm"
+                            : "text-[#50617f] hover:bg-[#eff6f4] hover:text-[#0e7c7b]"
+                        }`}
+                      >
+                        <ClipboardPenLine size={16} />
+                        Consultation
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedOption("lab-clinical-chemistry")}
+                        aria-pressed={selectedOption.group === "lab"}
+                        className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c8102e] ${
+                          selectedOption.group === "lab"
+                            ? "bg-[#c8102e] text-white shadow-sm"
+                            : "text-[#50617f] hover:bg-[#fff1f3] hover:text-[#c8102e]"
+                        }`}
+                      >
+                        <FlaskConical size={16} />
+                        Laboratory
+                      </button>
                     </div>
                   </div>
 
                   <Select
-                    label="Record Type"
+                    label="Specific record type"
                     value={selectedOptionValue}
                     onChange={(event) => updateSelectedOption(event.target.value)}
                   >
@@ -949,10 +1210,10 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                 </div>
               </div>
 
-              <div className="flex-1 p-5">
+              <div className="flex-1 p-5 sm:p-6">
                 {!selectedPatient ? (
-                  <div className="flex min-h-[360px] flex-col items-center justify-center rounded-lg border border-dashed border-[#c6d1e3] bg-[#f8fafc] p-6 text-center">
-                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#eff6f4] text-[#0e7c7b]">
+                  <div className="flex min-h-[390px] flex-col items-center justify-center rounded-xl border border-dashed border-[#c6d1e3] bg-[#f8fafc] p-6 text-center">
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[#eff6f4] text-[#0e7c7b]">
                       <Search size={26} />
                     </div>
                     <h3 className="text-base font-bold text-[#0f2244]">
@@ -990,13 +1251,25 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                     )} */}
 
                     {selectedOption.group === "lab" && (
-                      <div className="max-w-xs rounded-lg border border-[#dce3ef] bg-[#f8fafc] p-4">
+                      <div className="grid gap-4 rounded-xl border border-[#f1d2d9] bg-[#fffafb] p-4 md:grid-cols-[minmax(0,240px)_1fr] md:items-end">
                         <Input
-                          label="Result Date"
+                          label="Result date"
                           type="date"
                           value={labResultDate}
                           onChange={(event) => setLabResultDate(event.target.value)}
                         />
+                        <div
+                          aria-disabled="true"
+                          className="flex min-h-[44px] items-center gap-3 rounded-lg border border-dashed border-[#e5b9c3] bg-white px-3 py-2 text-sm text-[#6b7da0]"
+                        >
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#fff1f3] text-[#c8102e]">
+                            <FilePlusCorner size={16} />
+                          </span>
+                          <span>
+                            <span className="block font-semibold text-[#14233d]">External result reference</span>
+                            <span className="text-xs">File attachment will appear here.</span>
+                          </span>
+                        </div>
                       </div>
                     )}
 
@@ -1024,7 +1297,7 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                     )}
 
                     {sectionNavItems.length > 1 && (
-                      <div className="sticky top-0 z-10 -mx-5 flex gap-2 overflow-x-auto border-b border-[#dce3ef] bg-white/95 px-5 py-2 backdrop-blur">
+                      <div className="sticky top-0 z-10 -mx-5 flex gap-2 overflow-x-auto border-y border-[#dce3ef] bg-white/95 px-5 py-2.5 backdrop-blur sm:-mx-6 sm:px-6">
                         {sectionNavItems.map((section) => (
                           <a
                             key={section.title}
@@ -1049,7 +1322,7 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                             id={section.title ? slugify(section.title) : undefined}
                             className={
                               section.title
-                                ? "scroll-mt-16 rounded-lg border border-[#dce3ef] bg-[#fbfcfe] p-4"
+                                ? "scroll-mt-16 rounded-xl border border-[#dce3ef] bg-[#fbfcfe] p-4 sm:p-5"
                                 : ""
                             }
                           >
@@ -1096,7 +1369,7 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                                         ))}
                                       </Select>
                                     ) : field.key === "chemistry_tests" ? (
-                                      <fieldset className="rounded-lg border border-[#dce3ef] bg-[#f8fafc] p-4">
+                                      <fieldset className="rounded-xl border border-[#dce3ef] bg-[#f8fafc] p-4">
                                         <legend className="px-1 text-[11px] font-semibold uppercase tracking-widest text-[#6b7da0]">
                                           {field.label}
                                         </legend>
@@ -1135,6 +1408,7 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                                         label={field.label}
                                         type={field.type ?? "text"}
                                         placeholder={field.placeholder}
+                                        readOnly={field.readOnly}
                                         value={formValues[field.key] ?? ""}
                                         onChange={(event) => updateField(field.key, event.target.value)}
                                       />
@@ -1151,16 +1425,17 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                 )}
               </div>
 
-              <div className="sticky bottom-0 z-10 flex flex-col gap-3 border-t border-[#dce3ef] bg-[#f8fafc]/95 p-5 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-                {saveBlockedReason ? (
-                  <p role="status" className="text-xs font-medium text-[#c8102e]">
-                    {saveBlockedReason}
+              <div className="sticky bottom-0 z-10 flex flex-col gap-3 border-t border-[#dce3ef] bg-white/95 p-5 shadow-[0_-8px_20px_rgba(15,34,68,0.04)] backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <div className={`flex items-center gap-2 text-xs font-medium ${
+                  saveBlockedReason ? "text-[#c8102e]" : "text-[#0e7c7b]"
+                }`}>
+                  <span className={`h-2 w-2 rounded-full ${
+                    saveBlockedReason ? "bg-[#c8102e]" : "bg-[#0e7c7b]"
+                  }`} />
+                  <p role="status">
+                    {saveBlockedReason ?? "Ready to save this record."}
                   </p>
-                ) : (
-                  <p role="status" className="text-xs text-[#6b7da0]">
-                    Ready to save.
-                  </p>
-                )}
+                </div>
                 <Button
                   icon={<Save size={17} />}
                   type="submit"

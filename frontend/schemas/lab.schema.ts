@@ -115,6 +115,8 @@ export const cbcSchema = z.object({
   others2: optionalText(),
   bleeding_time: numericResult("Bleeding time"),
   clotting_time: numericResult("Clotting time"),
+  abo_type: optionalText(),
+  rh_type: optionalText(),
   remarks: optionalText(),
 });
 
@@ -140,6 +142,8 @@ export const cbcDefaultValues: CbcFormValues = {
   others2: "",
   bleeding_time: 0,
   clotting_time: 0,
+  abo_type: "",
+  rh_type: "",
   remarks: "PLEASE CORRELATE CLINICALLY FOR APPROPRIATE INTERPRETATION OF RESULTS",
 };
 

@@ -42,9 +42,13 @@ export const registerUser = async (payload: iRegister) => {
  * LOGIN USER
  */
 export const loginUser = async (username: string, password: string) => {
-      console.log("Authentication service loaded");
+  const normalizedUsername = username.trim();
+  if (!normalizedUsername || !password) {
+    throw new Error("Invalid credentials");
+  }
+
   const user = await prisma.users.findUnique({
-    where: { username },
+    where: { username: normalizedUsername },
     include: {
       roles: {
         include: {
@@ -63,7 +67,17 @@ export const loginUser = async (username: string, password: string) => {
     throw new Error("Invalid credentials");
   }
 
-  const roles = user.roles.map(r => r.role.role_name);
+  const roles = Array.from(
+    new Set(
+      user.roles
+        .map((entry) => entry.role.role_name.trim().toUpperCase())
+        .filter(Boolean)
+    )
+  );
+
+  if (!user.is_active || roles.length === 0) {
+    throw new Error("Invalid credentials");
+  }
 
   // Generate JWT
   const token = jwt.sign(

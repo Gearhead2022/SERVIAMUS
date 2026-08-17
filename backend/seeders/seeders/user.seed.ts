@@ -2,6 +2,12 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 export async function seedUsers(prisma: PrismaClient) {
+    
+        // Clear existing seeded data
+    await prisma.users.deleteMany();
+    await prisma.userRole.deleteMany();
+
+    
     const roles = await prisma.roleTypes.findMany();
 
     const hash = async (password: string) => {
@@ -25,7 +31,7 @@ export async function seedUsers(prisma: PrismaClient) {
 
     const staff1 = await prisma.users.create({
         data: {
-            name: "sample staff",
+            name: "(Edit ME!)",
             username: "staff",
             password: await hash("staff"),
         },
@@ -33,7 +39,7 @@ export async function seedUsers(prisma: PrismaClient) {
 
     const admin1 = await prisma.users.create({
         data: {
-            name: "John Parreno",
+            name: "(Edit ME!)",
             username: "admin",
             password: await hash("admin"),
         },
@@ -41,7 +47,7 @@ export async function seedUsers(prisma: PrismaClient) {
 
     const cashier1 = await prisma.users.create({
         data: {
-            name: "sample cashier",
+            name: "(Edit ME!)",
             username: "cashier",
             password: await hash("cashier"),
         },
@@ -49,11 +55,20 @@ export async function seedUsers(prisma: PrismaClient) {
 
     const lab1 = await prisma.users.create({
         data: {
-            name: "sample medtech",
+            name: "(Edit ME!)",
             username: "medtech",
             password: await hash("medtech"),
         },
     });
+
+     const encoder1 = await prisma.users.create({
+        data: {
+            name: "(Edit ME!)",
+            username: "encoder",
+            password: await hash("encoder"),
+        },
+    });
+
 
     await prisma.userRole.createMany({
         data: [
@@ -77,8 +92,12 @@ export async function seedUsers(prisma: PrismaClient) {
                 user_id: lab1.user_id,
                 role_id: roleMap["LAB"],
             },
+            {
+                user_id: encoder1.user_id,
+                role_id: roleMap["ENCODER"],
+            },
         ]
     });
 
-    return { doctor1, staff1, admin1 };
+    return { doctor1, staff1, admin1, cashier1, lab1, encoder1 };
 }

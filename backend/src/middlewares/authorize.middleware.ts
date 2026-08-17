@@ -6,11 +6,12 @@ export const authorize = (allowedRoles: string[]) => {
     // console.log("User:", req.user);
 
     const userRoles = req.user?.roles || [];
+    const normalizedAllowedRoles = allowedRoles.map((role) => role.trim().toUpperCase());
 
     // console.log("Roles:", userRoles);
 
     const hasAccess = userRoles.some(role =>
-      allowedRoles.includes(role)
+      normalizedAllowedRoles.includes(role.trim().toUpperCase())
     );
 
     // console.log("Has Access:", hasAccess);

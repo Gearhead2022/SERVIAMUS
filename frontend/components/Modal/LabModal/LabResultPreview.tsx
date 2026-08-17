@@ -3,6 +3,7 @@
 import Button from "@/components/ui/Button";
 import { LabRequest, LabResultPayload } from "@/types/LabTypes";
 import LabResultDocument from "./LabResultDocument";
+import ExternalLabAttachments from "./ExternalLabAttachments";
 
 type Props = {
   request: LabRequest;
@@ -60,6 +61,13 @@ export default function LabResultPreview({
       </div>
 
       <LabResultDocument request={request} form={form} />
+
+      <ExternalLabAttachments
+        labId={request.labId}
+        patientCode={request.patientId}
+        patientId={request.rawPatientId}
+        patientName={request.patientName}
+      />
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 print:hidden">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

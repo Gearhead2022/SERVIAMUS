@@ -19,6 +19,12 @@ import {
   updateLabRequestStatusService,
   getLabPreviewService,
 } from "./lab.services";
+import {
+  createExternalLabAttachment,
+  getAttachmentHeaderValue,
+  getExternalLabAttachmentFile,
+  getExternalLabAttachments,
+} from "./lab.attachments";
 
 const labStatusValues = ["queued", "pending", "done"] as const;
 const labCategoryValues = ["clinical-chemistry", "hematology", "parasitology", "urinalysis", "other"] as const;
@@ -167,6 +173,69 @@ export const getPatientLabRequestsController = async (req: Request, res: Respons
       error,
       "Failed to fetch patient laboratory requests."
     );
+  }
+};
+
+export const getExternalLabAttachmentsController = async (req: Request, res: Response) => {
+  try {
+    const patientId = Number(req.params.patientId);
+    if (!Number.isInteger(patientId) || patientId <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid patient." });
+    }
+
+    const attachments = await getExternalLabAttachments(patientId);
+    return res.status(200).json({ success: true, data: attachments });
+  } catch (error) {
+    return handleLabModuleError(res, error, "Failed to fetch laboratory attachments.");
+  }
+};
+
+export const uploadExternalLabAttachmentController = async (req: Request, res: Response) => {
+  try {
+    const patientId = Number(req.query.patientId);
+    const labId = req.query.labId ? Number(req.query.labId) : null;
+    const uploadedBy = req.user?.user_id;
+
+    if (!Number.isInteger(patientId) || patientId <= 0 || !uploadedBy) {
+      return res.status(400).json({ success: false, message: "A valid patient is required." });
+    }
+
+    if (labId !== null && (!Number.isInteger(labId) || labId <= 0)) {
+      return res.status(400).json({ success: false, message: "Invalid laboratory request." });
+    }
+
+    const attachment = await createExternalLabAttachment({
+      body: req.body,
+      patientId,
+      labId,
+      uploadedBy,
+      fileName: getAttachmentHeaderValue(req.header("x-file-name")) || "laboratory-result",
+      mimeType: getAttachmentHeaderValue(req.header("x-file-type")),
+      sourceLaboratory: getAttachmentHeaderValue(req.header("x-source-laboratory")),
+      description: getAttachmentHeaderValue(req.header("x-description")),
+    });
+
+    emitLabUpdated({ labId: labId ?? undefined, patientId, reason: "external-result-attached" });
+    return res.status(201).json({ success: true, data: attachment });
+  } catch (error) {
+    return handleLabModuleError(res, error, "Failed to upload laboratory attachment.");
+  }
+};
+
+export const downloadExternalLabAttachmentController = async (req: Request, res: Response) => {
+  try {
+    const attachmentId = Number(req.params.attachmentId);
+    if (!Number.isInteger(attachmentId) || attachmentId <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid laboratory attachment." });
+    }
+
+    const attachment = await getExternalLabAttachmentFile(attachmentId);
+    res.setHeader("Content-Type", attachment.mime_type);
+    res.setHeader("Content-Disposition", `inline; filename="${attachment.file_name.replace(/\"/g, "")}"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    return res.status(200).send(attachment.file);
+  } catch (error) {
+    return handleLabModuleError(res, error, "Failed to open laboratory attachment.");
   }
 };
 
