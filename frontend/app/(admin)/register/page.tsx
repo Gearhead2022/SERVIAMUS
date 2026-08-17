@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import {
   UserPlus, Search, Shield, BadgeCheck,
-  Hash, MoreHorizontal,
+  Hash,
   Users, CheckCircle2, XCircle, Clock,
-  Pencil, Trash2
+  Pencil
 } from "lucide-react";
 import RegisterUserModal from "@/components/Modal/ChildModal/RegisterUserModal";
 import EditUserModal from "@/components/Modal/ChildModal/EditAccountModal";
@@ -16,8 +16,6 @@ import { useAuthRoles } from "@/hooks/useAuthRoles";
 import Pagination from "@/components/Pagination";
 import CardLabel from "@/components/ui/CardLabel";
 import Button from "@/components/ui/Button";
-import SweetAlert from "@/utils/SweetAlert";
-import { useDeleteUser } from "@/hooks/useRegister";
 
 // ── Types (adjust to match your actual hook types) ──────────────────────────
 
@@ -33,22 +31,25 @@ export type UserRecord = {
   created_at: string;
 };
 
-const ROLE_META: Record<number, { role_name: string, color: string; bg: string }> = {
-  1: { role_name: "ADMIN", color: "#c8102e", bg: "#eef1f9" },
-  2: { role_name: "DOCTOR", color: "#065050", bg: "#e0f4f4" },
-  3: { role_name: "MEDTECH", color: "#7c4dab", bg: "#f3eefb" },
-  4: { role_name: "STAFF", color: "#92400e", bg: "#fffbeb" },
-  5: { role_name: "CASHIER", color: "#0f2244", bg: "#fdf0f2" },
+const ROLE_META: Record<string, { color: string; bg: string }> = {
+  ADMIN: { color: "#c8102e", bg: "#eef1f9" },
+  DOCTOR: { color: "#065050", bg: "#e0f4f4" },
+  LAB: { color: "#7c4dab", bg: "#f3eefb" },
+  LABORATORY: { color: "#7c4dab", bg: "#f3eefb" },
+  STAFF: { color: "#92400e", bg: "#fffbeb" },
+  CASHIER: { color: "#0f2244", bg: "#fdf0f2" },
+  ENCODER: { color: "#2563eb", bg: "#eff6ff" },
 };
 
 
-function RoleBadge({ role }: { role: number }) {
-  const m = ROLE_META[role] ?? { role_name: "N/A", color: "#6b7da0", bg: "#f0f3fa" };
+function RoleBadge({ roleName }: { roleName?: string | null }) {
+  const label = roleName?.trim().toUpperCase() || "N/A";
+  const m = ROLE_META[label] ?? { color: "#6b7da0", bg: "#f0f3fa" };
   return (
     <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold px-2.5 py-1 rounded-full"
       style={{ background: m.bg, color: m.color }}>
       <Shield size={9} />
-      {m.role_name ?? "N/A"}
+      {label}
     </span>
   );
 }
@@ -84,8 +85,6 @@ export default function UserManagementPage() {
 
   const [rowsPerPage, setRowsPerPage] = useState(8);
   const [totalEntries, setTotalEntries] = useState(0);
-
-  const { mutateAsync: deleteUserMutation } = useDeleteUser();
 
   const { data: roles, } = useAuthRoles();
 
@@ -216,7 +215,7 @@ export default function UserManagementPage() {
       {showEdit && selectedUser && (
         <EditUserModal
           user={selectedUser}
-          role_id={selectedUser.role.role_id}
+          role_id={selectedUser.role?.role_id ?? 0}
           onClose={() => setShowEdit(false)}
           onSuccess={() => setShowEdit(false)}
         />
@@ -430,7 +429,7 @@ export default function UserManagementPage() {
 
                         {/* Role */}
                         <td className="px-4 py-3.5 text-black">
-                          <RoleBadge role={user.role.role_id} />
+                          <RoleBadge roleName={user.role?.role_name} />
                         </td>
 
                         {/* Title */}

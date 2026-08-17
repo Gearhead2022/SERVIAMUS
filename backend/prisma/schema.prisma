@@ -46,6 +46,8 @@ model Users {
   consultation_request_as_doctor            ConsultationRequest[]       @relation("ConsultationRequestDoctor")
   notification                              Notification[]
   external_lab_attachments                  ExternalLabAttachment[]     @relation("ExternalLabAttachmentUploader")
+  patient_deletion_requests_created         PatientDeletionRequest[]    @relation("PatientDeletionRequester")
+  patient_deletion_requests_reviewed         PatientDeletionRequest[]    @relation("PatientDeletionReviewer")
 
   @@map("users")
 }
@@ -733,8 +735,36 @@ model Patients {
   medical_certificate_results MedicalCertificateResult[]
   queue                       Queue[]
   external_lab_attachments    ExternalLabAttachment[]
+  deletion_requests           PatientDeletionRequest[]
 
   @@map("patients")
+}
+
+model PatientDeletionRequest {
+  deletion_request_id Int                     @id @default(autoincrement())
+  patient_id          Int?                    @unique
+  patient_name        String                  @db.VarChar(50)
+  patient_code        String?                 @db.VarChar(50)
+  requested_by        Int
+  reviewed_by         Int?
+  status              PatientDeletionStatus   @default(PENDING)
+  reason              String?                 @db.VarChar(500)
+  requested_at        DateTime                @default(now())
+  reviewed_at         DateTime?
+
+  patient   Patients? @relation(fields: [patient_id], references: [patient_id], onDelete: SetNull)
+  requester Users     @relation("PatientDeletionRequester", fields: [requested_by], references: [user_id])
+  reviewer  Users?    @relation("PatientDeletionReviewer", fields: [reviewed_by], references: [user_id])
+
+  @@index([status, requested_at])
+  @@index([requested_by])
+  @@map("patient_deletion_requests")
+}
+
+enum PatientDeletionStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model ExternalLabAttachment {

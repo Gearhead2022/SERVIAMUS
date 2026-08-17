@@ -169,6 +169,70 @@ export const getExternalLabAttachments = async (patientId: number) => {
   });
 };
 
+/**
+ * Returns one row per patient with external laboratory files. Fetching in
+ * attachment order lets the newest file determine the worklist order without
+ * changing the external-lab attachment schema.
+ */
+export const getExternalLabAttachmentWorklist = async () => {
+  const attachments = await prisma.externalLabAttachment.findMany({
+    orderBy: { created_at: "desc" },
+    select: {
+      attachment_id: true,
+      patient_id: true,
+      lab_id: true,
+      file_name: true,
+      mime_type: true,
+      file_size: true,
+      source_laboratory: true,
+      description: true,
+      created_at: true,
+      uploader: { select: { name: true } },
+      patient: {
+        select: {
+          patient_id: true,
+          patient_code: true,
+          name: true,
+          age: true,
+          sex: true,
+          _count: { select: { external_lab_attachments: true } },
+        },
+      },
+    },
+  });
+
+  const seenPatientIds = new Set<number>();
+
+  return attachments.flatMap((attachment) => {
+    if (seenPatientIds.has(attachment.patient_id)) {
+      return [];
+    }
+
+    seenPatientIds.add(attachment.patient_id);
+
+    return [{
+      patient_id: attachment.patient.patient_id,
+      patient_code: attachment.patient.patient_code,
+      name: attachment.patient.name,
+      age: attachment.patient.age,
+      sex: attachment.patient.sex,
+      attachment_count: attachment.patient._count.external_lab_attachments,
+      latest_attachment_at: attachment.created_at,
+      latest_attachment: {
+        attachment_id: attachment.attachment_id,
+        lab_id: attachment.lab_id,
+        file_name: attachment.file_name,
+        mime_type: attachment.mime_type,
+        file_size: attachment.file_size,
+        source_laboratory: attachment.source_laboratory,
+        description: attachment.description,
+        created_at: attachment.created_at,
+        uploader: attachment.uploader,
+      },
+    }];
+  });
+};
+
 export const getExternalLabAttachmentFile = async (attachmentId: number) => {
   const attachment = await prisma.externalLabAttachment.findUnique({
     where: { attachment_id: attachmentId },

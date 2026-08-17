@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { User, CircleUser, BadgeCheck, Hash, FileDigit, X, RefreshCw, Save, ToggleLeft, ToggleRight, ShieldCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,7 +33,7 @@ export type EditableUser = {
     license_no?: string | null;
     ptr_no?: string | null;
     is_active: boolean;
-    role: UserRole;
+    role: UserRole | null;
 };
 
 // ── Shared style tokens ───────────────────────────────────────────────────────
@@ -203,7 +203,7 @@ export default function EditUserModal({
                                 <p className="text-[12.5px] font-semibold text-white leading-tight">{user.name}</p>
                                 <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.5)" }}>
                                     @{user.username}
-                                    {user.role.role_name && <> · {user.role.role_name}</>}
+                                    {user.role?.role_name && <> · {user.role.role_name}</>}
                                 </p>
                             </div>
                         </div>

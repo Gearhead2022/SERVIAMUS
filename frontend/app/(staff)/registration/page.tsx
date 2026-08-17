@@ -80,7 +80,7 @@ const RegistrationPage = () => {
 
     const confirmed = await SweetAlert.confirmationAlert2(
       "Delete patient?",
-      `This will permanently remove ${patient.name} if the record has no medical history.`,
+      `If ${patient.name} has no records, deletion is immediate. Otherwise, this sends an approval request to an administrator.`,
     );
 
     if (!confirmed) return;

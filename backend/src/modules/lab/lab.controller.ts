@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { getIO } from "../../socket";
 import {
   createNotification,
+  notifyDoctors,
   resolveUsersByRoleNames,
 } from "../notification/notification.services";
 import { handleLabModuleError } from "./lab.errors";
@@ -24,13 +25,14 @@ import {
   getAttachmentHeaderValue,
   getExternalLabAttachmentFile,
   getExternalLabAttachments,
+  getExternalLabAttachmentWorklist,
 } from "./lab.attachments";
 
 const labStatusValues = ["queued", "pending", "done"] as const;
 const labCategoryValues = ["clinical-chemistry", "hematology", "parasitology", "urinalysis", "other"] as const;
 const labRecordGroupValues = ["clinical-chemistry", "clinical-microscopy", "hematology", "other", "serology"] as const;
 
-const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR"] as const;
+const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR", "role_ENCODER"] as const;
 
 const emitLabUpdated = (payload: {
   labId?: number;
@@ -190,6 +192,18 @@ export const getExternalLabAttachmentsController = async (req: Request, res: Res
   }
 };
 
+export const getExternalLabAttachmentWorklistController = async (
+  _req: Request,
+  res: Response
+) => {
+  try {
+    const worklist = await getExternalLabAttachmentWorklist();
+    return res.status(200).json({ success: true, data: worklist });
+  } catch (error) {
+    return handleLabModuleError(res, error, "Failed to fetch the external laboratory worklist.");
+  }
+};
+
 export const uploadExternalLabAttachmentController = async (req: Request, res: Response) => {
   try {
     const patientId = Number(req.query.patientId);
@@ -215,9 +229,7 @@ export const uploadExternalLabAttachmentController = async (req: Request, res: R
       description: getAttachmentHeaderValue(req.header("x-description")),
     });
 
-    const doctorUserIds = await resolveUsersByRoleNames(["DOCTOR"]);
-    await createNotification({
-      userIds: doctorUserIds,
+    await notifyDoctors({
       type: "SYSTEM",
       title: "External Laboratory Result Attached",
       message: `An external laboratory result is now available for patient ID ${patientId}.`,
@@ -295,6 +307,14 @@ export const createLabRequestController = async (req: Request, res: Response) =>
       title: "New Laboratory Billing",
       message: "A laboratory billing record is ready for cashier processing.",
       entity: "billing",
+    });
+
+    await notifyDoctors({
+      type: "NEW_REQUEST",
+      title: "New Laboratory Request",
+      message: `A laboratory request for patient ${request.patientId} is ready for doctor review.`,
+      entity: "request",
+      entity_id: request.requestId,
     });
 
     return res.status(201).json({
@@ -429,6 +449,14 @@ export const saveLabResultController = async (req: Request, res: Response) => {
       patientId: result.rawPatientId,
       reason: "result-saved",
       requestId: result.requestId,
+    });
+
+    await notifyDoctors({
+      type: "SYSTEM",
+      title: "Laboratory Result Ready",
+      message: `A laboratory result for patient ${result.patientId} is ready for doctor review.`,
+      entity: "request",
+      entity_id: result.requestId,
     });
 
     return res.status(201).json({

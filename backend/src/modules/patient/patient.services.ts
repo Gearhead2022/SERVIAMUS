@@ -169,11 +169,13 @@ export const updatePatient = async (patientId: number, payload: PatientPayload) 
   return normalizePatient(patient as PatientRecord, supportsPhilhealthColumn);
 };
 
-export const deletePatient = async (patientId: number) => {
+const getPatientDeletionCandidate = async (patientId: number) => {
   const patient = await prisma.patients.findUnique({
     where: { patient_id: patientId },
     select: {
       patient_id: true,
+      name: true,
+      patient_code: true,
       _count: {
         select: {
           request: true,
@@ -200,16 +202,112 @@ export const deletePatient = async (patientId: number) => {
     throw new Error("Patient not found");
   }
 
-  const hasMedicalHistory = Object.values(patient._count).some((count) => count > 0);
+  return patient;
+};
 
-  if (hasMedicalHistory) {
-    throw new Error(
-      "Patients with medical records, requests, or laboratory results cannot be deleted."
-    );
+const hasPatientRecords = (patient: Awaited<ReturnType<typeof getPatientDeletionCandidate>>) =>
+  Object.values(patient._count).some((count) => count > 0);
+
+export type PatientDeletionOutcome =
+  | { action: "deleted"; patient_id: number }
+  | { action: "approval_required"; deletion_request_id: number; already_pending: boolean };
+
+export const requestPatientDeletion = async (
+  patientId: number,
+  requestedBy: number
+): Promise<PatientDeletionOutcome> => {
+  const patient = await getPatientDeletionCandidate(patientId);
+
+  if (!hasPatientRecords(patient)) {
+    const deleted = await prisma.patients.delete({
+      where: { patient_id: patientId },
+      select: { patient_id: true },
+    });
+
+    return { action: "deleted", patient_id: deleted.patient_id };
   }
 
-  return prisma.patients.delete({
+  const existing = await prisma.patientDeletionRequest.findUnique({
     where: { patient_id: patientId },
-    select: { patient_id: true },
+    select: { deletion_request_id: true, status: true },
+  });
+
+  if (existing?.status === "PENDING") {
+    return {
+      action: "approval_required",
+      deletion_request_id: existing.deletion_request_id,
+      already_pending: true,
+    };
+  }
+
+  const request = existing
+    ? await prisma.patientDeletionRequest.update({
+        where: { deletion_request_id: existing.deletion_request_id },
+        data: {
+          requested_by: requestedBy,
+          reviewed_by: null,
+          status: "PENDING",
+          reason: null,
+          requested_at: new Date(),
+          reviewed_at: null,
+        },
+      })
+    : await prisma.patientDeletionRequest.create({
+        data: {
+          patient_id: patient.patient_id,
+          patient_name: patient.name,
+          patient_code: patient.patient_code,
+          requested_by: requestedBy,
+        },
+      });
+
+  return {
+    action: "approval_required",
+    deletion_request_id: request.deletion_request_id,
+    already_pending: false,
+  };
+};
+
+export const getPatientDeletionRequests = async () =>
+  prisma.patientDeletionRequest.findMany({
+    include: {
+      requester: { select: { name: true, username: true } },
+      reviewer: { select: { name: true, username: true } },
+    },
+    orderBy: [{ status: "asc" }, { requested_at: "desc" }],
+  });
+
+export const reviewPatientDeletionRequest = async (
+  deletionRequestId: number,
+  reviewedBy: number,
+  decision: "APPROVED" | "REJECTED"
+) => {
+  return prisma.$transaction(async (tx) => {
+    const request = await tx.patientDeletionRequest.findUnique({
+      where: { deletion_request_id: deletionRequestId },
+    });
+
+    if (!request) {
+      throw new Error("Deletion request not found");
+    }
+
+    if (request.status !== "PENDING") {
+      throw new Error("This deletion request has already been reviewed.");
+    }
+
+    const reviewed = await tx.patientDeletionRequest.update({
+      where: { deletion_request_id: deletionRequestId },
+      data: {
+        status: decision,
+        reviewed_by: reviewedBy,
+        reviewed_at: new Date(),
+      },
+    });
+
+    if (decision === "APPROVED" && request.patient_id) {
+      await tx.patients.delete({ where: { patient_id: request.patient_id } });
+    }
+
+    return reviewed;
   });
 };

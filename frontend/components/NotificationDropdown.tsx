@@ -94,7 +94,15 @@ function resolveNotificationPath(
     }
 
     if (notification.entity === "lab") {
-        return "/labdashboard";
+      return "/labdashboard";
+    }
+
+    if (notification.entity === "lab-attachment") {
+        return roles.includes("DOCTOR") ? "/externalLabReferences" : "/labdashboard";
+    }
+
+    if (notification.entity === "patient-deletion") {
+        return "/patient-deletion-requests";
     }
 
     if (notification.entity === "consultation") {

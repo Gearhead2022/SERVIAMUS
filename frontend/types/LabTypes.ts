@@ -191,6 +191,17 @@ export type ExternalLabAttachment = {
   };
 };
 
+export type ExternalLabAttachmentWorklistItem = {
+  patient_id: number;
+  patient_code?: string | null;
+  name: string;
+  age?: number | null;
+  sex?: string | null;
+  attachment_count: number;
+  latest_attachment_at: string;
+  latest_attachment: Omit<ExternalLabAttachment, "patient_id">;
+};
+
 export interface PatientLabRequestResponse {
   labId: number;
   requestId: number;

@@ -44,14 +44,12 @@ export interface UsersProps2 {
     ptr_no: string;
     is_active: boolean;
     created_at: string;
-    role: UserRole;
+    role: UserRole | null;
 }
 
-export interface UserRole {
-    role: Role;
-    role_id: number;
-    role_name: string;
-}
+// Account responses expose one flattened RoleTypes record as `role`.
+// Keeping this alias preserves the modal contract without assuming role IDs.
+export type UserRole = Role;
 
 export interface TableRequestProps<T> {
     data: T[];

@@ -7,7 +7,7 @@ import {
   useUploadExternalLabAttachment,
 } from "@/hooks/Lab/useLab";
 import { openExternalLabAttachment } from "@/services/lab.service";
-import { FileText, Image, LoaderCircle, Paperclip, Upload, ExternalLink } from "lucide-react";
+import { FileText, Image as ImageIcon, LoaderCircle, Paperclip, Upload, ExternalLink, RefreshCw } from "lucide-react";
 
 type Props = {
   canUpload?: boolean;
@@ -21,7 +21,7 @@ const fileSize = (size: number) =>
   size < 1024 * 1024 ? `${Math.max(1, Math.round(size / 1024))} KB` : `${(size / (1024 * 1024)).toFixed(1)} MB`;
 
 const attachmentIcon = (attachment: ExternalLabAttachment) =>
-  attachment.mime_type === "application/pdf" ? <FileText size={17} /> : <Image size={17} />;
+  attachment.mime_type === "application/pdf" ? <FileText size={17} /> : <ImageIcon size={17} />;
 
 export default function ExternalLabAttachments({
   canUpload = false,
@@ -34,7 +34,7 @@ export default function ExternalLabAttachments({
   const [file, setFile] = useState<File | null>(null);
   const [sourceLaboratory, setSourceLaboratory] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const { data: attachments = [], isLoading } = useExternalLabAttachments(patientId);
+  const { data: attachments = [], isError, isLoading, refetch } = useExternalLabAttachments(patientId);
   const upload = useUploadExternalLabAttachment();
 
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -109,6 +109,13 @@ export default function ExternalLabAttachments({
       <div className="mt-4 space-y-2">
         {isLoading ? (
           <p className="text-sm text-slate-500">Loading attached references…</p>
+        ) : isError ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-3 text-sm text-rose-800">
+            <p>Unable to load this patient&apos;s attached references.</p>
+            <button type="button" onClick={() => void refetch()} className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-rose-800 underline underline-offset-2">
+              <RefreshCw size={13} /> Try again
+            </button>
+          </div>
         ) : attachments.length === 0 ? (
           <p className="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-500">No external laboratory results are attached to this patient.</p>
         ) : (

@@ -1,5 +1,9 @@
 import api from "./axios";
-import { PatientProps } from "@/types/PatientTypes";
+import {
+  PatientDeletionOutcome,
+  PatientDeletionRequest,
+  PatientProps,
+} from "@/types/PatientTypes";
 
 export const fetchAllPatient = async (search: string) => {
   const res = await api.get("/api/patient/getAllPatients", {
@@ -31,5 +35,18 @@ export const updatePatient = async (
 
 export const deletePatient = async (patientId: number) => {
   const res = await api.delete(`/api/patient/${patientId}/patientDelete`);
-  return res.data.data;
+  return res.data.data as PatientDeletionOutcome;
+};
+
+export const fetchPatientDeletionRequests = async () => {
+  const res = await api.get("/api/patient/deletion-requests");
+  return (res.data.data ?? []) as PatientDeletionRequest[];
+};
+
+export const reviewPatientDeletionRequest = async (
+  requestId: number,
+  decision: "APPROVED" | "REJECTED"
+) => {
+  const res = await api.patch(`/api/patient/deletion-requests/${requestId}`, { decision });
+  return res.data.data as PatientDeletionRequest;
 };

@@ -4,7 +4,7 @@ import { createNotification, resolveNotificationUsers, resolveUsersByRoleNames }
 import { getIO } from "../../socket";
 import { RequestType } from "@prisma/client";
 
-const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR"] as const;
+const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR", "role_ENCODER"] as const;
 
 const normalizeIds = (ids: number | number[]) => {
   return Array.isArray(ids) ? ids : [ids];
@@ -41,9 +41,10 @@ export const createRequestController = async (req: Request, res: Response) => {
 
     const requestUserIds = await resolveNotificationUsers(request);
     const adminUserIds = await resolveUsersByRoleNames(["ADMIN"]);
+    const doctorUserIds = await resolveUsersByRoleNames(["DOCTOR"]);
 
     const notificationUserIds = Array.from(
-      new Set([...normalizeIds(requestUserIds), ...adminUserIds])
+      new Set([...normalizeIds(requestUserIds), ...adminUserIds, ...doctorUserIds])
     );
 
     await createNotification({

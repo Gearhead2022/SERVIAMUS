@@ -1,0 +1,49 @@
+# Follow-up review — deletion approvals and Accounts role labels
+#
+# Runtime/database action completed
+#   - Applied: backend/prisma/migrations/20260817000100_patient_deletion_approval/migration.sql
+#   - Restarted: verified backend listener on port 5006
+#   - Verified: `npx prisma migrate status` reports database schema is up to date
+
+diff --git a/frontend/hooks/admin/useAdmin.ts b/frontend/hooks/admin/useAdmin.ts
+@@ Account response contract
+-    role: UserRole;
++    role: UserRole | null;
++
++// User-list responses expose the actual flattened RoleTypes record.
++// Do not infer a role from role_id; role IDs can vary across databases.
++export type UserRole = Role;
+
+diff --git a/frontend/app/(admin)/register/page.tsx b/frontend/app/(admin)/register/page.tsx
+@@ Role badge rendering
+-const ROLE_META: Record<number, ...> = { /* hard-coded role IDs */ };
+-<RoleBadge role={user.role.role_id} />
++const ROLE_META: Record<string, ...> = {
++  ADMIN, DOCTOR, LAB, LABORATORY, STAFF, CASHIER, ENCODER
++};
++<RoleBadge roleName={user.role?.role_name} />
+
+# Result: the tag text is sourced from the exact role linked to the user
+# (for example ENCODER stays ENCODER), regardless of the database's ID order.
+
+diff --git a/frontend/components/Modal/ChildModal/EditAccountModal.tsx b/frontend/components/Modal/ChildModal/EditAccountModal.tsx
+@@ Nullable role safety
+-role: UserRole;
+-{user.role.role_name && ...}
++role: UserRole | null;
++{user.role?.role_name && ...}
+
+# Result: a legacy account without a role cannot crash the account editor.
+
+# Root cause resolved for screenshots 1 and 3
+# The code referenced prisma.patientDeletionRequest, but the migration creating
+# patient_deletion_requests had never been applied. The live backend then used
+# a Prisma client with no patientDeletionRequest delegate, causing:
+# “Cannot read properties of undefined (reading 'findUnique')”.
+# The migration has now been applied and the backend process restarted.
+
+# Verification
+# - backend TypeScript: passed
+# - database migration status: up to date
+# - frontend TypeScript: passed
+# - targeted ESLint: no errors (one existing React Hook Form compiler warning)

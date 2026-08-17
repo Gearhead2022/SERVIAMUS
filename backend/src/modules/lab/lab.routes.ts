@@ -15,6 +15,7 @@ import {
   getLabPreviewController,
   downloadExternalLabAttachmentController,
   getExternalLabAttachmentsController,
+  getExternalLabAttachmentWorklistController,
   uploadExternalLabAttachmentController,
 } from "./lab.controller";
 import { authenticate } from "../../middlewares/auth.middleware";
@@ -36,7 +37,7 @@ router.get(
 );
 router.get(
   "/records",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "ENCODER"]),
   getPatientRecordsController
 );
 router.get(
@@ -46,13 +47,18 @@ router.get(
 );
 router.get(
   "/patients/:patientId/records",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "STAFF"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "STAFF", "ENCODER"]),
   getPatientLabRecordsController
 );
 router.get(
   "/patients/:patientId/attachments",
   authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
   getExternalLabAttachmentsController
+);
+router.get(
+  "/attachments/worklist",
+  authorize(["DOCTOR"]),
+  getExternalLabAttachmentWorklistController
 );
 router.get(
   "/attachments/:attachmentId/file",
@@ -69,7 +75,7 @@ router.post("/requests", authorize(["ADMIN", "DOCTOR"]), createLabRequestControl
 router.get("/requests", authorize(["ADMIN", "LAB", "LABORATORY"]), getLabRequestsController);
 router.get(
   "/requests/:labId",
-  authorize(["ADMIN", "LAB", "LABORATORY", "STAFF", "DOCTOR"]),
+  authorize(["ADMIN", "LAB", "LABORATORY", "STAFF", "DOCTOR", "ENCODER"]),
   getLabRequestByIdController
 );
 router.patch(
@@ -83,6 +89,7 @@ router.post("/results", authorize(["ADMIN", "LAB", "LABORATORY"]), saveLabResult
 
 router.get(
   "/preview/:labid",
+  authorize(["ADMIN", "LAB", "LABORATORY", "STAFF", "DOCTOR", "ENCODER"]),
   getLabPreviewController
 );
 

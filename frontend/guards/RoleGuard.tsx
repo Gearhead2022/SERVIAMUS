@@ -13,10 +13,14 @@ export default function RoleGuard({
   allowedRoles,
   children
 }: RoleGuardProps) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isAuthReady } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    if (!isAuthReady) {
+      return;
+    }
+
     if (!isAuthenticated) {
       router.replace("/");
       // router.replace("/pages/admin/register");
@@ -30,7 +34,11 @@ export default function RoleGuard({
     if (!hasAccess) {
       router.replace("/unauthorized");
     }
-  }, [isAuthenticated, user, allowedRoles, router]);
+  }, [isAuthenticated, isAuthReady, user, allowedRoles, router]);
+
+  if (!isAuthReady) {
+    return null;
+  }
 
   return <>{children}</>;
 }

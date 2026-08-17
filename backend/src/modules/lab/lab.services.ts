@@ -574,17 +574,19 @@ export const searchPatientsService = async (search?: string) => {
     `
       SELECT
         patient_id,
+        patient_code,
         name,
         age,
         sex,
         address,
         contact_number
       FROM patients
-      WHERE (? = '' OR name LIKE ? OR address LIKE ? OR CAST(patient_id AS CHAR) LIKE ?)
+      WHERE (? = '' OR name LIKE ? OR patient_code LIKE ? OR address LIKE ? OR CAST(patient_id AS CHAR) LIKE ?)
       ORDER BY patient_id DESC
       LIMIT 10
     `,
     keyword,
+    wildcard,
     wildcard,
     wildcard,
     wildcard
@@ -618,10 +620,11 @@ export const getPatientRecordsService = async (search?: string) => {
         (SELECT COUNT(*) FROM consultation_records cr WHERE cr.patient_id = p.patient_id) AS history_count,
         (SELECT COUNT(*) FROM vital_signs vs WHERE vs.patient_id = p.patient_id) AS vital_signs_count
       FROM patients p
-      WHERE (? = '' OR p.name LIKE ? OR p.address LIKE ? OR CAST(p.patient_id AS CHAR) LIKE ?)
+      WHERE (? = '' OR p.name LIKE ? OR p.patient_code LIKE ? OR p.address LIKE ? OR CAST(p.patient_id AS CHAR) LIKE ?)
       ORDER BY p.name ASC, p.patient_id DESC
     `,
     keyword,
+    wildcard,
     wildcard,
     wildcard,
     wildcard

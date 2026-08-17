@@ -3,9 +3,11 @@
 import { FormEvent, useMemo, useState } from "react";
 import {
   Activity,
+  CalendarDays,
+  CheckCircle2,
   ClipboardCheck,
   ClipboardPenLine,
-  FilePlusCorner,
+  FileText,
   FlaskConical,
   HeartPulse,
   History,
@@ -17,7 +19,7 @@ import {
   UserRoundCheck,
   Users,
 } from "lucide-react";
-import ReactSelect, { SingleValue } from "react-select";
+import ReactSelect from "react-select";
 import AddPatientForm from "@/components/Modal/ChildModal/AddPatientForm";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -815,15 +817,6 @@ const EncodingPage = () => {
     });
   };
 
-const filteredPatients = patients.filter((patient: PatientProps) => {
-  const keyword = patientSearch.toLowerCase();
-
-  return (
-    patient.name.toLowerCase().includes(keyword) ||
-    patient.patient_code?.toLowerCase().includes(keyword)
-  );
-});
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -936,24 +929,44 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
   return (
     <RoleGuard allowedRoles={["ENCODER"]}>
       <main className="min-h-full scroll-smooth bg-[#eef2f7] font-['DM_Sans'] text-[#14233d]">
-
-         <div className="flex w-full items-center justify-end px-6 py-4">
-            {canAddPatient(user?.roles) && (
-              <Button
-                icon={<Plus size={18} />}
-                variant="addPatient"
-                type="button"
-                onClick={() => setShowPatientForm((current) => !current)}
-              >
-                {showPatientForm ? "Hide Patient Form" : "Add Patient"}
-              </Button>
-            )}
+        <header className="border-b border-[#cfd9e8] bg-white">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-5 py-5 sm:px-8 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#0e7c7b]">
+                Clinical operations desk
+              </p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#0f2244]">
+                Encoder workspace
+              </h1>
+              <p className="mt-1 text-sm text-[#61718e]">
+                Select the patient, choose the record, then save a complete entry.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 rounded-lg border border-[#d8e1ef] bg-[#f8fafc] px-3 py-2 text-xs text-[#50617f]">
+                <span className={`h-2 w-2 rounded-full ${selectedPatient ? "bg-[#0e7c7b]" : "bg-[#94a3b8]"}`} />
+                <span className="font-semibold text-[#14233d]">
+                  {selectedPatient ? "Patient file active" : "Waiting for patient"}
+                </span>
+              </div>
+              {canAddPatient(user?.roles) && (
+                <Button
+                  icon={<Plus size={18} />}
+                  variant="addPatient"
+                  type="button"
+                  onClick={() => setShowPatientForm((current) => !current)}
+                >
+                  {showPatientForm ? "Close patient form" : "Add patient"}
+                </Button>
+              )}
+            </div>
           </div>
+        </header>
 
         <div className="mx-auto grid w-full max-w-7xl gap-6 px-5 py-6 sm:px-8 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
           <aside className="space-y-5">
             {showPatientForm && (
-              <section className="overflow-hidden rounded-xl border border-[#dce3ef] bg-white shadow-sm">
+              <section className="overflow-hidden rounded-xl border border-[#b9dfdc] bg-white shadow-sm">
                 <AddPatientForm
                   patient={null}
                   onClose={() => setShowPatientForm(false)}
@@ -962,15 +975,15 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
             )}
 
 
-            <section className="overflow-hidden rounded-xl border border-[#d8e1ef] bg-white shadow-sm lg:sticky lg:top-4">
-              <div className="border-b border-[#dce3ef] bg-[#f8fafc] px-5 py-4">
+            <section className="overflow-hidden rounded-xl border border-[#d8e1ef] bg-white shadow-[0_10px_28px_rgba(15,34,68,0.08)] lg:sticky lg:top-4">
+              <div className="border-b border-[#18335f] bg-[#0f2244] px-5 py-4 text-white">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0f2244] text-white">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#1d3b6b] text-[#d6f4ef]">
                     <Search size={18} />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-[#0f2244]">Patient context</h2>
-                    <p className="text-xs text-[#6b7da0]">This identity stays visible as you encode.</p>
+                    <h2 className="text-base font-bold">Patient file</h2>
+                    <p className="text-xs text-[#c6d3e7]">Keep the active patient visible while encoding.</p>
                   </div>
                 </div>
               </div>
@@ -1075,17 +1088,41 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                     </dl>
                   </div>
                 ) : (
-                  <div className="rounded-lg border border-dashed border-[#c6d1e3] bg-[#f8fafc] p-4 text-sm text-[#6b7da0]">
-                    Patient details will appear here after selection.
+                  <div className="rounded-lg border border-dashed border-[#c6d1e3] bg-[#f8fafc] p-4 text-sm leading-relaxed text-[#6b7da0]">
+                    Search by name or patient code to open a patient file.
                   </div>
                 )}
+
+                <div className="border-t border-[#e3e9f2] pt-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7da0]">
+                    Today&apos;s workflow
+                  </p>
+                  <ol className="mt-3 space-y-2.5 text-xs">
+                    {[
+                      { label: "Open patient file", complete: Boolean(selectedPatient) },
+                      { label: "Choose record type", complete: Boolean(selectedOptionValue) },
+                      { label: "Review and save", complete: !saveBlockedReason && Boolean(selectedPatient) },
+                    ].map((step, index) => (
+                      <li key={step.label} className="flex items-center gap-2.5 text-[#50617f]">
+                        {step.complete ? (
+                          <CheckCircle2 size={16} className="shrink-0 text-[#0e7c7b]" aria-hidden="true" />
+                        ) : (
+                          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-[#b7c4d8] text-[9px] font-bold text-[#6b7da0]">
+                            {index + 1}
+                          </span>
+                        )}
+                        <span className={step.complete ? "font-semibold text-[#14233d]" : ""}>{step.label}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
               </div>
             </section>
 
 
           </aside>
 
-          <section className={`overflow-hidden rounded-xl border bg-white shadow-sm ${
+          <section className={`overflow-hidden rounded-xl border bg-white shadow-[0_10px_28px_rgba(15,34,68,0.08)] ${
             selectedOption.group === "lab"
               ? "border-[#f1d2d9]"
               : "border-[#d8e1ef]"
@@ -1111,9 +1148,18 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                         )}
                       </div>
                       <div>
-                        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#6b7da0]">
-                          Active record
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#6b7da0]">
+                            Active record
+                          </p>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                            selectedOption.group === "lab"
+                              ? "bg-[#fff0f3] text-[#b20f2a]"
+                              : "bg-[#e9f7f4] text-[#08726f]"
+                          }`}>
+                            {selectedOption.group === "lab" ? "Laboratory" : "Consultation"}
+                          </span>
+                        </div>
                         <h2 className="mt-0.5 text-xl font-bold text-[#0f2244]">
                           {selectedOption.label}
                         </h2>
@@ -1124,7 +1170,17 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                         </p>
                       </div>
                     </div>
-
+                    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#dce3ef] pt-3 text-xs">
+                      <span className="flex items-center gap-1.5 text-[#50617f]">
+                        <UserRoundCheck size={14} className="text-[#0e7c7b]" />
+                        <span className="font-semibold text-[#14233d]">
+                          {selectedPatient ? selectedPatient.name : "No patient selected"}
+                        </span>
+                      </span>
+                      {selectedPatient?.patient_code && (
+                        <span className="font-medium text-[#6b7da0]">{selectedPatient.patient_code}</span>
+                      )}
+                    </div>
                   </div>
 
                   <Select
@@ -1157,14 +1213,17 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
               <div className="flex-1 p-5 sm:p-6">
                 {!selectedPatient ? (
                   <div className="flex min-h-[390px] flex-col items-center justify-center rounded-xl border border-dashed border-[#c6d1e3] bg-[#f8fafc] p-6 text-center">
-                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[#eff6f4] text-[#0e7c7b]">
-                      <Search size={26} />
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[#0f2244] text-[#d6f4ef] shadow-sm">
+                      <FileText size={26} />
                     </div>
                     <h3 className="text-base font-bold text-[#0f2244]">
-                      Select a patient to start encoding
+                      Open a patient file to begin
                     </h3>
                     <p className="mt-1 max-w-sm text-sm text-[#6b7da0]">
-                      Search by name or patient code on the left. Use Add Patient only for records that do not exist in the system.
+                      Search by name or patient code in the patient file panel. Add a patient only when the record is not already in the system.
+                    </p>
+                    <p className="mt-4 rounded-md bg-white px-3 py-2 text-xs font-medium text-[#50617f] shadow-sm">
+                      Step 1 of 3: select the patient whose record you are updating.
                     </p>
                   </div>
                 ) : (
@@ -1195,25 +1254,22 @@ const filteredPatients = patients.filter((patient: PatientProps) => {
                     )} */}
 
                     {selectedOption.group === "lab" && (
-                      <div className="grid gap-4 rounded-xl  p-4 md:grid-cols-[minmax(0,240px)_1fr] md:items-end">
+                      <div className="grid gap-4 rounded-xl border border-[#f2d7dd] bg-[#fffafb] p-4 md:grid-cols-[minmax(0,240px)_1fr] md:items-end">
                         <Input
                           label="Result date"
                           type="date"
                           value={labResultDate}
                           onChange={(event) => setLabResultDate(event.target.value)}
                         />
-                        {/* <div
-                          aria-disabled="true"
-                          className="flex min-h-[44px] items-center gap-3 rounded-lg border border-dashed border-[#e5b9c3] bg-white px-3 py-2 text-sm text-[#6b7da0]"
-                        >
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#fff1f3] text-[#c8102e]">
-                            <FilePlusCorner size={16} />
+                        <div className="flex items-center gap-3 rounded-lg border border-[#f1d2d9] bg-white px-3 py-2.5 text-sm text-[#50617f]">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#fff0f3] text-[#b20f2a]">
+                            <CalendarDays size={16} />
                           </span>
                           <span>
-                            <span className="block font-semibold text-[#14233d]">External result reference</span>
-                            <span className="text-xs">File attachment will appear here.</span>
+                            <span className="block font-semibold text-[#14233d]">Result entry</span>
+                            <span className="text-xs">Use the date the result was verified.</span>
                           </span>
-                        </div> */}
+                        </div>
                       </div>
                     )}
 

@@ -3,11 +3,11 @@ import { consultationRecordHistory, consultationRecords, consultationRecordsByRe
 import { RequestStatus, RequestType } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
 import { getIO } from "../../socket";
-import { createNotification, resolveUsersByRoleNames } from "../notification/notification.services";
+import { createNotification, notifyDoctors, resolveUsersByRoleNames } from "../notification/notification.services";
 
 type NonLaboratoryRequestType = Exclude<RequestType, "LABORATORY">;
 
-const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR"] as const;
+const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR", "role_ENCODER"] as const;
 
 export const createConsultationResultController = async (req: Request, res: Response) => {
   try {
@@ -16,6 +16,11 @@ export const createConsultationResultController = async (req: Request, res: Resp
     const io = getIO();
 
     io.to([...WORKFLOW_ROOMS]).emit("consultation:updated");
+    await notifyDoctors({
+      title: "Consultation Result Ready",
+      message: "A consultation result is ready for doctor review.",
+      entity: "consultation",
+    });
 
     return res.status(201).json({
       success: true,
@@ -199,6 +204,11 @@ export const createPrescriptionController = async (req: Request, res: Response) 
 
   try {
     const prescription = await createPresciptions(req.body);
+    await notifyDoctors({
+      title: "Prescription Ready",
+      message: "A prescription result is ready for doctor review.",
+      entity: "consultation",
+    });
 
     return res.status(200).json({
       success: true,
@@ -514,6 +524,11 @@ export const laboratoryRecordHistoryController = async (req: Request, res: Respo
 export const createMedCertResultController = async (req: Request, res: Response) => {
   try {
     const med_cert = await createMedicalCertificate(req.body);
+    await notifyDoctors({
+      title: "Medical Certificate Ready",
+      message: "A medical certificate result is ready for doctor review.",
+      entity: "consultation",
+    });
 
     return res.status(201).json({
       success: true,
@@ -744,6 +759,11 @@ export const createFollowupResultController = async (req: Request, res: Response
     const io = getIO();
 
     io.to([...WORKFLOW_ROOMS]).emit("consultation:updated");
+    await notifyDoctors({
+      title: "Consultation Follow-up Ready",
+      message: "A consultation follow-up result is ready for doctor review.",
+      entity: "consultation",
+    });
 
     return res.status(201).json({
       success: true,

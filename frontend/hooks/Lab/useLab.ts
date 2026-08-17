@@ -11,11 +11,13 @@ import {
   updateLabRequestStatus,
   fetchLabResultPreview,
   fetchExternalLabAttachments,
+  fetchExternalLabAttachmentWorklist,
   uploadExternalLabAttachment,
   UploadExternalLabAttachmentPayload,
 } from "@/services/lab.service";
 import {
   LabRequest,
+  ExternalLabAttachmentWorklistItem,
   LabTestCatalogItem,
   LabUser,
   PatientLabRecordFilters,
@@ -117,10 +119,11 @@ export const useLabRequest = (labId?: number) =>
     enabled: typeof labId === "number" && Number.isFinite(labId) && labId > 0,
   });
 
-export const useLabPatientDirectory = (search: string) =>
+export const useLabPatientDirectory = (search: string, enabled = true) =>
   useQuery<PatientRecord[]>({
     queryKey: [...LAB_PATIENT_DIRECTORY_QUERY_KEY, search],
     queryFn: () => fetchPatientRecords(search),
+    enabled,
     staleTime: 30 * 1000,
   });
 
@@ -229,6 +232,13 @@ export const useExternalLabAttachments = (patientId?: number) =>
     queryKey: ["lab", "external-attachments", patientId],
     queryFn: () => fetchExternalLabAttachments(patientId as number),
     enabled: typeof patientId === "number" && Number.isFinite(patientId) && patientId > 0,
+  });
+
+export const useExternalLabAttachmentWorklist = () =>
+  useQuery<ExternalLabAttachmentWorklistItem[]>({
+    queryKey: ["lab", "external-attachment-worklist"],
+    queryFn: fetchExternalLabAttachmentWorklist,
+    refetchOnWindowFocus: true,
   });
 
 export const useUploadExternalLabAttachment = () => {

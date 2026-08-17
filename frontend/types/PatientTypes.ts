@@ -17,3 +17,24 @@ export interface PatientProps {
    last_medical_assistance_year?: string;
 
 }
+
+export type PatientDeletionOutcome = {
+  action: "deleted" | "approval_required";
+  patient_id?: number;
+  deletion_request_id?: number;
+  already_pending?: boolean;
+};
+
+export type PatientDeletionRequest = {
+  deletion_request_id: number;
+  patient_id: number | null;
+  patient_name: string;
+  patient_code: string | null;
+  requested_by: number;
+  reviewed_by: number | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  requested_at: string;
+  reviewed_at: string | null;
+  requester: { name: string; username: string };
+  reviewer: { name: string; username: string } | null;
+};

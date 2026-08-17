@@ -89,6 +89,29 @@ export const markAsRead = async (notifId: number, userId: number) => {
     });
 };
 
+type DoctorNotificationParams = Omit<CreateNotificationParams, "userIds" | "type"> & {
+    type?: CreateNotificationParams["type"];
+};
+
+export const notifyDoctors = async ({
+    type = "SYSTEM",
+    title,
+    message,
+    entity,
+    entity_id,
+}: DoctorNotificationParams) => {
+    const doctorUserIds = await resolveUsersByRoleNames(["DOCTOR"]);
+
+    await createNotification({
+        userIds: doctorUserIds,
+        type,
+        title,
+        message,
+        entity,
+        entity_id,
+    });
+};
+
 // MARK ALL
 export const markAllAsRead = async (userId: number) => {
     return prisma.notification.updateMany({

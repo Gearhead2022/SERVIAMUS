@@ -22,7 +22,11 @@ export default function ExternalLabAttachmentWorkspace({
 }: Props) {
   const [search, setSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<PatientRecord | null>(null);
-  const { data: patients = [], isFetching } = useLabPatientDirectory(search.trim());
+  const normalizedSearch = search.trim();
+  const { data: patients = [], isFetching } = useLabPatientDirectory(
+    normalizedSearch,
+    normalizedSearch.length >= 2
+  );
 
   const matches = useMemo(() => {
     if (search.trim().length < 2) return [];

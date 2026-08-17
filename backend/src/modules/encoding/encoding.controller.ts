@@ -6,6 +6,10 @@ import {
   saveEncodingFollowUpService,
   saveEncodingLabResultService,
 } from "./encoding.services";
+import { notifyDoctors } from "../notification/notification.services";
+import { getIO } from "../../socket";
+
+const DOCTOR_ROOM = "role_DOCTOR";
 
 export const getEncodingConsultationsController = async (req: Request, res: Response) => {
   try { 
@@ -22,6 +26,12 @@ export const saveEncodingConsultationController = async (req: Request, res: Resp
     const { patientId, consultationDate, fields } = req.body ?? {};
     if (!patientId || !consultationDate || !fields || typeof fields !== "object") return res.status(400).json({ success: false, message: "Patient, consultation date, and consultation fields are required." });
     const data = await saveEncodingConsultationService({ patientId: Number(patientId), consultationDate: String(consultationDate), fields, userId: req.user?.user_id });
+    await notifyDoctors({
+      title: "Consultation Result Ready",
+      message: "An encoded consultation result is ready for doctor review.",
+      entity: "consultation",
+    });
+    getIO().to(DOCTOR_ROOM).emit("consultation:updated", { patientId: Number(patientId), reason: "encoder-result-saved" });
     return res.status(201).json({ success: true, data });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error?.message ?? "Unable to save encoded consultation." });
@@ -94,6 +104,14 @@ export const saveEncodingLabResultController = async (
       userId: req.user?.user_id,
     });
 
+    await notifyDoctors({
+      title: "Laboratory Result Ready",
+      message: `An encoded ${data.testName} result is ready for doctor review.`,
+      entity: "request",
+      entity_id: data.requestId,
+    });
+    getIO().to(DOCTOR_ROOM).emit("lab:updated", { patientId: data.patientId, labId: data.labId, reason: "encoder-result-saved" });
+
     return res.status(201).json({
       success: true,
       data,
@@ -145,6 +163,12 @@ export const saveEncodingFollowUpController = async (
       wt: typeof wt === "string" ? wt : null,
       ht: typeof ht === "string" ? ht : null,
     });
+    await notifyDoctors({
+      title: "Consultation Follow-up Ready",
+      message: "An encoded consultation follow-up is ready for doctor review.",
+      entity: "consultation",
+    });
+    getIO().to(DOCTOR_ROOM).emit("consultation:updated", { patientId: Number(patientId), reason: "encoder-follow-up-saved" });
 
     return res.status(201).json({
       success: true,

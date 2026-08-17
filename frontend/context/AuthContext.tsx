@@ -3,6 +3,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useState
 } from "react";
 import { useRouter } from "next/navigation";
@@ -21,27 +22,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
-  // Safe user parsing (FIXED ERROR HERE)
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (typeof window === "undefined") return null;
+  // Read browser-only state after hydration so the server and the browser's
+  // first render produce the same markup.
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
+  useEffect(() => {
     const storedUser = localStorage.getItem("user");
 
     try {
-      if (!storedUser || storedUser === "undefined") return null;
-      return JSON.parse(storedUser);
+      const parsedUser =
+        storedUser && storedUser !== "undefined"
+          ? (JSON.parse(storedUser) as AuthUser)
+          : null;
+
+      setUser(parsedUser);
+      setIsAuthenticated(Boolean(parsedUser));
     } catch {
-      return null;
+      localStorage.removeItem("user");
+      setUser(null);
+      setIsAuthenticated(false);
+    } finally {
+      setIsAuthReady(true);
     }
-  });
-
-  // Auth based on user existence
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return !!localStorage.getItem("user");
-  });
-
-  const [isAuthReady] = useState(true);
+  }, []);
 
   // CLEAN login (NO TOKEN)
   const login = (user: AuthUser) => {

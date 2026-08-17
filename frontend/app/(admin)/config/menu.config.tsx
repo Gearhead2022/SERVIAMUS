@@ -12,7 +12,8 @@ import {
   WalletCards,
   BriefcaseMedical,
   FilePlusCorner,
-  Paperclip
+  Paperclip,
+  ShieldAlert
 } from "lucide-react";
 
 export interface MenuItem {
@@ -44,6 +45,13 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/services",
     icon: <BriefcaseMedical size={18} />,
     iconOnly: <BriefcaseMedical size={30} />,
+    roles: ["ADMIN"]
+  },
+  {
+    label: "Deletion Requests",
+    path: "/patient-deletion-requests",
+    icon: <ShieldAlert size={18} />,
+    iconOnly: <ShieldAlert size={30} />,
     roles: ["ADMIN"]
   },
   {

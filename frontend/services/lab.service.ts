@@ -2,6 +2,7 @@ import api from "./axios";
 import {
   CreateLabRequestPayload,
   ExternalLabAttachment,
+  ExternalLabAttachmentWorklistItem,
   LabRequest,
   LabResultPayload,
   LabTestCatalogItem,
@@ -175,6 +176,11 @@ export const fetchLabResultPreview = async (
 export const fetchExternalLabAttachments = async (patientId: number) => {
   const res = await api.get(`/api/lab/patients/${patientId}/attachments`);
   return (res.data.data ?? []) as ExternalLabAttachment[];
+};
+
+export const fetchExternalLabAttachmentWorklist = async () => {
+  const res = await api.get("/api/lab/attachments/worklist");
+  return (res.data.data ?? []) as ExternalLabAttachmentWorklistItem[];
 };
 
 export type UploadExternalLabAttachmentPayload = {

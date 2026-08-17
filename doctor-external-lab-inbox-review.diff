@@ -1,0 +1,62 @@
+# Doctor external laboratory-result inbox — review map
+#
+# Purpose: make the lab-to-doctor handoff visible without requiring a doctor to
+# search for every patient manually. This is a focused map of the new change;
+# the exact source edits remain visible in the editor's working-tree diff.
+
+diff --git a/backend/src/modules/lab/lab.attachments.ts b/backend/src/modules/lab/lab.attachments.ts
+@@ New query: getExternalLabAttachmentWorklist
++ Reads external_lab_attachments in descending created_at order.
++ Collapses the ordered attachment rows into one row per patient.
++ Returns patient name/code/age/sex, attachment count, latest timestamp, and
++ latest file metadata (name, type, source laboratory, uploader, note).
++ Does not add a database migration or change upload/storage behavior.
+
+diff --git a/backend/src/modules/lab/lab.controller.ts b/backend/src/modules/lab/lab.controller.ts
+@@ New controller
++ getExternalLabAttachmentWorklistController returns the Doctor worklist.
+
+diff --git a/backend/src/modules/lab/lab.routes.ts b/backend/src/modules/lab/lab.routes.ts
+@@ New route
++ GET /api/lab/attachments/worklist
++ Authorized for DOCTOR only.
+
+diff --git a/frontend/types/LabTypes.ts b/frontend/types/LabTypes.ts
+diff --git a/frontend/services/lab.service.ts b/frontend/services/lab.service.ts
+diff --git a/frontend/hooks/Lab/useLab.ts b/frontend/hooks/Lab/useLab.ts
+@@ Typed data layer
++ Adds ExternalLabAttachmentWorklistItem.
++ Adds fetchExternalLabAttachmentWorklist() and its React Query hook.
++ Existing socket invalidation for lab-attachment already invalidates the `lab`
++ query prefix, so an open Doctor inbox refreshes when lab staff upload a file.
+
+diff --git a/frontend/components/Doctor/ExternalLabResultWorklist.tsx b/frontend/components/Doctor/ExternalLabResultWorklist.tsx
+new file mode 100644
+@@ Doctor clinical inbox
++ Shows one chronological entry per patient, newest upload first.
++ Groups uploads into Today and Earlier for rapid triage.
++ Shows patient code, age/sex, latest filename, source laboratory, file type,
++ attachment count, and neutral upload time before selection.
++ Keeps selected patient context and reuses ExternalLabAttachments for document
++ viewing instead of duplicating attachment/file-opening code.
++ Includes loading, empty, error/retry, selection, and mobile stacked states.
+
+diff --git a/frontend/app/(doctor)/externalLabReferences/page.tsx b/frontend/app/(doctor)/externalLabReferences/page.tsx
+@@ Doctor page wiring
+-Search-first external-reference workspace.
++Chronological external-result inbox under the existing DOCTOR RoleGuard.
+
+diff --git a/frontend/components/Modal/LabModal/ExternalLabAttachments.tsx b/frontend/components/Modal/LabModal/ExternalLabAttachments.tsx
+@@ Shared document panel resilience
++Adds an attachment-load error state with a retry action.
++No change to existing upload permissions or file viewer behavior.
+
+# Design review
+# PASS after a refinement pass: amber “new” markers were removed because no
+# persisted read/review status exists; timestamps are now accurately neutral.
+#
+# Verification
+# - backend TypeScript: passed
+# - frontend TypeScript: passed
+# - targeted frontend ESLint: passed
+# - git diff --check: passed (Windows line-ending advisory only)

@@ -1,5 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createPatient, deletePatient, fetchAllPatient, fetchPatientById, updatePatient } from "@/services/patient.services";
+import {
+  createPatient,
+  deletePatient,
+  fetchAllPatient,
+  fetchPatientById,
+  fetchPatientDeletionRequests,
+  reviewPatientDeletionRequest,
+  updatePatient,
+} from "@/services/patient.services";
 import SweetAlert from "@/utils/SweetAlert";
 import { getApiErrorMessage } from "@/utils/api-error";
 import { CreateRequestProps, PaginationMeta, RequestProps, VitalSignProps } from "@/types/RequestTypes";
@@ -248,11 +256,17 @@ export const useDeletePatient = (closeModal: () => void) => {
   return useMutation({
     mutationFn: deletePatient,
 
-    onSuccess: () => {
-      SweetAlert.successAlert(
-        "Success",
-        "Patient deleted successfully"
-      );
+    onSuccess: (outcome) => {
+      if (outcome.action === "approval_required") {
+        SweetAlert.successAlert(
+          outcome.already_pending ? "Approval Already Pending" : "Approval Requested",
+          outcome.already_pending
+            ? "An administrator already has a pending deletion request for this patient."
+            : "This patient has existing records. The deletion request was sent to an administrator for review."
+        );
+      } else {
+        SweetAlert.successAlert("Success", "Patient deleted successfully");
+      }
       queryClient.invalidateQueries({ queryKey: ["patient"] });
       closeModal();
     },
@@ -263,5 +277,36 @@ export const useDeletePatient = (closeModal: () => void) => {
         getApiErrorMessage(error, "Unable to delete the patient.")
       );
     }
+  });
+};
+
+export const usePatientDeletionRequests = () =>
+  useQuery({
+    queryKey: ["patient", "deletion-requests"],
+    queryFn: fetchPatientDeletionRequests,
+  });
+
+export const useReviewPatientDeletionRequest = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ requestId, decision }: { requestId: number; decision: "APPROVED" | "REJECTED" }) =>
+      reviewPatientDeletionRequest(requestId, decision),
+    onSuccess: (_, variables) => {
+      SweetAlert.successAlert(
+        variables.decision === "APPROVED" ? "Deletion Approved" : "Deletion Rejected",
+        variables.decision === "APPROVED"
+          ? "The patient and associated records were deleted."
+          : "The patient record was kept."
+      );
+      queryClient.invalidateQueries({ queryKey: ["patient"] });
+      queryClient.invalidateQueries({ queryKey: ["patient", "deletion-requests"] });
+    },
+    onError: (error: unknown) => {
+      SweetAlert.errorAlert(
+        "Review Failed",
+        getApiErrorMessage(error, "Unable to review the patient deletion request.")
+      );
+    },
   });
 };

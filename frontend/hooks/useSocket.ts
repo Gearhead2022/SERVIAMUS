@@ -5,7 +5,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createSocket } from "@/lib/socket";
 import AppToast from "../components/CustomToast";
 
-type EntityType = "request" | "consultation" | "lab" | "billing" | "admin";
+type EntityType =
+    | "request"
+    | "consultation"
+    | "lab"
+    | "lab-attachment"
+    | "billing"
+    | "admin"
+    | "patient-deletion";
 
 type NotificationData = {
     type: "NEW_REQUEST" | "APPROVED" | "REJECTED" | "SYSTEM";
@@ -22,8 +29,10 @@ const ENTITY_QUERY_MAP: Record<EntityType, ReadonlyArray<readonly string[]>> = {
     request: [ ["lab"], ["billing"], ["dashboard"]], //["queue"],["request"], ["labRequests"]
     consultation: [["consultation"], ["consultation", "list"], ["queue"], ["dashboard"]],
     lab: [["lab"], ["laboratory"], ["billing"], ["request"], ["queue"], ["dashboard"]],
+    "lab-attachment": [["lab"], ["laboratory"], ["dashboard"]],
     billing: [["billing"], ["dashboard"]],
     admin: [["users"], ["services"], ["billing"], ["request"], ["queue"], ["dashboard"]],
+    "patient-deletion": [["patient"], ["dashboard"]],
 };
 
 export default function useSocket(onNotification?: NotificationHandler) {
