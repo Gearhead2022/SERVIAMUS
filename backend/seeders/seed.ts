@@ -22,8 +22,8 @@ async function main() {
     await seedMedicalCertificateRequest(prisma);
     await seedPrescriptions(prisma);
     // await seedPatients(prisma);
-    await seedVitals(prisma);
-    await seedConsultations(prisma);
+    // await seedVitals(prisma);
+    // await seedConsultations(prisma);
 
     console.log("Full database seeded");
 }
