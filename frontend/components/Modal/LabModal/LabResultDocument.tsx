@@ -654,14 +654,15 @@ function ParasitologyDocument({ request, form }: Props) {
           />
 
           <LabResultRow
+            label="Time Collected"
+            value={getValue(form, "time_collected", "____")}
+          />
+
+          <LabResultRow
             label="Consistency"
             value={getValue(form, "consistency", "____")}
           />
 
-          <LabResultRow
-            label="Time Collected"
-            value={getValue(form, "time_collected", "____")}
-          />
 
           <LabResultRow
             label="Time Received"
@@ -688,6 +689,7 @@ function ParasitologyDocument({ request, form }: Props) {
             value={getValue(form, "bacteria", "____")}
             unit="/HPF"
           />
+
         </div>
       </Section>
       <Section title="PARASITES">
@@ -902,19 +904,19 @@ function UrinalysisDocument({ request, form }: Props) {
           <LabResultRow
             label="RBC"
             value={getValue(form, "rbc", "____")}
-            unit="/HPF"
+            unit="/LPF"
           />
 
           <LabResultRow
             label="SQUAMOUS EPITH. CELLS"
             value={getValue(form, "squamous_cell", "____")}
-            unit="/HPF"
+            unit="/LPF"
           />
 
           <LabResultRow
             label="Round Epith. Cells"
             value={getValue(form, "round_cell", "____")}
-            unit="/HPF"
+            unit="/LPF"
           />
 
           <LabResultRow
@@ -926,7 +928,7 @@ function UrinalysisDocument({ request, form }: Props) {
           <LabResultRow
             label="Mucous Threads"
             value={getValue(form, "mucous", "____")}
-            unit="/HPF"
+            unit="/LPF"
           />
 
         </div>
@@ -1106,7 +1108,11 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
             <PreviewFieldv2 label="Time Taken" value={getValue(form, "time_taken")} />
           </div>
         ) : null
-      }
+      }<div className="mt-10 text-right font-bold italic tracking-wide text-black-500">
+
+      LAB NO: ________
+
+      </div>
 
       {showNote && note && (
         <div className="mt-10 text-center text-sm italic tracking-wide text-black">

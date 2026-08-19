@@ -67,7 +67,7 @@ const nextConfig = {
     allowedDevOrigins,
 };
 
-module.exports = nextConfig;
+// module.exports = nextConfig;
 
 
 // const allowedDevOrigins = [

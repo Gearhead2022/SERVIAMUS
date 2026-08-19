@@ -3,9 +3,9 @@ import { PrismaClient } from "@prisma/client";
 export async function seedLaboratory(prisma: PrismaClient) {
 
     // // Clear existing seeded data
-    // await prisma.laboratoryRequestItem.deleteMany();
-    // await prisma.laboratoryRequest.deleteMany();
     // await prisma.laboratoryTest.deleteMany();
+    // await prisma.laboratoryTest.deleteMany();
+    await prisma.laboratoryTest.deleteMany();
 
     // Reinsert catalog
     await prisma.laboratoryTest.createMany({
