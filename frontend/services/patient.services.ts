@@ -4,13 +4,16 @@ import {
   PatientDeletionRequest,
   PatientProps,
 } from "@/types/PatientTypes";
+import { PaginationMeta } from "@/types/RequestTypes";
 
-export const fetchAllPatient = async (search: string) => {
+export type PatientListResponse = { data: PatientProps[]; pagination: PaginationMeta };
+
+export const fetchAllPatient = async (search: string, page = 1, limit = 20): Promise<PatientListResponse> => {
   const res = await api.get("/api/patient/getAllPatients", {
-    params: { search }
+    params: { search, page, limit }
   }
   );
-  return res.data.data;
+  return { data: res.data.data ?? [], pagination: res.data.pagination };
 };
 
 export const createPatient = async (

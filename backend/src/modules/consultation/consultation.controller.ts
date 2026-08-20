@@ -239,15 +239,22 @@ export const getAllPatientConsultationController = async (req: Request, res: Res
       typeof req.query.search === "string" && req.query.search.trim() !== ""
         ? req.query.search.trim()
         : undefined;
+    const rawPage = Number(req.query.page);
+    const rawLimit = Number(req.query.limit);
+    const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+    const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 10;
 
     const consultations = await getAllPatientConsultationRecord(
       patientId,
-      search
+      search,
+      page,
+      limit,
     );
 
     return res.status(200).json({
       success: true,
-      data: consultations,
+      data: consultations.data,
+      pagination: consultations.pagination,
     });
   } catch (error: any) {
     return res.status(500).json({
@@ -272,15 +279,22 @@ export const getAllPatientMedCertController = async (req: Request, res: Response
       typeof req.query.search === "string" && req.query.search.trim() !== ""
         ? req.query.search.trim()
         : undefined;
+    const rawPage = Number(req.query.page);
+    const rawLimit = Number(req.query.limit);
+    const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+    const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 10;
 
     const certificates = await getAllPatientMedCertRecord(
       patientId,
-      search
+      search,
+      page,
+      limit,
     );
 
     return res.status(200).json({
       success: true,
-      data: certificates,
+      data: certificates.data,
+      pagination: certificates.pagination,
     });
   } catch (error: any) {
     return res.status(500).json({

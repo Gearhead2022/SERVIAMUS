@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import protectedRoutes from './routes/protected';
 import authentocationRoutes from './modules/authentication/authentication.routes';
 import { errorHandler } from "./middlewares/error.middleware";
+import { patientChartUploadBodyParser } from "./modules/patient-chart/patient-chart.upload";
 
 import http from "http";
 import { verifyToken } from './utils/verifyToken';
@@ -47,6 +48,7 @@ app.use(
 );
 
 app.use(cookieParser());
+app.use("/api/patient-chart/attachments", patientChartUploadBodyParser);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -8,7 +8,6 @@ import { usePatientLabRecords } from "@/hooks/Lab/useLab";
 import { LabRecordGroup, LabRequest, PatientRecord } from "@/types/LabTypes";
 import { getApiErrorMessage } from "@/utils/api-error";
 import { getLabRecordGroupLabel, getLabTemplateLabel } from "@/utils/lab-templates";
-import { Section } from "lucide-react";
 
 type Props = {
   patient: PatientRecord;
@@ -46,7 +45,7 @@ export default function PatientLabRecordsModal({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [recordGroup, setRecordGroup] = useState<LabRecordGroup | "all">("all");
-  const { data: records = [], error, isLoading } = usePatientLabRecords(
+  const { data: recordsResponse, error, isLoading } = usePatientLabRecords(
     patient.patient_id,
     {
       dateFrom,
@@ -54,6 +53,7 @@ export default function PatientLabRecordsModal({
       recordGroup,
     }
   );
+  const records = useMemo(() => recordsResponse?.data ?? [], [recordsResponse?.data]);
   const hasFilters = Boolean(dateFrom || dateTo || recordGroup !== "all");
 
   const groupedRecords = useMemo(() => {
@@ -74,26 +74,6 @@ export default function PatientLabRecordsModal({
       }))
       .filter((section) => section.items.length > 0);
   }, [records]);
-
-  const lastRecordedAt = useMemo(() => {
-    if (!records.length) {
-      return null;
-    }
-
-    return records
-      .map((record) => new Date(record.requestedDate).getTime())
-      .sort((left, right) => right - left)[0];
-  }, [records]);
-
-  const visibleCategorySummary = useMemo(() => {
-    if (!groupedRecords.length) {
-      return "No categories";
-    }
-
-    return groupedRecords
-      .map((section) => getLabRecordGroupLabel(section.group))
-      .join(", ");
-  }, [groupedRecords]);
 
   // console.log('labRecordModal', groupedRecords)
 

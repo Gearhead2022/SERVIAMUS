@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { useAllConsultationRecords } from "@/hooks/Consultation/useConsultation";
 import { useAllMedCertRecords } from "@/hooks/Consultation/useConsultation";
-import { useDebounce } from "use-debounce";
 import { ConsultationHistoryRecordsProps, MedicalCertificateProps } from "@/types/ConsultationTypes";
 import { mapConsultationRecordToForm } from "@/utils/consultation/mapConsultationRecord";
 import { MedCertFormValues, PrescriptionValues, RegisterConsultationFormValues } from "@/schemas/consultation.schema";
@@ -27,15 +26,20 @@ import { mapMedCertRecordToForm } from "@/utils/consultation/mapMedCertRecord";
 import { mapPrescriptionRecordToForm } from "@/utils/consultation/mapRxRecord";
 import { LabRecordGroup, LabRequest, LabResultPayload } from "@/types/LabTypes";
 import { usePatientLabRecords } from "@/hooks/Lab/useLab";
+import { usePatientChartAttachments } from "@/hooks/Patient/usePatientCharts";
+import { openPatientChartAttachment } from "@/services/patient-chart.services";
+import { PatientChartAttachment } from "@/types/PatientChartTypes";
+import Pagination from "@/components/Pagination";
 
 const labelCls = "text-[10px] font-semibold uppercase tracking-widest text-[#8a99b8]";
 
-type TabId = "consultations" | "laboratory" | "certificates";
+type TabId = "consultations" | "laboratory" | "certificates" | "medicalCharts";
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
     { id: "consultations", label: "Consultations", icon: Stethoscope },
     { id: "laboratory", label: "Laboratory", icon: TestTube2 },
     { id: "certificates", label: "Certificates", icon: FileCheck },
+    { id: "medicalCharts", label: "Medical charts", icon: FileText },
 ];
 
 // ── Status / badge helpers ────────────────────────────────────────────────────
@@ -236,7 +240,6 @@ function LabCard({ lab, onView }: { lab: LabRequest; onView?: (lab: LabRequest) 
 
     const catMeta = CATEGORY_META[lab.category] ?? CATEGORY_META["other"];
     const isDone = lab.status === "done";
-    const isUrgent = lab.priority === "Urgent";
     const progressPct = lab.totalTests > 0
         ? Math.round((lab.completedCount / lab.totalTests) * 100)
         : 0;
@@ -445,6 +448,24 @@ function CertCard({ cert, onSelectMedCert }: { cert: MedicalCertificateProps; on
     );
 }
 
+function MedicalChartCard({ attachment }: { attachment: PatientChartAttachment }) {
+    const formattedSize = attachment.file_size < 1024 * 1024
+        ? `${Math.max(1, Math.round(attachment.file_size / 1024))} KB`
+        : `${(attachment.file_size / 1024 / 1024).toFixed(1)} MB`;
+    return (
+        <div className="rounded-2xl p-4 flex items-center gap-4" style={{ border: "1.5px solid #dce3ef", background: "white" }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#e0f4f4", color: "#0e7c7b" }}><FileText size={19} /></div>
+            <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-[13px]" style={{ color: "#1a2a45" }}>{attachment.file_name}</p>
+                <p className="mt-1 text-[11px]" style={{ color: "#6b7da0" }}>
+                    Added {new Date(attachment.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} · {formattedSize} · by {attachment.uploader.name}
+                </p>
+            </div>
+            <button type="button" onClick={() => openPatientChartAttachment(attachment.attachment_id)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold flex-shrink-0" style={{ background: "#eef1f9", color: "#0f2244", border: "1px solid #dce3ef" }}><Eye size={12} /> View</button>
+        </div>
+    );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 const ViewPatientHistoryModal: React.FC<{
@@ -455,41 +476,56 @@ const ViewPatientHistoryModal: React.FC<{
     onViewLaboratoryTest?: (record: LabRequest) => void;
 }> = ({ patient, onViewPrescription, onViewConsultation, onViewMedicalCertificate, onViewLaboratoryTest }) => {
 
-    const [search, setSearch] = useState<string>("");
-    const [debouncedSearch] = useDebounce(search, 500);
+    const search = "";
+    const [activeTab, setActiveTab] = useState<TabId>("consultations");
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 10;
 
     const { data: consultationList } = useAllConsultationRecords({
         patient_id: patient?.patient_id ?? 0,
-        search: debouncedSearch,
+        search,
+        page: activeTab === "consultations" ? currentPage : 1,
+        limit: pageSize,
     });
 
     // console.log('dipoeta', consultationList)
 
     const { data: medCertList } = useAllMedCertRecords({
         patient_id: patient?.patient_id ?? 0,
-        search: debouncedSearch,
+        search,
+        page: activeTab === "certificates" ? currentPage : 1,
+        limit: pageSize,
     });
 
-    const [dateFrom, setDateFrom] = useState("");
-    const [dateTo, setDateTo] = useState("");
+    const dateFrom = "";
+    const dateTo = "";
     const [recordGroup, setRecordGroup] = useState<LabRecordGroup | "all">("all");
 
-    const { data: labRecords = [] } = usePatientLabRecords(
+    const { data: labRecordResponse } = usePatientLabRecords(
         patient?.patient_id,
-        { dateFrom, dateTo, recordGroup }
+        { dateFrom, dateTo, recordGroup, page: activeTab === "laboratory" ? currentPage : 1, limit: pageSize }
     );
-
-    const [activeTab, setActiveTab] = useState<TabId>("consultations");
+    const labRecords = labRecordResponse?.data ?? [];
+    const { data: medicalCharts = [] } = usePatientChartAttachments(patient?.patient_id);
 
     const initials = patient?.name
         ? patient.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
         : "?";
 
     const counts = {
-        consultations: consultationList?.length ?? 0,
-        laboratory: labRecords.length,
-        certificates: medCertList?.length ?? 0,
+        consultations: consultationList?.pagination.total ?? 0,
+        laboratory: labRecordResponse?.pagination.total ?? 0,
+        certificates: medCertList?.pagination.total ?? 0,
+        medicalCharts: medicalCharts.length,
     };
+
+    const activePagination = activeTab === "consultations"
+        ? consultationList?.pagination
+        : activeTab === "laboratory"
+            ? labRecordResponse?.pagination
+            : activeTab === "certificates"
+                ? medCertList?.pagination
+                : undefined;
 
     const urgentLabs = labRecords.filter((l: LabRequest) => l.status !== "done" && l.priority === "Urgent");
     const pendingLabs = labRecords.filter((l: LabRequest) => l.status === "pending" || l.status === "queued");
@@ -525,6 +561,7 @@ const ViewPatientHistoryModal: React.FC<{
                         { icon: Stethoscope, count: counts.consultations, label: "Consults", color: "#0f2244", bg: "#eef1f9" },
                         { icon: TestTube2, count: counts.laboratory, label: "Lab Tests", color: "#0e7c7b", bg: "#e0f4f4" },
                         { icon: FileCheck, count: counts.certificates, label: "Certificates", color: "#7c4dab", bg: "#f3eefb" },
+                        { icon: FileText, count: counts.medicalCharts, label: "Charts", color: "#0e7c7b", bg: "#e0f4f4" },
                     ].map(({ icon: Icon, count, label, color, bg }) => (
                         <div key={label} className="flex items-center gap-2 px-3 py-2 rounded-xl"
                             style={{ background: bg }}>
@@ -539,13 +576,14 @@ const ViewPatientHistoryModal: React.FC<{
             </div>
 
             {/* ── Tab bar ── */}
-            <div className="flex-shrink-0 flex items-center gap-1 px-6 py-3"
+            <div className="flex-shrink-0 flex items-center gap-1 overflow-x-auto overscroll-x-contain px-3 py-3 sm:px-6"
+                aria-label="Patient record categories"
                 style={{ borderBottom: "1px solid #eef1f9" }}>
                 {TABS.map(({ id, label, icon: Icon }) => {
                     const isActive = activeTab === id;
                     return (
-                        <button key={id} type="button" onClick={() => setActiveTab(id)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-semibold transition-all"
+                        <button key={id} type="button" onClick={() => { setActiveTab(id); setCurrentPage(1); }} aria-label={`${label}: ${counts[id]} records`}
+                            className="flex shrink-0 items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all sm:gap-2 sm:px-4 sm:text-[12px]"
                             style={isActive
                                 ? { background: "#0f2244", color: "white" }
                                 : { background: "transparent", color: "#6b7da0" }}>
@@ -568,9 +606,9 @@ const ViewPatientHistoryModal: React.FC<{
                 {/* CONSULTATIONS */}
                 {activeTab === "consultations" && onViewConsultation && onViewPrescription && (
                     <div className="space-y-3">
-                        {!consultationList || consultationList.length === 0
+                        {!consultationList || consultationList.data.length === 0
                             ? <EmptyState icon={Stethoscope} message="No consultation records yet" />
-                            : consultationList.map((c) => (
+                            : consultationList.data.map((c) => (
                                 <ConsultationCard
                                     key={c.consultation.consultation_id}
                                     records={c}
@@ -627,7 +665,7 @@ const ViewPatientHistoryModal: React.FC<{
                         <div className="flex items-center gap-2 flex-wrap">
                             {(["all", "hematology", "clinical-chemistry", "clinical-microscopy", "serology", "other"] as const).map((g) => (
                                 <button key={g} type="button"
-                                    onClick={() => setRecordGroup(g)}
+                                    onClick={() => { setRecordGroup(g); setCurrentPage(1); }}
                                     className="text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all capitalize"
                                     style={recordGroup === g
                                         ? { background: "#0f2244", color: "white" }
@@ -650,9 +688,9 @@ const ViewPatientHistoryModal: React.FC<{
                 {/* CERTIFICATES */}
                 {activeTab === "certificates" && onViewMedicalCertificate && (
                     <div className="space-y-3">
-                        {!medCertList || medCertList.length === 0
+                        {!medCertList || medCertList.data.length === 0
                             ? <EmptyState icon={FileCheck} message="No certificates issued yet" />
-                            : medCertList.map((c) => (
+                            : medCertList.data.map((c) => (
                                 <CertCard
                                     key={c.medCert.mcr_id}
                                     cert={c.medCert}
@@ -668,21 +706,31 @@ const ViewPatientHistoryModal: React.FC<{
                         }
                     </div>
                 )}
+
+                {activeTab === "medicalCharts" && (
+                    <div className="space-y-3">
+                        {medicalCharts.length === 0
+                            ? <EmptyState icon={FileText} message="No scanned medical chart files yet" />
+                            : medicalCharts.map((attachment) => <MedicalChartCard key={attachment.attachment_id} attachment={attachment} />)}
+                    </div>
+                )}
             </div>
 
             {/* ── Footer ── */}
             <div className="flex-shrink-0 px-6 py-3 flex items-center justify-between"
                 style={{ borderTop: "1px solid #eef1f9", background: "#f7f8fc" }}>
                 <p className="text-[11px]" style={{ color: "#b0bcd4" }}>
-                    Showing {counts[activeTab]} record(s)
+                    Showing {activePagination ? `${activePagination.total ? (currentPage - 1) * activePagination.limit + 1 : 0}–${Math.min(currentPage * activePagination.limit, activePagination.total)} of ${activePagination.total}` : counts[activeTab]} record(s)
                 </p>
-                {consultationList && consultationList.length > 0 && (
+                {activePagination && activePagination.totalPages > 1 ? (
+                    <Pagination currentPage={currentPage} totalPages={activePagination.totalPages} totalEntries={activePagination.total} calculateStartIndex={() => activePagination.total ? (currentPage - 1) * activePagination.limit + 1 : 0} calculateEndIndex={() => Math.min(currentPage * activePagination.limit, activePagination.total)} setCurrentPage={setCurrentPage} />
+                ) : consultationList && consultationList.data.length > 0 && (
                     <div className="flex items-center gap-1.5">
                         <TrendingUp size={12} style={{ color: "#b0bcd4" }} />
                         <p className="text-[11px]" style={{ color: "#b0bcd4" }}>
                             Last visit:{" "}
-                            {consultationList[0].consultation.consultation_date
-                                ? new Date(consultationList[0].consultation.consultation_date).toISOString().split("T")[0]
+                            {consultationList.data[0].consultation.consultation_date
+                                ? new Date(consultationList.data[0].consultation.consultation_date).toISOString().split("T")[0]
                                 : "—"}
                         </p>
                     </div>

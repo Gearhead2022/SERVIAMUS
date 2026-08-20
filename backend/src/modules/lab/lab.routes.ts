@@ -24,35 +24,35 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get("/users", authorize(["ADMIN", "LAB", "LABORATORY"]), getAllUsersController);
+router.get("/users", authorize(["ADMIN", "LAB", "LABORATORY", "PATHOLOGIST", "ENCODER"]), getAllUsersController);
 router.get(
   "/patients",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "PATHOLOGIST"]),
   searchPatientsController
 );
 router.get(
   "/tests",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "STAFF"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "PATHOLOGIST", "STAFF"]),
   getLabTestsController
 );
 router.get(
   "/records",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "ENCODER"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "PATHOLOGIST", "ENCODER"]),
   getPatientRecordsController
 );
 router.get(
   "/patients/:patientId/requests",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "PATHOLOGIST"]),
   getPatientLabRequestsController
 );
 router.get(
   "/patients/:patientId/records",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "STAFF", "ENCODER"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "PATHOLOGIST", "STAFF", "ENCODER"]),
   getPatientLabRecordsController
 );
 router.get(
   "/patients/:patientId/attachments",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "PATHOLOGIST"]),
   getExternalLabAttachmentsController
 );
 router.get(
@@ -62,34 +62,34 @@ router.get(
 );
 router.get(
   "/attachments/:attachmentId/file",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "PATHOLOGIST"]),
   downloadExternalLabAttachmentController
 );
 router.post(
   "/attachments",
-  authorize(["ADMIN", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "LAB", "LABORATORY", "PATHOLOGIST"]),
   express.raw({ type: "application/octet-stream", limit: "10mb" }),
   uploadExternalLabAttachmentController
 );
 router.post("/requests", authorize(["ADMIN", "DOCTOR"]), createLabRequestController);
-router.get("/requests", authorize(["ADMIN", "LAB", "LABORATORY"]), getLabRequestsController);
+router.get("/requests", authorize(["ADMIN", "LAB", "LABORATORY", "PATHOLOGIST"]), getLabRequestsController);
 router.get(
   "/requests/:labId",
-  authorize(["ADMIN", "LAB", "LABORATORY", "STAFF", "DOCTOR", "ENCODER"]),
+  authorize(["ADMIN", "LAB", "LABORATORY", "PATHOLOGIST", "STAFF", "DOCTOR", "ENCODER"]),
   getLabRequestByIdController
 );
 router.patch(
   "/requests/:labId/status",
-  authorize(["ADMIN", "LAB", "LABORATORY"]),
+  authorize(["ADMIN", "LAB", "LABORATORY", "PATHOLOGIST"]),
   updateLabRequestStatusController
 );
-router.post("/results", authorize(["ADMIN", "LAB", "LABORATORY"]), saveLabResultController);
+router.post("/results", authorize(["ADMIN", "LAB", "LABORATORY", "PATHOLOGIST"]), saveLabResultController);
 
 //added by john
 
 router.get(
   "/preview/:labid",
-  authorize(["ADMIN", "LAB", "LABORATORY", "STAFF", "DOCTOR", "ENCODER"]),
+  authorize(["ADMIN", "LAB", "LABORATORY", "PATHOLOGIST", "STAFF", "DOCTOR", "ENCODER"]),
   getLabPreviewController
 );
 

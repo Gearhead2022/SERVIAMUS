@@ -1,5 +1,6 @@
 import api from "./axios";
 import { ConsultationResultProps, MedicalCertificateProps, Status, RequestTypes, CreatePrescriptionPayload, CreateFollowupPayload } from "@/types/ConsultationTypes";
+import { PaginationMeta } from "@/types/RequestTypes";
 
 export const consultationResults = async (
   data: ConsultationResultProps
@@ -60,19 +61,18 @@ export const createPrescription = async (data: CreatePrescriptionPayload) => {
   return res.data.data;
 }
 
-export const getAllPatientConsultationList = async (patient_id: number, search?: string) => {
+export const getAllPatientConsultationList = async (patient_id: number, search?: string, page = 1, limit = 10) => {
   const res = await api.get(`/api/consultation/${patient_id}/getAllPatientConsultationRecords`, {
-    params: { search }
+    params: { search, page, limit }
   });
-  console.log('asdasdasd', res.data.data)
-  return res.data.data;
+  return { data: res.data.data ?? [], pagination: res.data.pagination as PaginationMeta };
 }
 
-export const getAllPatientMedCertList = async (patient_id: number, search?: string) => {
+export const getAllPatientMedCertList = async (patient_id: number, search?: string, page = 1, limit = 10) => {
   const res = await api.get(`/api/consultation/${patient_id}/getAllPatientMedCertRecords`, {
-    params: { search }
+    params: { search, page, limit }
   });
-  return res.data.data;
+  return { data: res.data.data ?? [], pagination: res.data.pagination as PaginationMeta };
 }
 
 export const getAllPatientPrescriptionList = async (patient_id: number, search?: string) => {

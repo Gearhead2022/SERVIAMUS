@@ -1,6 +1,6 @@
 import { LabResultPayload, LabUser } from "@/types/LabTypes";
 
-const PATHOLOGIST_ROLE_NAMES = new Set(["PATHOLOGIST", "DOCTOR"]);
+const PATHOLOGIST_ROLE_NAMES = new Set(["PATHOLOGIST"]);
 const MEDTECH_ROLE_NAMES = new Set(["MEDTECH", "LAB", "LABORATORY"]);
 
 const defaultLabPersonnel = {
@@ -17,6 +17,7 @@ const defaultLabPersonnel = {
 } as const;
 
 const labResultMetaKeys = new Set([
+  "lab_no",
   "medTechUserId",
   "med_tech_user_id",
   "medtech_license_no",
@@ -151,7 +152,7 @@ export const getMedTechUsers = (users: LabUser[]) => {
 
 export const getPathologistUsers = (users: LabUser[]) => {
   const matchedUsers = filterUsersByRoles(users, PATHOLOGIST_ROLE_NAMES);
-  return sortUsersByName(matchedUsers.length ? matchedUsers : users);
+  return sortUsersByName(matchedUsers);
 };
 
 export const findLabUserById = (users: LabUser[], userId: number) =>

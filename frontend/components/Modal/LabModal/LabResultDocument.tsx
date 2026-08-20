@@ -383,6 +383,25 @@ function Section({
   );
 }
 
+function LabNumberAndRemarks({
+  form,
+  remarks,
+}: {
+  form: LabResultPayload;
+  remarks: string;
+}) {
+  return (
+    <div className="mt-10 space-y-2">
+      <p className="text-right text-[12px] font-bold italic tracking-wide text-slate-800">
+        LAB NO: {getValue(form, "lab_no", "—")}
+      </p>
+      <p className="result-remarks text-center text-sm font-bold italic tracking-wide text-blue-600">
+        REMARKS: {remarks}
+      </p>
+    </div>
+  );
+}
+
 function CompactFieldGrid({
   fields,
 }: {
@@ -635,9 +654,7 @@ function CbcDocument({ request, form }: Props) {
         </div>
       </Section>
       <BloodTypingResultSection form={form} showOthers={false} />
-      <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500">
-        <h2>REMARKS: {getValue(form, "remarks")}</h2>
-      </div>
+      <LabNumberAndRemarks form={form} remarks={getValue(form, "remarks")} />
     </PreviewShell>
   );
 }
@@ -774,9 +791,7 @@ function ParasitologyDocument({ request, form }: Props) {
         </div>
       </Section>
 
-      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
-        REMARKS : {getValue(form, "remarks")}
-      </p>
+      <LabNumberAndRemarks form={form} remarks={getValue(form, "remarks")} />
     </PreviewShell>
   );
 }
@@ -947,13 +962,10 @@ function UrinalysisDocument({ request, form }: Props) {
         </div>
       </Section>
 
-      <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500 uppercase">
-        <h2>REMARKS: {getValue(
-          form,
-          "remarks",
-          "No intestinal parasite seen in direct fecal smear"
-        )}</h2>
-      </div>
+      <LabNumberAndRemarks
+        form={form}
+        remarks={getValue(form, "remarks", "No intestinal parasite seen in direct fecal smear")}
+      />
     </PreviewShell>
   );
 }
@@ -1108,11 +1120,7 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
             <PreviewFieldv2 label="Time Taken" value={getValue(form, "time_taken")} />
           </div>
         ) : null
-      }<div className="mt-10 text-right font-bold italic tracking-wide text-black-500">
-
-      LAB NO: ________
-
-      </div>
+      }
 
       {showNote && note && (
         <div className="mt-10 text-center text-sm italic tracking-wide text-black">
@@ -1120,9 +1128,7 @@ function ClinicalChemistryDocument({ request, form, displayMode = "preview" }: P
         </div>
       )}
 
-      <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500">
-        <h2>REMARKS: {getValue(form, "remarks")}</h2>
-      </div>
+      <LabNumberAndRemarks form={form} remarks={getValue(form, "remarks")} />
     </PreviewShell >
   );
 }
@@ -1159,9 +1165,7 @@ function SingleChemistryDocument({ request, form }: Props) {
           ]}
         />
       </Section>
-      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
-        REMARKS : {getValue(form, "remarks")}
-      </p>
+      <LabNumberAndRemarks form={form} remarks={getValue(form, "remarks")} />
     </PreviewShell>
   );
 }
@@ -1218,9 +1222,7 @@ function SerologyDocument({ request, form }: Props) {
           </p>
         </div>
       </Section>
-      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
-        REMARKS : {getValue(form, "remarks")}
-      </p>
+      <LabNumberAndRemarks form={form} remarks={getValue(form, "remarks")} />
     </PreviewShell>
   );
 }
@@ -1273,9 +1275,7 @@ function FecalOccultBloodDocument({ request, form }: Props) {
           </div>
         </div>
       </Section>
-      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
-        REMARKS : {getValue(form, "remarks")}
-      </p>
+      <LabNumberAndRemarks form={form} remarks={getValue(form, "remarks")} />
     </PreviewShell>
   );
 }
@@ -1377,9 +1377,7 @@ function Hba1cDocument({ request, form }: Props) {
           ))}
         </div>
       </Section>
-      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
-        REMARKS : {getValue(form, "remarks", "No additional remarks")}
-      </p>
+      <LabNumberAndRemarks form={form} remarks={getValue(form, "remarks", "No additional remarks")} />
     </PreviewShell>
   );
 }
@@ -1465,9 +1463,7 @@ function ChemistryPanelDocument({ request, form, displayMode = "preview" }: Prop
           </div>
         </div>
       </Section>
-      <p className="result-remarks mt-10 text-center text-sm font-bold italic tracking-wide text-blue-600">
-        REMARKS : {getValue(form, "remarks", "No additional remarks")}
-      </p>
+      <LabNumberAndRemarks form={form} remarks={getValue(form, "remarks", "No additional remarks")} />
     </PreviewShell>
   );
 }
@@ -1626,9 +1622,7 @@ function OgttDocument({ request, form }: Props) {
         </div>
       </Section>
 
-      <div className="mt-10 text-center font-bold italic tracking-wide text-blue-500">
-        <h2>REMARKS: {getValue(form, 'remarks', "____")}</h2>
-      </div>
+      <LabNumberAndRemarks form={form} remarks={getValue(form, "remarks", "____")} />
     </PreviewShell>
   );
 }
@@ -1661,6 +1655,7 @@ function GenericDocument({
           )}
         </div>
       </Section>
+      <LabNumberAndRemarks form={form} remarks={getValue(form, "remarks", "No additional remarks")} />
     </PreviewShell>
   );
 }

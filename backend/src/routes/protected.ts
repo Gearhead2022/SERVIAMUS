@@ -11,6 +11,7 @@ import ConsultationRoutes from "../modules/consultation/consultation.routes";
 import QueueRoutes from "../modules/queue/queue.routes";
 import NotificationRoutes from "../modules/notification/notification.route";
 import EncodingRoutes from "../modules/encoding/encoding.routes";
+import PatientChartRoutes from "../modules/patient-chart/patient-chart.routes";
 
 const router = Router();
 
@@ -35,5 +36,6 @@ router.use("/admin", AdminRoutes);  // Admin routes
 router.use("/notification", NotificationRoutes);  // Notidication routes
 
 router.use("/encoding", EncodingRoutes);  // Isolated records encoding routes
+router.use("/patient-chart", PatientChartRoutes); // Private patient chart files
 
 export default router;

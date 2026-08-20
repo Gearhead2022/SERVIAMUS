@@ -23,6 +23,24 @@ const parseEncodingDate = (value: string | undefined, label: string) => {
   return parsed;
 };
 
+const ensureEncodingPersonnel = async (
+  tx: Prisma.TransactionClient,
+  userId: number | null | undefined,
+  label: string,
+  requiredRole?: string
+) => {
+  if (!userId) throw new Error(`${label} is required.`);
+  const user = await tx.users.findUnique({
+    where: { user_id: userId },
+    select: { user_id: true, roles: { select: { role: { select: { role_name: true } } } } },
+  });
+  if (!user) throw new Error(`${label} was not found.`);
+  if (requiredRole && !user.roles.some(({ role }) => role.role_name.trim().toUpperCase() === requiredRole)) {
+    throw new Error(`${label} must have the ${requiredRole} role.`);
+  }
+  return user.user_id;
+};
+
 const getOrCreateLabTest = async (
   tx: Prisma.TransactionClient,
   testName: string,
@@ -304,6 +322,8 @@ export const saveEncodingLabResultService = async (
     const test = await getOrCreateLabTest(tx, payload.testName, payload.schemaKey);
     const resultDate = parseEncodingDate(payload.resultDate, "Result date");
     const requestedBy = await getEncoderName(tx, payload.userId, payload.requestedBy);
+    const medTechUserId = await ensureEncodingPersonnel(tx, payload.medTechUserId, "Selected medical technologist");
+    const pathologistUserId = await ensureEncodingPersonnel(tx, payload.pathologistUserId, "Selected pathologist", "PATHOLOGIST");
 
     const request = await tx.request.create({
       data: {
@@ -332,7 +352,7 @@ export const saveEncodingLabResultService = async (
         test_id: test.test_id,
         status: "DONE",
         result_payload: normalizeLabForm(payload.form),
-        processed_by: payload.medTechUserId ?? payload.userId ?? null,
+        processed_by: medTechUserId,
         completed_at: resultDate,
       },
     });
@@ -344,8 +364,8 @@ export const saveEncodingLabResultService = async (
       testName: test.name,
       schemaKey: test.schema_key ?? payload.schemaKey,
       form: payload.form,
-      medTechUserId: payload.medTechUserId ?? payload.userId ?? null,
-      pathologistUserId: payload.pathologistUserId ?? null,
+      medTechUserId,
+      pathologistUserId,
     });
 
     await syncEncodedResultDate(

@@ -8,6 +8,7 @@ import {
   reviewPatientDeletionRequest,
   updatePatient,
 } from "@/services/patient.services";
+import { PatientListResponse } from "@/services/patient.services";
 import SweetAlert from "@/utils/SweetAlert";
 import { getApiErrorMessage } from "@/utils/api-error";
 import { CreateRequestProps, PaginationMeta, RequestProps, VitalSignProps } from "@/types/RequestTypes";
@@ -15,10 +16,10 @@ import { PatientProps } from "@/types/PatientTypes";
 import { getPrevVitalSigns, createRequest, getAllUsers as getAllRegisteredUsers, fetchAllRequest, deleteRequest, updateRequest, getLastRecord } from "@/services/request.services";
 import { UsersProps } from "@/types/RequestTypes";
 
-export const useGetAllpatient = (search: string) => {
-  return useQuery<PatientProps[]>({
-    queryKey: ["patient", "list", search],
-    queryFn: () => fetchAllPatient(search),
+export const useGetAllpatient = (search: string, page = 1, limit = 20) => {
+  return useQuery<PatientListResponse>({
+    queryKey: ["patient", "list", search, page, limit],
+    queryFn: () => fetchAllPatient(search, page, limit),
   });
 };
 

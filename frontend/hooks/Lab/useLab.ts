@@ -26,6 +26,7 @@ import {
   SaveLabResultPayload,
   UpdateLabRequestStatusPayload,
 } from "@/types/LabTypes";
+import { PaginationMeta } from "@/types/RequestTypes";
 import { getApiErrorMessage } from "@/utils/api-error";
 import SweetAlert from "@/utils/SweetAlert";
 
@@ -48,6 +49,8 @@ const getPatientLabRecordsQueryKey = (
     filters.dateFrom ?? "",
     filters.dateTo ?? "",
     filters.recordGroup ?? "all",
+    filters.page ?? 1,
+    filters.limit ?? 10,
   ] as const;
 
 const getPatientLabRequestsQueryKey = (patientId: number) =>
@@ -131,7 +134,7 @@ export const usePatientLabRecords = (
   patientId?: number,
   filters: PatientLabRecordFilters = {}
 ) =>
-  useQuery<LabRequest[]>({
+  useQuery<{ data: LabRequest[]; pagination: PaginationMeta }>({
     queryKey: patientId
       ? getPatientLabRecordsQueryKey(patientId, filters)
       : [...LAB_PATIENT_RECORDS_QUERY_KEY, "unknown"],

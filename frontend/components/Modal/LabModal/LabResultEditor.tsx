@@ -9,6 +9,7 @@ import GeneralResultModal from "./GeneralResultModal";
 import HbAIcResultModal from "./HbAIcResultModal";
 import HematologyModal from "./HematologyModal";
 import LabResultPersonnelPanel from "./LabResultPersonnelPanel";
+import LabResultReferencePanel from "./LabResultReferencePanel";
 import OGTTResultModal from "./OGTTResultModal";
 import ParasitologyModal from "./ParasitologyModal";
 import SerologyResultModal from "./SerologyResultModal";
@@ -38,6 +39,9 @@ type Props = {
 };
 
 export default function LabResultEditor({ request, onSubmit, onCancel }: Props) {
+  const [labNumber, setLabNumber] = useState(
+    () => String(request.resultPayload?.lab_no ?? "")
+  );
   const [medTechUserId, setMedTechUserId] = useState<number | "">(
     () => getSavedMedTechUserId(request.resultPayload) ?? ""
   );
@@ -75,6 +79,7 @@ export default function LabResultEditor({ request, onSubmit, onCancel }: Props) 
 
     onSubmit({
       ...form,
+      lab_no: labNumber.trim(),
       ...buildLabPersonnelPayload({
         medTechUser,
         pathologistUser,
@@ -223,6 +228,10 @@ export default function LabResultEditor({ request, onSubmit, onCancel }: Props) 
         onPathologistChange={setPathologistUserId}
         pathologistOptions={pathologistUsers}
         pathologistUserId={pathologistUserId}
+      />
+      <LabResultReferencePanel
+        labNumber={labNumber}
+        onLabNumberChange={setLabNumber}
       />
       {editor}
     </div>

@@ -174,6 +174,8 @@ export type PatientLabRecordFilters = {
   dateFrom?: string;
   dateTo?: string;
   recordGroup?: LabRecordGroup | "all";
+  page?: number;
+  limit?: number;
 };
 
 export type ExternalLabAttachment = {

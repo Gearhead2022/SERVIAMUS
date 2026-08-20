@@ -190,17 +190,17 @@ export const usePrescription = () => {
   });
 };
 
-export const useAllConsultationRecords = (param: { patient_id: number, search: string }) => {
-  return useQuery<ConsultationHistoryRecordsProps[]>({
-    queryKey: ["consultation", "consult-list", param.patient_id, param.search],
-    queryFn: () => getAllPatientConsultationList(param.patient_id, param.search),
+export const useAllConsultationRecords = (param: { patient_id: number, search: string, page?: number, limit?: number }) => {
+  return useQuery<{ data: ConsultationHistoryRecordsProps[]; pagination: PaginationMeta }>({
+    queryKey: ["consultation", "consult-list", param.patient_id, param.search, param.page ?? 1, param.limit ?? 10],
+    queryFn: () => getAllPatientConsultationList(param.patient_id, param.search, param.page, param.limit),
   });
 };
 
-export const useAllMedCertRecords = (param: { patient_id: number, search: string }) => {
-  return useQuery<medCertHistoryRecordsProps[]>({
-    queryKey: ["consultation", "medcert", param.patient_id, param.search],
-    queryFn: () => getAllPatientMedCertList(param.patient_id, param.search),
+export const useAllMedCertRecords = (param: { patient_id: number, search: string, page?: number, limit?: number }) => {
+  return useQuery<{ data: medCertHistoryRecordsProps[]; pagination: PaginationMeta }>({
+    queryKey: ["consultation", "medcert", param.patient_id, param.search, param.page ?? 1, param.limit ?? 10],
+    queryFn: () => getAllPatientMedCertList(param.patient_id, param.search, param.page, param.limit),
   });
 };
 

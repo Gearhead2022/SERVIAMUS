@@ -20,11 +20,16 @@ export const getAllPatientsController = async (req: Request, res: Response) => {
         ? req.query.search.trim()
         : undefined;
 
-    const patients = await getAllPatients(search);
+    const rawPage = Number(req.query.page);
+    const rawLimit = Number(req.query.limit);
+    const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+    const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 20;
+    const patients = await getAllPatients(search, page, limit);
 
     return res.status(200).json({
       success: true,
-      data: patients
+      data: patients.data,
+      pagination: patients.pagination,
     });
   } catch (error: any) {
     return res.status(400).json({

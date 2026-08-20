@@ -81,12 +81,10 @@ const getPatientWriteData = (
 /**
  * GET ALL PATIENT
  */
-export const getAllPatients = async (search?: string) => {
+export const getAllPatients = async (search?: string, page = 1, limit = 20) => {
   const supportsPhilhealthColumn = await hasPatientPhilhealthColumn();
   const select = getPatientSelect(supportsPhilhealthColumn);
-
-  const patients = await prisma.patients.findMany({
-    where: search
+  const where = search
       ? {
         OR: [
           {
@@ -101,13 +99,18 @@ export const getAllPatients = async (search?: string) => {
           },
         ],
       }
-      : undefined,
-    select,
-  });
+      : undefined;
+  const [total, patients] = await prisma.$transaction([
+    prisma.patients.count({ where }),
+    prisma.patients.findMany({
+      where, select, orderBy: { patient_id: "desc" }, skip: (page - 1) * limit, take: limit,
+    }),
+  ]);
 
-  return (patients as PatientRecord[]).map((patient) =>
-    normalizePatient(patient, supportsPhilhealthColumn)
-  );
+  return {
+    data: (patients as PatientRecord[]).map((patient) => normalizePatient(patient, supportsPhilhealthColumn)),
+    pagination: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
+  };
 };
 
 /**

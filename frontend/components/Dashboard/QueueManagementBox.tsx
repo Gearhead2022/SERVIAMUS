@@ -21,7 +21,8 @@ export default function QueueManagementBox() {
 
   const { mutateAsync: addToQueue, isPending } = useAddToQueue();
   const { data: queues = [], refetch } = useGetAllQueues();
-  const { data: patients = [], isLoading: patientsLoading } = useGetAllpatient(searchPatient);
+  const { data: patientResponse, isLoading: patientsLoading } = useGetAllpatient(searchPatient);
+  const patients = patientResponse?.data ?? [];
 
 
   const consultationCount = queues.filter((q: QueueProps) => q.queue_type === "CONSULTATION").length;

@@ -1,4 +1,5 @@
 import api from "./axios";
+import { PaginationMeta } from "@/types/RequestTypes";
 import {
   CreateLabRequestPayload,
   ExternalLabAttachment,
@@ -134,12 +135,14 @@ export const fetchPatientLabRecords = async (
   if (filters.recordGroup && filters.recordGroup !== "all") {
     params.set("recordGroup", filters.recordGroup);
   }
+  if (filters.page) params.set("page", String(filters.page));
+  if (filters.limit) params.set("limit", String(filters.limit));
 
   const res = await api.get(`/api/lab/patients/${patientId}/records`, {
     params,
   });
   const items = (res.data.data ?? []) as LabRequestApiResponse[];
-  return items.map(toFrontendRequest);
+  return { data: items.map(toFrontendRequest), pagination: res.data.pagination as PaginationMeta };
 };
 
 export const fetchPatientLabRequests = async (patientId: number) => {

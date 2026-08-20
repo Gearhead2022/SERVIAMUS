@@ -18,5 +18,5 @@ export const canAccessBilling = (userRoles: string[] | undefined) => {
 };
 
 export const canViewLab = (userRoles: string[] | undefined) => {
-    return hasRole(userRoles, ["LAB", "LABORATORY"]);
+    return hasRole(userRoles, ["LAB", "LABORATORY", "PATHOLOGIST"]);
 };

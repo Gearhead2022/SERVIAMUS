@@ -13,6 +13,7 @@ import {
   BriefcaseMedical,
   FilePlusCorner,
   Paperclip,
+  Files,
   ShieldAlert
 } from "lucide-react";
 
@@ -52,6 +53,13 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/patient-deletion-requests",
     icon: <ShieldAlert size={18} />,
     iconOnly: <ShieldAlert size={30} />,
+    roles: ["ADMIN"]
+  },
+  {
+    label: "Patient Charts",
+    path: "/patient-charts",
+    icon: <Files size={18} />,
+    iconOnly: <Files size={30} />,
     roles: ["ADMIN"]
   },
   {
@@ -98,14 +106,14 @@ export const MENU_ITEMS: MenuItem[] = [
     path: "/labdashboard",
     icon: <LayoutDashboard size={18} />,
     iconOnly: <LayoutDashboard size={30} />,
-    roles: ["LAB", "LABORATORY"]
+    roles: ["LAB", "LABORATORY", "PATHOLOGIST"]
   },
   {
     label: "Laboratory Records",
     path: "/labrecords",
     icon: <FlaskConical size={18} />,
     iconOnly: <FlaskConical size={30} />,
-    roles: ["LAB", "LABORATORY", "ENCODER", "ADMIN"]
+    roles: ["LAB", "LABORATORY", "PATHOLOGIST", "ENCODER", "ADMIN"]
   },
 
   // ───────────────── STAFF ─────────────────

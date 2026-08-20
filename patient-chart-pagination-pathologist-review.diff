@@ -1,0 +1,102 @@
+# Patient chart uploads, scalable records, and Pathologist role — review map
+#
+# The full working-tree source diff remains available in the editor. This file
+# maps the focused change set and the migration applied to serviamus_db.
+
+diff --git a/backend/prisma/migrations/20260820000100_patient_charts_and_pathologist/migration.sql b/backend/prisma/migrations/20260820000100_patient_charts_and_pathologist/migration.sql
+@@ Database additions (APPLIED)
++ Creates patient_chart_attachments with patient/uploader foreign keys, safe
++ original/stored filename metadata, MIME/size/timestamp, and patient/date index.
++ Adds PATHOLOGIST idempotently without altering existing Doctor accounts.
+
+diff --git a/backend/src/modules/patient-chart/* b/backend/src/modules/patient-chart/*
+new file mode 100644
+@@ Segregated patient-chart module
++ Private storage: uploads/patient-charts.
++ Dedicated create/list/download service, controller, route, and error layers.
++ ADMIN uploads; ADMIN/DOCTOR/STAFF can list or view files through authenticated
++ routes only.
++ Uses raw per-file uploads, matching existing secure attachment conventions.
+
+diff --git a/frontend/app/(admin)/patient-charts/page.tsx b/frontend/app/(admin)/patient-charts/page.tsx
+new file mode 100644
+@@ Admin journal intake workspace
++ Adds ADMIN-only /patient-charts route and navigation entry.
++ Patient search supports name and patient code with paginated patient selection.
++ Supports multiple PDF/JPG/PNG files (10 MB each).
++ Gives every queued file a real upload progress bar and status.
++ Separates invalid files (Replace/Remove only) from retryable upload failures.
++ Preserves selected patient context and provides an intake/audit summary.
+
+diff --git a/frontend/services/patient-chart.services.ts b/frontend/services/patient-chart.services.ts
+diff --git a/frontend/hooks/Patient/usePatientCharts.ts b/frontend/hooks/Patient/usePatientCharts.ts
+diff --git a/frontend/types/PatientChartTypes.ts b/frontend/types/PatientChartTypes.ts
+@@ Typed upload/data layer
++ Adds Axios onUploadProgress support per queued file.
++ Adds typed chart attachment records and cache invalidation per patient.
+
+diff --git a/frontend/components/Modal/ChildModal/ViewPatientHistoryModal.tsx b/frontend/components/Modal/ChildModal/ViewPatientHistoryModal.tsx
+@@ Personal medical chart
++ Adds a Medical charts history tab with file metadata, uploader, size, time,
++ and private View action.
++ Makes tab navigation scroll safely on narrow phones.
++ Resets history pagination when a different patient or lab grouping is selected.
+
+diff --git a/backend/src/modules/patient/patient.controller.ts b/backend/src/modules/patient/patient.controller.ts
+diff --git a/backend/src/modules/patient/patient.services.ts b/backend/src/modules/patient/patient.services.ts
+diff --git a/frontend/services/patient.services.ts b/frontend/services/patient.services.ts
+diff --git a/frontend/hooks/Patient/usePatientRegistration.ts b/frontend/hooks/Patient/usePatientRegistration.ts
+diff --git a/frontend/app/(staff)/registration/page.tsx b/frontend/app/(staff)/registration/page.tsx
+@@ Patient pagination
++ Adds page/limit/total metadata to the patient list.
++ Registration and the chart-patient picker use the existing Pagination control.
++ Search resets to page one while keeping existing patient selection valid.
+
+diff --git a/backend/src/modules/consultation/consultation.controller.ts b/backend/src/modules/consultation/consultation.controller.ts
+diff --git a/backend/src/modules/consultation/consultation.services.ts b/backend/src/modules/consultation/consultation.services.ts
+diff --git a/backend/src/modules/lab/lab.controller.ts b/backend/src/modules/lab/lab.controller.ts
+diff --git a/backend/src/modules/lab/lab.services.ts b/backend/src/modules/lab/lab.services.ts
+diff --git a/frontend/hooks/Consultation/useConsultation.ts b/frontend/hooks/Consultation/useConsultation.ts
+diff --git a/frontend/hooks/Lab/useLab.ts b/frontend/hooks/Lab/useLab.ts
+diff --git a/frontend/components/Modal/LabModal/PatientLabRecordsModal.tsx b/frontend/components/Modal/LabModal/PatientLabRecordsModal.tsx
+@@ History record pagination
++ Consultation, laboratory, and certificate patient-history queries now return
++ paginated rows plus totals.
++ Tab badges report total record counts, not current page length.
++ Changing tab/search/date/filter resets the active page to one.
+
+diff --git a/backend/seeders/seeders/role.seed.ts b/backend/seeders/seeders/role.seed.ts
+diff --git a/backend/src/modules/lab/lab.routes.ts b/backend/src/modules/lab/lab.routes.ts
+diff --git a/backend/src/modules/lab/lab.services.ts b/backend/src/modules/lab/lab.services.ts
+diff --git a/backend/src/modules/encoding/encoding.services.ts b/backend/src/modules/encoding/encoding.services.ts
+diff --git a/frontend/utils/lab-personnel.ts b/frontend/utils/lab-personnel.ts
+diff --git a/frontend/components/Modal/LabModal/LabResultEditor.tsx b/frontend/components/Modal/LabModal/LabResultPersonnelPanel.tsx
+diff --git a/frontend/app/(encoder)/encoding/page.tsx b/frontend/app/(encoder)/encoding/page.tsx
+@@ Pathologist role and result personnel
++ Adds PATHOLOGIST to seed and deployed role data.
++ Gives PATHOLOGIST the same appropriate laboratory workspace access as LAB.
++ Removes DOCTOR as a pathologist fallback.
++ Requires a real Medical Technologist and Pathologist before lab-result save.
++ Encoder lab results now explicitly select/persist both personnel IDs.
++ Existing Doctor accounts and past result data are not modified.
+
+diff --git a/frontend/context/AuthContext.tsx b/frontend/context/AuthContext.tsx
+diff --git a/frontend/app/(admin)/config/menu.config.tsx b/frontend/app/(admin)/config/menu.config.tsx
+diff --git a/frontend/utils/permissions.ts b/frontend/utils/permissions.ts
+@@ Role routing and navigation
++ Routes Pathologist sign-in to the laboratory workspace.
++ Adds Pathologist visibility to lab menus/guards/permissions.
+
+# Migration recovery note
+# The first migration attempt stopped at the PATHOLOGIST insert because it was
+# missing CURRENT_TIMESTAMP for created_at. The partial empty chart table was
+# removed, the failed attempt was marked rolled back, the corrected migration
+# was reapplied, and `prisma migrate status` now reports the database up to date.
+
+# Validation
+# - backend Prisma generation + TypeScript: passed
+# - database migration status: up to date
+# - frontend TypeScript: passed
+# - focused frontend lint: passed
+# - git diff --check: passed (Windows line-ending advisories only)
+# - Admin intake design evaluation: PASS after mobile/invalid-file refinements

@@ -179,7 +179,7 @@ export default function LabResultPrintPage() {
   ]);
 
   return (
-    <RoleGuard allowedRoles={["ADMIN", "LAB", "LABORATORY", "DOCTOR"]}>
+    <RoleGuard allowedRoles={["ADMIN", "LAB", "LABORATORY", "PATHOLOGIST", "DOCTOR"]}>
       <div className="min-h-screen bg-[#eef4f3] px-4 py-6 print:bg-white print:px-0 print:py-0">
         <div className="mx-auto max-w-5xl space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">

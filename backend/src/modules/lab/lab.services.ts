@@ -50,6 +50,8 @@ type PatientLabRecordsFilters = {
   dateFrom?: string;
   dateTo?: string;
   recordGroup?: string;
+  page?: number;
+  limit?: number;
 };
 
 let hasQueueTablePromise: Promise<boolean> | null = null;
@@ -334,7 +336,8 @@ const getUserName = async (tx: Prisma.TransactionClient, userId: number) => {
 const ensurePersonnelUserExists = async (
   tx: Prisma.TransactionClient,
   userId: number | null | undefined,
-  label: string
+  label: string,
+  requiredRole?: string
 ) => {
   if (!userId) {
     return null;
@@ -342,11 +345,14 @@ const ensurePersonnelUserExists = async (
 
   const user = await tx.users.findUnique({
     where: { user_id: userId },
-    select: { user_id: true },
+    select: { user_id: true, roles: { select: { role: { select: { role_name: true } } } } },
   });
 
   if (!user) {
     throw new LabModuleError(`${label} was not found.`, 400);
+  }
+  if (requiredRole && !user.roles.some(({ role }) => role.role_name.trim().toUpperCase() === requiredRole)) {
+    throw new LabModuleError(`${label} must have the ${requiredRole} role.`, 400);
   }
 
   return user.user_id;
@@ -706,7 +712,7 @@ export const getLabRequestsService = async (status?: string) => {
     const records = await getLabRequestRecords(tx);
     const normalizedStatus = status?.trim().toLowerCase();
 
-    return records
+    const displayItems = records
       .filter((record) => record.items.length > 0)
       .flatMap(getDisplayItemsForRecord)
       .filter((item) => !normalizedStatus || item.status === normalizedStatus)
@@ -720,6 +726,7 @@ export const getLabRequestsService = async (status?: string) => {
 
         return right.labId - left.labId;
       });
+    return displayItems;
   });
 };
 
@@ -749,7 +756,7 @@ export const getPatientLabRequestsService = async (patientId: number) => {
       include: labRequestInclude,
     });
 
-    return records
+    const displayItems = records
       .filter((record) => record.items.length > 0)
       .map((record) => ({
         labId: record.id,
@@ -791,6 +798,7 @@ export const getPatientLabRequestsService = async (patientId: number) => {
 
         return right.labId - left.labId;
       });
+    return displayItems;
   });
 };
 
@@ -834,7 +842,7 @@ export const getPatientLabRecordsService = async (
       include: labRequestInclude,
     });
 
-    return records
+    const displayItems = records
       .filter((record) => record.items.length > 0)
       .flatMap(getDisplayItemsForRecord)
       .filter((item) => Boolean(item.resultPayload))
@@ -851,6 +859,18 @@ export const getPatientLabRecordsService = async (
 
         return right.labId - left.labId;
       });
+
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+    return {
+      data: displayItems.slice((page - 1) * limit, page * limit),
+      pagination: {
+        total: displayItems.length,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(displayItems.length / limit)),
+      },
+    };
   });
 };
 
@@ -1023,8 +1043,12 @@ export const saveLabResultService = async ({
     const resolvedPathologistUserId = await ensurePersonnelUserExists(
       tx,
       pathologistUserId,
-      "Selected pathologist"
+      "Selected pathologist",
+      "PATHOLOGIST"
     );
+    if (!resolvedPathologistUserId) {
+      throw new LabModuleError("Select an assigned Pathologist before saving the laboratory result.", 400);
+    }
     // Saving a morphed form writes the same encoded payload back to every
     // underlying request item so records, printing, and structured tables stay consistent.
     const relatedGroupItems = combinedResultFamily

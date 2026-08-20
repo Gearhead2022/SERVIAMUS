@@ -143,6 +143,6 @@ export const resolveNotificationUsers = async (request: any): Promise<number | n
             return request.med?.physician;
 
         default:
-            return resolveUsersByRoleNames(["LAB", "LABORATORY"]);
+            return resolveUsersByRoleNames(["LAB", "LABORATORY", "PATHOLOGIST"]);
     }
 };

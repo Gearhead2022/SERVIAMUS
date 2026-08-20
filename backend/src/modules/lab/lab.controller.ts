@@ -32,7 +32,7 @@ const labStatusValues = ["queued", "pending", "done"] as const;
 const labCategoryValues = ["clinical-chemistry", "hematology", "parasitology", "urinalysis", "other"] as const;
 const labRecordGroupValues = ["clinical-chemistry", "clinical-microscopy", "hematology", "other", "serology"] as const;
 
-const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_STAFF", "role_DOCTOR", "role_ENCODER"] as const;
+const WORKFLOW_ROOMS = ["role_ADMIN", "role_CASHIER", "role_LAB", "role_LABORATORY", "role_PATHOLOGIST", "role_STAFF", "role_DOCTOR", "role_ENCODER"] as const;
 
 const emitLabUpdated = (payload: {
   labId?: number;
@@ -113,6 +113,10 @@ export const getPatientLabRecordsController = async (req: Request, res: Response
     const dateTo = typeof req.query.dateTo === "string" ? req.query.dateTo : undefined;
     const recordGroup =
       typeof req.query.recordGroup === "string" ? req.query.recordGroup : undefined;
+    const rawPage = Number(req.query.page);
+    const rawLimit = Number(req.query.limit);
+    const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+    const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 10;
 
     if (!Number.isInteger(patientId) || patientId <= 0) {
       return res.status(400).json({
@@ -137,11 +141,14 @@ export const getPatientLabRecordsController = async (req: Request, res: Response
       dateFrom,
       dateTo,
       recordGroup,
+      page,
+      limit,
     });
 
     return res.status(200).json({
       success: true,
-      data: records,
+      data: records.data,
+      pagination: records.pagination,
     });
   } catch (error) {
     return handleLabModuleError(

@@ -18,6 +18,8 @@ export type SaveEncodingLabPayload = {
   resultDate?: string;
   schemaKey?: LabSchemaKey | null;
   testName: string;
+  medTechUserId: number;
+  pathologistUserId: number;
 };
 
 export type SaveEncodingFollowUpPayload = {

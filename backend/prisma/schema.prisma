@@ -46,6 +46,7 @@ model Users {
   consultation_request_as_doctor            ConsultationRequest[]       @relation("ConsultationRequestDoctor")
   notification                              Notification[]
   external_lab_attachments                  ExternalLabAttachment[]     @relation("ExternalLabAttachmentUploader")
+  patient_chart_attachments                 PatientChartAttachment[]   @relation("PatientChartAttachmentUploader")
   patient_deletion_requests_created         PatientDeletionRequest[]    @relation("PatientDeletionRequester")
   patient_deletion_requests_reviewed         PatientDeletionRequest[]    @relation("PatientDeletionReviewer")
 
@@ -735,9 +736,28 @@ model Patients {
   medical_certificate_results MedicalCertificateResult[]
   queue                       Queue[]
   external_lab_attachments    ExternalLabAttachment[]
+  patient_chart_attachments   PatientChartAttachment[]
   deletion_requests           PatientDeletionRequest[]
 
   @@map("patients")
+}
+
+model PatientChartAttachment {
+  attachment_id Int      @id @default(autoincrement())
+  patient_id    Int
+  uploaded_by   Int
+  file_name     String   @db.VarChar(255)
+  stored_name   String   @unique @db.VarChar(255)
+  mime_type     String   @db.VarChar(100)
+  file_size     Int
+  created_at    DateTime @default(now())
+
+  patient  Patients @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
+  uploader Users    @relation("PatientChartAttachmentUploader", fields: [uploaded_by], references: [user_id])
+
+  @@index([patient_id, created_at])
+  @@index([uploaded_by])
+  @@map("patient_chart_attachments")
 }
 
 model PatientDeletionRequest {

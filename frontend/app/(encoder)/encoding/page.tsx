@@ -28,6 +28,7 @@ import Textarea from "@/components/ui/Textarea";
 import { useAuth } from "@/context/AuthContext";
 import RoleGuard from "@/guards/RoleGuard";
 import { useGetAllpatient } from "@/hooks/Patient/usePatientRegistration";
+import { useLabUsers } from "@/hooks/Lab/useLab";
 import {
   useEncodingConsultations,
   useSaveEncodingConsultation,
@@ -38,6 +39,9 @@ import type { LabCategory, LabResultPayload, LabSchemaKey } from "@/types/LabTyp
 import type { PatientProps } from "@/types/PatientTypes";
 import { canAddPatient } from "@/utils/permissions";
 import Label from "@/components/ui/label";
+import LabResultPersonnelPanel from "@/components/Modal/LabModal/LabResultPersonnelPanel";
+import LabResultReferencePanel from "@/components/Modal/LabModal/LabResultReferencePanel";
+import { findLabUserById, getMedTechUsers, getPathologistUsers } from "@/utils/lab-personnel";
 
 type FieldType = "date" | "text" | "textarea" | "select" | "checkbox";
 
@@ -537,12 +541,19 @@ const EncodingPage = () => {
     defaultEncodingOption.value
   );
   const [labResultDate, setLabResultDate] = useState(today());
+  const [labNumber, setLabNumber] = useState("");
   const [formValues, setFormValues] = useState<Record<string, string>>(
     emptyValuesFor(defaultEncodingOption)
   );
   const [showPatientForm, setShowPatientForm] = useState(false);
+  const [medTechUserId, setMedTechUserId] = useState<number | "">("");
+  const [pathologistUserId, setPathologistUserId] = useState<number | "">("");
 
-  const { data: patients = [] } = useGetAllpatient(patientSearch);
+  const { data: patientResponse } = useGetAllpatient(patientSearch, 1, 100);
+  const patients = patientResponse?.data ?? [];
+  const { data: labUsers = [], isLoading: isLoadingLabUsers } = useLabUsers();
+  const medTechUsers = useMemo(() => getMedTechUsers(labUsers), [labUsers]);
+  const pathologistUsers = useMemo(() => getPathologistUsers(labUsers), [labUsers]);
   const saveLab = useSaveEncodingLabResult();
   const saveConsultation = useSaveEncodingConsultation();
   const saveFollowUp = useSaveEncodingFollowUp();
@@ -693,6 +704,8 @@ const EncodingPage = () => {
   // it so encoders don't have to guess what's missing.
   const saveBlockedReason = (() => {
     if (!selectedPatient) return "Select a patient to begin encoding.";
+    if (selectedOption.group === "lab" && !pathologistUsers.length) return "No Pathologist account is available. Ask an administrator to assign the PATHOLOGIST role.";
+    if (selectedOption.group === "lab" && (!medTechUserId || !pathologistUserId)) return "Select both result personnel before saving.";
     if (selectedOption.value === "consultation-follow-up" && !selectedConsultationId) {
       return "Choose an existing consultation record to attach this follow-up.";
     }
@@ -713,8 +726,11 @@ const EncodingPage = () => {
       encodingOptions.find((option) => option.value === value) ?? encodingOptions[0];
     setSelectedOptionValue(nextOption.value);
     setLabResultDate(today());
+    setLabNumber("");
     setFormValues(emptyValuesFor(nextOption));
     setSelectedConsultationId("");
+    setMedTechUserId("");
+    setPathologistUserId("");
   };
 
   const updateField = (key: string, value: string) => {
@@ -859,6 +875,7 @@ const EncodingPage = () => {
     ) {
       return;
     }
+    if (!medTechUserId || !pathologistUserId || !findLabUserById(labUsers, medTechUserId) || !findLabUserById(labUsers, pathologistUserId)) return;
 
     if (selectedOption.value === "lab-clinical-chemistry") {
       for (const test of selectedClinicalChemistryTests) {
@@ -873,11 +890,13 @@ const EncodingPage = () => {
               : [field.key];
           }),
         ]);
-        const form: LabResultPayload = Object.fromEntries(
+        const form: LabResultPayload = {
+          ...Object.fromEntries(
           Object.entries(formValues).filter(
             ([key, value]) => testFieldKeys.has(key) && value.trim() !== ""
-          )
-        );
+          )),
+          lab_no: labNumber.trim(),
+        };
 
         await saveLab.mutateAsync({
           patientId: selectedPatient.patient_id,
@@ -886,10 +905,13 @@ const EncodingPage = () => {
           resultDate: labResultDate || today(),
           schemaKey: test.schemaKey,
           testName: test.testName,
+          medTechUserId,
+          pathologistUserId,
         });
       }
 
       setFormValues(emptyValuesFor(selectedOption));
+      setLabNumber("");
       return;
     }
 
@@ -897,11 +919,13 @@ const EncodingPage = () => {
       return;
     }
 
-    const form: LabResultPayload = Object.fromEntries(
+    const form: LabResultPayload = {
+      ...Object.fromEntries(
       Object.entries(formValues).filter(
         ([key, value]) => key !== "chemistry_test" && value.trim() !== ""
-      )
-    );
+      )),
+      lab_no: labNumber.trim(),
+    };
 
     const ogttDetails =
       formValues.test_type === "50G"
@@ -922,8 +946,11 @@ const EncodingPage = () => {
       resultDate: labResultDate || today(),
       schemaKey: labDetails.schemaKey ?? null,
       testName: labDetails.testName ?? selectedOption.label,
+      medTechUserId,
+      pathologistUserId,
     });
     setFormValues(emptyValuesFor(selectedOption));
+    setLabNumber("");
   };
 
   return (
@@ -1254,7 +1281,8 @@ const EncodingPage = () => {
                     )} */}
 
                     {selectedOption.group === "lab" && (
-                      <div className="grid gap-4 rounded-xl border border-[#f2d7dd] bg-[#fffafb] p-4 md:grid-cols-[minmax(0,240px)_1fr] md:items-end">
+                      <div className="space-y-4 rounded-xl border border-[#f2d7dd] bg-[#fffafb] p-4">
+                        <div className="grid gap-4 md:grid-cols-[minmax(0,240px)_1fr] md:items-end">
                         <Input
                           label="Result date"
                           type="date"
@@ -1270,6 +1298,20 @@ const EncodingPage = () => {
                             <span className="text-xs">Use the date the result was verified.</span>
                           </span>
                         </div>
+                        </div>
+                        <LabResultReferencePanel
+                          labNumber={labNumber}
+                          onLabNumberChange={setLabNumber}
+                        />
+                        <LabResultPersonnelPanel
+                          isLoading={isLoadingLabUsers}
+                          medTechOptions={medTechUsers}
+                          medTechUserId={medTechUserId}
+                          onMedTechChange={setMedTechUserId}
+                          pathologistOptions={pathologistUsers}
+                          pathologistUserId={pathologistUserId}
+                          onPathologistChange={setPathologistUserId}
+                        />
                       </div>
                     )}
 

@@ -694,9 +694,26 @@ export const createPresciptions = async (payload: PrescriptionPayload) => {
 
 export const getAllPatientConsultationRecord = async (
   patient_id: number,
-  search?: string
+  search?: string,
+  page = 1,
+  limit = 10,
 ) => {
-  const consultations = await prisma.consultation.findMany({
+  const where = {
+      patient_id,
+
+      ...(search && {
+        OR: [
+          { chief_complaint: { contains: search } },
+          { hist_illness: { contains: search } },
+          { examination: { contains: search } },
+          { assessment: { contains: search } },
+          { plans: { contains: search } },
+        ],
+      }),
+    };
+  const [total, consultations] = await prisma.$transaction([
+    prisma.consultation.count({ where }),
+    prisma.consultation.findMany({
     where: {
       patient_id,
 
@@ -712,6 +729,8 @@ export const getAllPatientConsultationRecord = async (
     },
 
     orderBy: { consultation_id: "desc" },
+    skip: (page - 1) * limit,
+    take: limit,
 
     include: {
       patient: true,
@@ -727,7 +746,8 @@ export const getAllPatientConsultationRecord = async (
         },
       },
     },
-  });
+  }),
+  ]);
 
   const baseline = await prisma.consultationRecords.findUnique({
     where: { patient_id },
@@ -759,14 +779,27 @@ export const getAllPatientConsultationRecord = async (
   }));
   // console.log('ywaw', pota)
 
-  return pota;
+  return { data: pota, pagination: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) } };
 };
 
 export const getAllPatientMedCertRecord = async (
   patient_id: number,
-  search?: string
+  search?: string,
+  page = 1,
+  limit = 10,
 ) => {
-  const certificates = await prisma.medicalCertificateResult.findMany({
+  const where = {
+      patient_id,
+
+      ...(search && {
+        OR: [
+          { purpose: { contains: search } },
+        ],
+      }),
+    };
+  const [total, certificates] = await prisma.$transaction([
+    prisma.medicalCertificateResult.count({ where }),
+    prisma.medicalCertificateResult.findMany({
     where: {
       patient_id,
 
@@ -778,6 +811,8 @@ export const getAllPatientMedCertRecord = async (
     },
 
     orderBy: { med_cert_id: "desc" },
+    skip: (page - 1) * limit,
+    take: limit,
 
     include: {
       patient: true,
@@ -787,9 +822,10 @@ export const getAllPatientMedCertRecord = async (
         }
       },
     }
-  });
+  }),
+  ]);
 
-  return certificates.map((c) => ({
+  return { data: certificates.map((c) => ({
     medCert: {
       med_cert_id: c.med_cert_id,
       mcr_id: c.mcr_id,
@@ -800,7 +836,7 @@ export const getAllPatientMedCertRecord = async (
       result_date: c.result_date,
     },
     medCertRequest: c.med_cert_request
-  }));
+  })), pagination: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) } };
 };
 
 export const getPatientPrescription = async (consultation_id: number) => {

@@ -26,6 +26,7 @@ import { openLabPrintPage } from "@/utils/lab-print";
 import LabResultPreview from "@/components/Modal/LabModal/LabResultPreview";
 import { openConsultPrintPage } from "@/utils/consultation/consultPrint";
 import SweetAlert from "@/utils/SweetAlert";
+import Pagination from "@/components/Pagination";
 
 const RegistrationPage = () => {
   const { user } = useAuth();
@@ -43,12 +44,14 @@ const RegistrationPage = () => {
       : undefined;
 
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
   const [debouncedSearch] = useDebounce(search, 500);
   const {
     data: patientList,
     error: patientListError,
     isLoading: patientListLoading,
-  } = useGetAllpatient(debouncedSearch);
+  } = useGetAllpatient(debouncedSearch, currentPage, pageSize);
   const { data: prevVitalSigns, isLoading: vitalsLoading } = useGetPrevVitalSigns(patientId);
   const [currentRequestId, setCurrentRequestId] = useState<number | null>(null);
 
@@ -62,7 +65,8 @@ const RegistrationPage = () => {
   const [selectedConsultationRecord, setSelectedConsultationRecord] = useState<RegisterConsultationFormValues | null>(null);
   const [selectedMedCertRecord, setSelectedMedCertRecord] = useState<MedCertFormValues | null>(null);
   const [selectedPrescriptionRecord, setSelectedPrescriptionRecord] = useState<PrescriptionValues | null>(null);
-  const patientCount = patientList?.length ?? 0;
+  const patients = patientList?.data ?? [];
+  const patientCount = patientList?.pagination.total ?? 0;
 
   const [activeRecord, setActiveRecord] = useState<LabRequest | null>(null);
 
@@ -147,7 +151,7 @@ const RegistrationPage = () => {
 
         {selectedPatient && activeAction == "history" && (
           <ModalHeader showModal={true} title={"History Records"} subtitle="View previous consultations, laboratory records, and medical certificates." sizeModal="2xlarge" onClose={closeNested}>
-            <ViewPatientHistoryModal patient={selectedPatient}
+            <ViewPatientHistoryModal key={selectedPatient.patient_id} patient={selectedPatient}
               onViewPrescription={(requestId, form) => {
                 setActiveAction("prescription");
                 handleViewPrescription(requestId, form);
@@ -375,7 +379,7 @@ const RegistrationPage = () => {
                 type="text"
                 placeholder="Search patients"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                 className="w-full bg-black/10 border border-black/15 rounded-xl pl-10 pr-4 py-2.5 text-sm text-black placeholder-black/30 outline-none focus:bg-black/15 focus:border-black/30 transition"
               />
             </div>
@@ -437,7 +441,7 @@ const RegistrationPage = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {patientList?.map((patient: PatientProps) => (
+                {patients.map((patient: PatientProps) => (
                   <PatientCard
                     key={patient.patient_id}
                     patient={patient}
@@ -448,6 +452,16 @@ const RegistrationPage = () => {
                   />
                 ))}
               </div>
+            )}
+            {patientList && patientList.pagination.totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={patientList.pagination.totalPages}
+                totalEntries={patientList.pagination.total}
+                calculateStartIndex={() => patientList.pagination.total ? (currentPage - 1) * pageSize + 1 : 0}
+                calculateEndIndex={() => Math.min(currentPage * pageSize, patientList.pagination.total)}
+                setCurrentPage={setCurrentPage}
+              />
             )}
           </div>
         </div>

@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (normalizedRoles.includes("ADMIN")) return router.replace("/dashboard");
     if (normalizedRoles.includes("ENCODER")) return router.replace("/encoding");
     if (normalizedRoles.includes("DOCTOR")) return router.replace("/docDashboard");
-    if (normalizedRoles.includes("LAB") || normalizedRoles.includes("LABORATORY")) {
+    if (normalizedRoles.includes("LAB") || normalizedRoles.includes("LABORATORY") || normalizedRoles.includes("PATHOLOGIST")) {
       return router.replace("/labdashboard");
     }
     if (normalizedRoles.includes("STAFF")) return router.replace("/registration");
