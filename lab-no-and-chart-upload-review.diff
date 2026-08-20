@@ -134,3 +134,25 @@
 +// Valid selections upload sequentially immediately after selection.
 +// The active-ID guard prevents accidental duplicate requests from the action
 +// button and automatic flow. Failed files retain their Retry control.
++
++--- a/frontend/app/(admin)/patient-charts/page.tsx
++++ b/frontend/app/(admin)/patient-charts/page.tsx
++@@ createQueueItem
++-id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`
+++// Avoid browser crypto support differences in the client upload queue.
+++id: `chart-${Date.now()}-${file.lastModified}-${++queueItemSequence}`
++
++--- a/backend/src/modules/patient-chart/patient-chart.services.ts
++++ b/backend/src/modules/patient-chart/patient-chart.services.ts
++@@ createPatientChartAttachment
++-const storedName = `${randomUUID()}${extension}`;
++-const storedPath = path.join(UPLOAD_DIRECTORY, storedName);
++-await mkdir(UPLOAD_DIRECTORY, { recursive: true });
+++const patientDirectoryName = `patient-${patient.patient_id}`;
+++const storedFileName = `${randomUUID()}${extension}`;
+++const storedName = path.posix.join(patientDirectoryName, storedFileName);
+++const storedPath = path.join(UPLOAD_DIRECTORY, patientDirectoryName, storedFileName);
+++await mkdir(path.dirname(storedPath), { recursive: true });
++@@ getPatientChartAttachmentFile
+++// Resolve only paths inside uploads/patient-charts. This continues to read
+++// existing flat filenames while safely supporting the new patient folders.

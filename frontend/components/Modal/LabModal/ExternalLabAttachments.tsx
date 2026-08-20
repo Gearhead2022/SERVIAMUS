@@ -7,7 +7,7 @@ import {
   useUploadExternalLabAttachment,
 } from "@/hooks/Lab/useLab";
 import { openExternalLabAttachment } from "@/services/lab.service";
-import { FileText, Image as ImageIcon, LoaderCircle, Paperclip, Upload, ExternalLink, RefreshCw } from "lucide-react";
+import { FileText, Image as ImageIcon, LoaderCircle, Paperclip, Upload, ExternalLink, RefreshCw, X } from "lucide-react";
 
 type Props = {
   canUpload?: boolean;
@@ -41,6 +41,11 @@ export default function ExternalLabAttachments({
     setFile(event.target.files?.[0] ?? null);
   };
 
+  const clearSelectedFile = () => {
+    setFile(null);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
   const handleUpload = async () => {
     if (!file || upload.isPending) return;
 
@@ -51,10 +56,9 @@ export default function ExternalLabAttachments({
       sourceLaboratory,
       description,
     });
-    setFile(null);
+    clearSelectedFile();
     setSourceLaboratory("");
     setDescription("");
-    if (inputRef.current) inputRef.current.value = "";
   };
 
   return (
@@ -97,7 +101,14 @@ export default function ExternalLabAttachments({
             <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Optional context for the doctor" className="w-full rounded-lg border border-[#d7e7e3] bg-white px-3 py-2 text-sm outline-none focus:border-[#0e7c7b]" />
           </label>
           <div className="flex items-center justify-between gap-3 sm:col-span-2">
-            <p className="text-xs text-slate-500">{file ? `${file.name} · ${fileSize(file.size)}` : "Maximum file size: 10 MB"}</p>
+            {file ? (
+              <div className="flex min-w-0 items-center gap-2 text-xs text-slate-600">
+                <span className="truncate">{file.name} · {fileSize(file.size)}</span>
+                <button type="button" onClick={clearSelectedFile} disabled={upload.isPending} aria-label={`Remove ${file.name}`} title="Remove selected file" className="shrink-0 rounded p-1 text-slate-500 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50">
+                  <X size={15} />
+                </button>
+              </div>
+            ) : <p className="text-xs text-slate-500">Maximum file size: 10 MB</p>}
             <button type="button" onClick={handleUpload} disabled={!file || upload.isPending} className="inline-flex items-center gap-2 rounded-lg bg-[#0e7c7b] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#065f5b] disabled:cursor-not-allowed disabled:opacity-50">
               {upload.isPending ? <LoaderCircle size={14} className="animate-spin" /> : <Upload size={14} />}
               Attach result

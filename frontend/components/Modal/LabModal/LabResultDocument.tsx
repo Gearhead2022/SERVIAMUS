@@ -821,7 +821,7 @@ function UrinalysisDocument({ request, form }: Props) {
             </div>
 
             <div className="px-4 py-2 border-r border-slate-300">
-              ResultS
+              Results
             </div>
             <div className="px-4 py-2">
               REFERENCE RANGE

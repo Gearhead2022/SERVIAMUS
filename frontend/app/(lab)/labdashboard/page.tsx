@@ -404,7 +404,10 @@ export default function DashboardPage() {
     setPreviewPayload(null);
   };
 
-  const handleSaveResults = async (form: LabResultPayload) => {
+  const handleSaveResults = async (
+    form: LabResultPayload,
+    personnel: { medTechUserId: number; pathologistUserId: number }
+  ) => {
     if (!activeRequest || !activeTemplate) {
       return;
     }
@@ -414,6 +417,7 @@ export default function DashboardPage() {
         labId: activeRequest.labId,
         category: activeTemplate.apiCategory,
         form,
+        ...personnel,
       });
 
       syncSelectedRequest(updated);

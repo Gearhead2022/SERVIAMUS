@@ -91,13 +91,54 @@ export const createPatientChartAttachment = async ({
   }
 };
 
-export const getPatientChartAttachments = async (patientId: number) => {
+export const getPatientChartAttachments = async (
+  patientId: number,
+  search?: string
+) => {
+  return getPatientChartAttachmentsPage(patientId, 1, 10, search);
+};
+
+export const getPatientChartAttachmentsPage = async (
+  patientId: number,
+  page: number,
+  limit: number,
+  search?: string
+) => {
   const patient = await prisma.patients.findUnique({ where: { patient_id: patientId }, select: { patient_id: true } });
   if (!patient) throw new PatientChartError(404, "The selected patient was not found.");
-  return prisma.patientChartAttachment.findMany({
-    where: { patient_id: patientId }, orderBy: { created_at: "desc" },
-    select: { attachment_id: true, patient_id: true, file_name: true, mime_type: true, file_size: true, created_at: true, uploader: { select: { name: true } } },
-  });
+  const safePage = Math.max(1, Math.floor(page));
+  const safeLimit = Math.min(50, Math.max(1, Math.floor(limit)));
+  const keyword = search?.trim();
+  const where = {
+    patient_id: patientId,
+    ...(keyword
+      ? {
+          file_name: {
+            contains: keyword,
+          },
+        }
+      : {}),
+  };
+  const [data, total] = await Promise.all([
+    prisma.patientChartAttachment.findMany({
+      where,
+      orderBy: { created_at: "desc" },
+      skip: (safePage - 1) * safeLimit,
+      take: safeLimit,
+      select: { attachment_id: true, patient_id: true, file_name: true, mime_type: true, file_size: true, created_at: true, uploader: { select: { name: true } } },
+    }),
+    prisma.patientChartAttachment.count({ where }),
+  ]);
+
+  return {
+    data,
+    pagination: {
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+    },
+  };
 };
 
 export const getPatientChartAttachmentFile = async (attachmentId: number) => {
@@ -109,4 +150,17 @@ export const getPatientChartAttachmentFile = async (attachmentId: number) => {
   if (!storedPath) throw new PatientChartError(404, "The patient chart file is no longer available.");
   try { return { ...attachment, file: await readFile(storedPath) }; }
   catch { throw new PatientChartError(404, "The patient chart file is no longer available."); }
+};
+
+export const deletePatientChartAttachment = async (attachmentId: number) => {
+  const attachment = await prisma.patientChartAttachment.findUnique({
+    where: { attachment_id: attachmentId },
+    select: { attachment_id: true, stored_name: true },
+  });
+  if (!attachment) throw new PatientChartError(404, "The patient chart file was not found.");
+
+  await prisma.patientChartAttachment.delete({ where: { attachment_id: attachmentId } });
+
+  const storedPath = resolveStoredChartPath(attachment.stored_name);
+  if (storedPath) await unlink(storedPath).catch(() => undefined);
 };

@@ -34,7 +34,10 @@ import SweetAlert from "@/utils/SweetAlert";
 
 type Props = {
   request: LabRequest;
-  onSubmit: (form: LabResultPayload) => void;
+  onSubmit: (
+    form: LabResultPayload,
+    personnel: { medTechUserId: number; pathologistUserId: number }
+  ) => void;
   onCancel: () => void;
 };
 
@@ -77,14 +80,20 @@ export default function LabResultEditor({ request, onSubmit, onCancel }: Props) 
       return;
     }
 
-    onSubmit({
-      ...form,
-      lab_no: labNumber.trim(),
-      ...buildLabPersonnelPayload({
-        medTechUser,
-        pathologistUser,
-      }),
-    });
+    onSubmit(
+      {
+        ...form,
+        lab_no: labNumber.trim(),
+        ...buildLabPersonnelPayload({
+          medTechUser,
+          pathologistUser,
+        }),
+      },
+      {
+        medTechUserId: medTechUser.userId,
+        pathologistUserId: pathologistUser.userId,
+      }
+    );
   };
 
   const editor = (() => {

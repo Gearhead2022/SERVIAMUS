@@ -1,10 +1,20 @@
 import api from "./axios";
-import { PatientChartAttachment, PatientChartUploadPayload } from "@/types/PatientChartTypes";
+import { PatientChartAttachment, PatientChartAttachmentList, PatientChartUploadPayload } from "@/types/PatientChartTypes";
 import { resolvePatientChartMimeType } from "@/utils/patient-chart-file";
 
-export const fetchPatientChartAttachments = async (patientId: number) => {
-  const response = await api.get(`/api/patient-chart/patients/${patientId}/attachments`);
-  return (response.data.data ?? []) as PatientChartAttachment[];
+export const fetchPatientChartAttachments = async (
+  patientId: number,
+  page = 1,
+  limit = 10,
+  search = ""
+) => {
+  const response = await api.get(`/api/patient-chart/patients/${patientId}/attachments`, {
+    params: { page, limit, ...(search.trim() ? { search: search.trim() } : {}) },
+  });
+  return {
+    data: (response.data.data ?? []) as PatientChartAttachment[],
+    pagination: response.data.pagination,
+  } as PatientChartAttachmentList;
 };
 
 export const uploadPatientChartAttachment = async ({ file, patientId, onProgress }: PatientChartUploadPayload) => {
@@ -33,4 +43,8 @@ export const openPatientChartAttachment = async (attachmentId: number) => {
   const url = URL.createObjectURL(response.data as Blob);
   window.open(url, "_blank", "noopener,noreferrer");
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+};
+
+export const deletePatientChartAttachment = async (attachmentId: number) => {
+  await api.delete(`/api/patient-chart/attachments/${attachmentId}`);
 };

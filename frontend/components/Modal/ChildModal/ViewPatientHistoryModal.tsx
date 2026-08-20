@@ -506,7 +506,12 @@ const ViewPatientHistoryModal: React.FC<{
         { dateFrom, dateTo, recordGroup, page: activeTab === "laboratory" ? currentPage : 1, limit: pageSize }
     );
     const labRecords = labRecordResponse?.data ?? [];
-    const { data: medicalCharts = [] } = usePatientChartAttachments(patient?.patient_id);
+    const { data: medicalChartResponse } = usePatientChartAttachments(
+        patient?.patient_id,
+        activeTab === "medicalCharts" ? currentPage : 1,
+        pageSize,
+    );
+    const medicalCharts = medicalChartResponse?.data ?? [];
 
     const initials = patient?.name
         ? patient.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
@@ -516,7 +521,7 @@ const ViewPatientHistoryModal: React.FC<{
         consultations: consultationList?.pagination.total ?? 0,
         laboratory: labRecordResponse?.pagination.total ?? 0,
         certificates: medCertList?.pagination.total ?? 0,
-        medicalCharts: medicalCharts.length,
+        medicalCharts: medicalChartResponse?.pagination.total ?? 0,
     };
 
     const activePagination = activeTab === "consultations"
@@ -525,7 +530,9 @@ const ViewPatientHistoryModal: React.FC<{
             ? labRecordResponse?.pagination
             : activeTab === "certificates"
                 ? medCertList?.pagination
-                : undefined;
+                : activeTab === "medicalCharts"
+                    ? medicalChartResponse?.pagination
+                    : undefined;
 
     const urgentLabs = labRecords.filter((l: LabRequest) => l.status !== "done" && l.priority === "Urgent");
     const pendingLabs = labRecords.filter((l: LabRequest) => l.status === "pending" || l.status === "queued");

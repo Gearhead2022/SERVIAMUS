@@ -1,12 +1,16 @@
 import { Request, Response } from "express";
 import { handlePatientChartError } from "./patient-chart.errors";
-import { createPatientChartAttachment, decodeChartHeader, getPatientChartAttachmentFile, getPatientChartAttachments } from "./patient-chart.services";
+import { createPatientChartAttachment, decodeChartHeader, deletePatientChartAttachment, getPatientChartAttachmentFile, getPatientChartAttachmentsPage } from "./patient-chart.services";
 
 export const listPatientChartAttachmentsController = async (req: Request, res: Response) => {
   try {
     const patientId = Number(req.params.patientId);
     if (!Number.isInteger(patientId) || patientId <= 0) return res.status(400).json({ success: false, message: "Invalid patient." });
-    return res.status(200).json({ success: true, data: await getPatientChartAttachments(patientId) });
+    const page = Number(req.query.page ?? 1);
+    const limit = Number(req.query.limit ?? 10);
+    const search = typeof req.query.search === "string" ? req.query.search : undefined;
+    if (!Number.isInteger(page) || !Number.isInteger(limit) || page <= 0 || limit <= 0) return res.status(400).json({ success: false, message: "Invalid pagination." });
+    return res.status(200).json({ success: true, ...(await getPatientChartAttachmentsPage(patientId, page, limit, search)) });
   } catch (error) { return handlePatientChartError(res, error, "Failed to fetch patient chart files."); }
 };
 
@@ -34,4 +38,13 @@ export const downloadPatientChartAttachmentController = async (req: Request, res
     res.setHeader("Cache-Control", "private, no-store");
     return res.status(200).send(attachment.file);
   } catch (error) { return handlePatientChartError(res, error, "Failed to open patient chart file."); }
+};
+
+export const deletePatientChartAttachmentController = async (req: Request, res: Response) => {
+  try {
+    const attachmentId = Number(req.params.attachmentId);
+    if (!Number.isInteger(attachmentId) || attachmentId <= 0) return res.status(400).json({ success: false, message: "Invalid patient chart file." });
+    await deletePatientChartAttachment(attachmentId);
+    return res.status(200).json({ success: true, message: "Patient chart file deleted." });
+  } catch (error) { return handlePatientChartError(res, error, "Failed to delete patient chart file."); }
 };

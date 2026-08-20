@@ -1,0 +1,35 @@
+# Patient chart and external laboratory file removal — review guide
+
+--- a/frontend/app/(admin)/patient-charts/page.tsx
++++ b/frontend/app/(admin)/patient-charts/page.tsx
+@@ selected chart files
+-// Selected files upload immediately.
++// Files remain queued until "Upload eligible files" is pressed.
++// This gives the user time to remove an accidental selection.
+@@ each queue row
++<button
++  type="button"
++  onClick={() => removeFile(item.id)}
++  aria-label={item.status === "complete" ? "Clear from this upload list" : "Remove selected file"}
++>
++  <X />
++</button>
+
+# Pending, failed, and invalid files: X removes them before upload.
+# Completed files: X clears the row from the current upload list only; it does
+# not delete the chart already stored for the patient.
+
+--- a/frontend/components/Modal/LabModal/ExternalLabAttachments.tsx
++++ b/frontend/components/Modal/LabModal/ExternalLabAttachments.tsx
+@@ selected external result
++const clearSelectedFile = () => {
++  setFile(null);
++  if (inputRef.current) inputRef.current.value = "";
++};
++
++<button type="button" onClick={clearSelectedFile} aria-label={`Remove ${file.name}`}>
++  <X />
++</button>
+
+# The external-laboratory X removes only the currently selected, unsent file.
+# It does not delete an external result already attached to the patient.

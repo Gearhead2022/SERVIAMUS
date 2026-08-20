@@ -1,0 +1,30 @@
+# Patient chart management — review guide
+
+## Backend contract
+
+- `GET /api/patient-chart/patients/:patientId/attachments?page=1&limit=8`
+  now returns `{ data, pagination }` and performs `skip`/`take` in Prisma.
+- `DELETE /api/patient-chart/attachments/:attachmentId` is ADMIN-only. It removes
+  the attachment record and then attempts to remove its scoped patient-chart file.
+- Uploaded charts remain organized under `uploads/patient-charts/patient-{patientId}/`.
+
+## Frontend
+
+- The Patient Chart page now provides a selected-patient control rail, explicit
+  upload queue, document library, view/delete controls, and a destructive-action
+  confirmation dialog.
+- Both the patient directory and the chart file library use server responses and
+  the shared Pagination component; no document list is sliced in the browser.
+- The Medical Charts tab in patient history requests its active page from the
+  same server-side list endpoint and uses its returned total for the chart count.
+
+## Files changed for this feature
+
+- backend/src/modules/patient-chart/patient-chart.controller.ts
+- backend/src/modules/patient-chart/patient-chart.routes.ts
+- backend/src/modules/patient-chart/patient-chart.services.ts
+- frontend/app/(admin)/patient-charts/page.tsx
+- frontend/components/Modal/ChildModal/ViewPatientHistoryModal.tsx
+- frontend/hooks/Patient/usePatientCharts.ts
+- frontend/services/patient-chart.services.ts
+- frontend/types/PatientChartTypes.ts
