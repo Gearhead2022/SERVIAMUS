@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { mkdir, readFile, unlink, writeFile } from "fs/promises";
 import path from "path";
 import { prisma } from "../../config/prismaClient";
@@ -42,6 +42,19 @@ const resolveChartMimeType = (mimeType: string, fileName: string) => {
   return mimeTypeByExtension.get(path.extname(fileName).toLowerCase()) ?? null;
 };
 
+const hasExpectedFileSignature = (body: Buffer, mimeType: string) => {
+  if (mimeType === "application/pdf") {
+    return body.indexOf("%PDF-", 0, "ascii") >= 0 && body.indexOf("%PDF-", 0, "ascii") <= 1024;
+  }
+  if (mimeType === "image/jpeg") {
+    return body.length >= 3 && body[0] === 0xff && body[1] === 0xd8 && body[2] === 0xff;
+  }
+  if (mimeType === "image/png") {
+    return body.length >= 8 && body.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  }
+  return false;
+};
+
 export type CreatePatientChartAttachmentInput = {
   body: Buffer;
   fileName: string;
@@ -60,6 +73,8 @@ export const createPatientChartAttachment = async ({
   const resolvedMimeType = resolveChartMimeType(mimeType, safeFileName);
   const extension = resolvedMimeType ? allowedMimeTypes.get(resolvedMimeType) : null;
   if (!extension || !resolvedMimeType) throw new PatientChartError(400, "Only PDF, JPG, and PNG patient chart files are allowed.");
+  if (!hasExpectedFileSignature(body, resolvedMimeType)) throw new PatientChartError(400, "The file content does not match its declared PDF, JPG, or PNG type.");
+  const contentSha256 = createHash("sha256").update(body).digest("hex");
 
   const [patient, uploader] = await Promise.all([
     prisma.patients.findUnique({ where: { patient_id: patientId }, select: { patient_id: true } }),
@@ -67,6 +82,39 @@ export const createPatientChartAttachment = async ({
   ]);
   if (!patient) throw new PatientChartError(404, "The selected patient was not found.");
   if (!uploader) throw new PatientChartError(401, "The uploading administrator was not found.");
+
+  // Older chart rows predate checksum storage. Compare their existing files on
+  // demand so a newly uploaded scan cannot duplicate a legacy attachment.
+  const legacyAttachments = await prisma.patientChartAttachment.findMany({
+    where: { patient_id: patientId, content_sha256: null },
+    select: {
+      attachment_id: true, patient_id: true, file_name: true, mime_type: true, file_size: true, created_at: true, stored_name: true,
+      uploader: { select: { name: true } },
+    },
+  });
+  for (const legacyAttachment of legacyAttachments) {
+    const legacyPath = resolveStoredChartPath(legacyAttachment.stored_name);
+    if (!legacyPath) continue;
+    try {
+      const legacyHash = createHash("sha256").update(await readFile(legacyPath)).digest("hex");
+      if (legacyHash === contentSha256) {
+        const { stored_name: _storedName, ...attachment } = legacyAttachment;
+        return { attachment, duplicate: true };
+      }
+    } catch {
+      // A missing legacy file is handled by its regular download path; it must
+      // not prevent a valid new chart from being filed.
+    }
+  }
+
+  const existingAttachment = await prisma.patientChartAttachment.findFirst({
+    where: { patient_id: patientId, content_sha256: contentSha256 },
+    select: {
+      attachment_id: true, patient_id: true, file_name: true, mime_type: true, file_size: true, created_at: true,
+      uploader: { select: { name: true } },
+    },
+  });
+  if (existingAttachment) return { attachment: existingAttachment, duplicate: true };
 
   const patientDirectoryName = `patient-${patient.patient_id}`;
   const storedFileName = `${randomUUID()}${extension}`;
@@ -78,17 +126,39 @@ export const createPatientChartAttachment = async ({
   await writeFile(storedPath, body, { flag: "wx" });
 
   try {
-    return await prisma.patientChartAttachment.create({
-      data: { patient_id: patientId, uploaded_by: uploadedBy, file_name: safeFileName, stored_name: storedName, mime_type: resolvedMimeType, file_size: body.length },
+    const attachment = await prisma.patientChartAttachment.create({
+      data: { patient_id: patientId, uploaded_by: uploadedBy, file_name: safeFileName, stored_name: storedName, mime_type: resolvedMimeType, file_size: body.length, content_sha256: contentSha256 },
       select: {
         attachment_id: true, patient_id: true, file_name: true, mime_type: true, file_size: true, created_at: true,
         uploader: { select: { name: true } },
       },
     });
+    return { attachment, duplicate: false };
   } catch (error) {
     await unlink(storedPath).catch(() => undefined);
+    if ((error as { code?: string }).code === "P2002") {
+      const duplicateAttachment = await prisma.patientChartAttachment.findFirst({
+        where: { patient_id: patientId, content_sha256: contentSha256 },
+        select: {
+          attachment_id: true, patient_id: true, file_name: true, mime_type: true, file_size: true, created_at: true,
+          uploader: { select: { name: true } },
+        },
+      });
+      if (duplicateAttachment) return { attachment: duplicateAttachment, duplicate: true };
+    }
     throw error;
   }
+};
+
+export const resolvePatientChartBatchPatients = async (patientCodes: string[]) => {
+  const normalizedCodes = [...new Set(patientCodes.map((code) => code.trim()).filter(Boolean))];
+  if (!normalizedCodes.length) return [];
+  if (normalizedCodes.length > 20_000) throw new PatientChartError(400, "A batch can reference at most 20,000 patient codes.");
+
+  return prisma.patients.findMany({
+    where: { patient_code: { in: normalizedCodes } },
+    select: { patient_id: true, patient_code: true, name: true },
+  });
 };
 
 export const getPatientChartAttachments = async (

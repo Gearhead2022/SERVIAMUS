@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { Fragment, useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import {
@@ -53,11 +54,22 @@ export default function UrinalysisModal({
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors },
   } = useForm<UrinalysisFormValues>({
     resolver: zodResolver(urinalysisSchema),
     defaultValues: mergeLabFormDefaults(urinalysisDefaultValues, initialValues),
   });
+  const rbc = useWatch({ control, name: "rbc" });
+  const rbcCount = Number.parseFloat(rbc?.trim() ?? "");
+  const showMorphology = Number.isFinite(rbcCount) && rbcCount > 10;
+
+  useEffect(() => {
+    if (!showMorphology) {
+      setValue("morphology", "");
+    }
+  }, [setValue, showMorphology]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 p-5">
@@ -110,13 +122,24 @@ export default function UrinalysisModal({
         </div>
         <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           {sectionFields.microscopic.map(({ label, name }) => (
-            <Input
-              key={name}
-              label={label}
-              placeholder="--"
-              {...register(name)}
-              error={errors[name]?.message}
-            />
+            <Fragment key={name}>
+              <Input
+                label={label}
+                placeholder="--"
+                {...register(name)}
+                error={errors[name]?.message}
+              />
+              {name === "rbc" && showMorphology && (
+                <div className="col-start-2">
+                  <Input
+                    label="Morphology"
+                    placeholder="Enter RBC morphology"
+                    {...register("morphology")}
+                    error={errors.morphology?.message}
+                  />
+                </div>
+              )}
+            </Fragment>
           ))}
         </div>
       </div>

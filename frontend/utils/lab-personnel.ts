@@ -18,6 +18,7 @@ const defaultLabPersonnel = {
 
 const labResultMetaKeys = new Set([
   "lab_no",
+  "ionized_calcium_unit",
   "medTechUserId",
   "med_tech_user_id",
   "medtech_license_no",

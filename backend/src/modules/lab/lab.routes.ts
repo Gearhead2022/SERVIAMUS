@@ -52,7 +52,7 @@ router.get(
 );
 router.get(
   "/patients/:patientId/attachments",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "PATHOLOGIST"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "PATHOLOGIST", "STAFF", "ENCODER"]),
   getExternalLabAttachmentsController
 );
 router.get(
@@ -62,7 +62,7 @@ router.get(
 );
 router.get(
   "/attachments/:attachmentId/file",
-  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "PATHOLOGIST"]),
+  authorize(["ADMIN", "DOCTOR", "LAB", "LABORATORY", "PATHOLOGIST", "STAFF", "ENCODER"]),
   downloadExternalLabAttachmentController
 );
 router.post(

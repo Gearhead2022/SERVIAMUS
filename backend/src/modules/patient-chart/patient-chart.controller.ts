@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { handlePatientChartError } from "./patient-chart.errors";
-import { createPatientChartAttachment, decodeChartHeader, deletePatientChartAttachment, getPatientChartAttachmentFile, getPatientChartAttachmentsPage } from "./patient-chart.services";
+import { createPatientChartAttachment, decodeChartHeader, deletePatientChartAttachment, getPatientChartAttachmentFile, getPatientChartAttachmentsPage, resolvePatientChartBatchPatients } from "./patient-chart.services";
 
 export const listPatientChartAttachmentsController = async (req: Request, res: Response) => {
   try {
@@ -19,13 +19,24 @@ export const uploadPatientChartAttachmentController = async (req: Request, res: 
     const patientId = Number(req.query.patientId);
     const uploadedBy = req.user?.user_id;
     if (!Number.isInteger(patientId) || patientId <= 0 || !uploadedBy) return res.status(400).json({ success: false, message: "A valid patient is required." });
-    const attachment = await createPatientChartAttachment({
+    const result = await createPatientChartAttachment({
       body: req.body, patientId, uploadedBy,
       fileName: decodeChartHeader(req.header("x-file-name")) || "patient-chart",
       mimeType: decodeChartHeader(req.header("x-file-type")),
     });
-    return res.status(201).json({ success: true, data: attachment });
+    return res.status(result.duplicate ? 200 : 201).json({ success: true, data: result.attachment, duplicate: result.duplicate });
   } catch (error) { return handlePatientChartError(res, error, "Failed to upload patient chart file."); }
+};
+
+export const resolvePatientChartBatchPatientsController = async (req: Request, res: Response) => {
+  try {
+    const patientCodes = req.body?.patientCodes;
+    if (!Array.isArray(patientCodes) || patientCodes.some((code) => typeof code !== "string")) {
+      return res.status(400).json({ success: false, message: "Provide an array of patient codes." });
+    }
+    const patients = await resolvePatientChartBatchPatients(patientCodes);
+    return res.status(200).json({ success: true, data: patients });
+  } catch (error) { return handlePatientChartError(res, error, "Failed to resolve batch patients."); }
 };
 
 export const downloadPatientChartAttachmentController = async (req: Request, res: Response) => {

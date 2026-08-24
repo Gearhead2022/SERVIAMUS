@@ -8,6 +8,7 @@ import { usePatientLabRecords } from "@/hooks/Lab/useLab";
 import { LabRecordGroup, LabRequest, PatientRecord } from "@/types/LabTypes";
 import { getApiErrorMessage } from "@/utils/api-error";
 import { getLabRecordGroupLabel, getLabTemplateLabel } from "@/utils/lab-templates";
+import ExternalLabAttachments from "./ExternalLabAttachments";
 
 type Props = {
   patient: PatientRecord;
@@ -55,6 +56,8 @@ export default function PatientLabRecordsModal({
   );
   const records = useMemo(() => recordsResponse?.data ?? [], [recordsResponse?.data]);
   const hasFilters = Boolean(dateFrom || dateTo || recordGroup !== "all");
+  const showExternalLaboratoryResults =
+    recordGroup === "all" || recordGroup === "other";
 
   const groupedRecords = useMemo(() => {
     const sections = new Map<LabRecordGroup, LabRequest[]>();
@@ -162,75 +165,96 @@ export default function PatientLabRecordsModal({
         <div className="rounded-2xl border border-dashed border-[#f1cdc8] bg-white px-4 py-8 text-center text-sm text-[#a35144]">
           {getApiErrorMessage(error, "Unable to load patient laboratory records.")}
         </div>
-      ) : records.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#cbe6e1] bg-white px-4 py-8 text-center text-sm text-[#5c8b84]">
-          No encoded laboratory records matched the selected filters.
-        </div>
       ) : (
-        groupedRecords.map((section) => (
-          <section key={section.group} className="space-y-3">
-            <div className="flex items-center gap-3">
-              <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-[#2f5e57]">
-                {getLabRecordGroupLabel(section.group)}
-              </h4>
-              <span className="h-px flex-1 bg-[#dcebe7]" />
-              <span className="rounded-full bg-[#ecf6f4] px-3 py-1 text-[11px] font-medium text-[#396f66]">
-                {section.items.length} test{section.items.length === 1 ? "" : "s"}
-              </span>
+        <>
+          {records.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[#cbe6e1] bg-white px-4 py-8 text-center text-sm text-[#5c8b84]">
+              No encoded laboratory records matched the selected filters.
             </div>
+          ) : groupedRecords.map((section) => (
+            <section key={section.group} className="space-y-3">
+              <div className="flex items-center gap-3">
+                <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-[#2f5e57]">
+                  {getLabRecordGroupLabel(section.group)}
+                </h4>
+                <span className="h-px flex-1 bg-[#dcebe7]" />
+                <span className="rounded-full bg-[#ecf6f4] px-3 py-1 text-[11px] font-medium text-[#396f66]">
+                  {section.items.length} test{section.items.length === 1 ? "" : "s"}
+                </span>
+              </div>
 
-            <div className="grid gap-3">
-              {section.items.map((record) => (
-                <div
-                  key={record.labId}
-                  className="rounded-2xl border border-[#d5ebe6] bg-white p-4 shadow-sm"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0 space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-md bg-[#e6f7f3] px-2 py-1 text-xs font-semibold text-[#2e7a6e]">
-                          {record.id}
-                        </span>
-                        <span
-                          className={`rounded-md px-2 py-1 text-xs font-semibold ${statusBadgeClasses[record.status]}`}
-                        >
-                          {record.status}
-                        </span>
-                        <span className="rounded-md bg-[#eef4ff] px-2 py-1 text-xs font-semibold text-[#305c9b]">
-                          {getLabRecordGroupLabel(record.recordGroup)}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-base font-semibold text-[#173f39] w-100 truncate">{record.testType}</p>
-                        <p className="mt-1 text-sm text-[#63867f]">
-                          {getLabTemplateLabel(record)} - {formatRecordDate(record.requestedDate)}
-                        </p>
-                      </div>
-                      <div className="grid gap-2 text-xs text-[#5f8a83] sm:grid-cols-2">
-                        <div className="rounded-xl bg-[#f4faf8] px-3 py-2.5">
-                          <p className="font-semibold uppercase tracking-[0.16em] text-[#63867f]">
-                            Requested By
+              <div className="grid gap-3">
+                {section.items.map((record) => (
+                  <div
+                    key={record.labId}
+                    className="rounded-2xl border border-[#d5ebe6] bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-md bg-[#e6f7f3] px-2 py-1 text-xs font-semibold text-[#2e7a6e]">
+                            {record.id}
+                          </span>
+                          <span
+                            className={`rounded-md px-2 py-1 text-xs font-semibold ${statusBadgeClasses[record.status]}`}
+                          >
+                            {record.status}
+                          </span>
+                          <span className="rounded-md bg-[#eef4ff] px-2 py-1 text-xs font-semibold text-[#305c9b]">
+                            {getLabRecordGroupLabel(record.recordGroup)}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-[#173f39] w-100 truncate">{record.testType}</p>
+                          <p className="mt-1 text-sm text-[#63867f]">
+                            {getLabTemplateLabel(record)} - {formatRecordDate(record.requestedDate)}
                           </p>
-                          <p className="mt-1 text-[#476d67]">{record.requestedBy}</p>
+                        </div>
+                        <div className="grid gap-2 text-xs text-[#5f8a83] sm:grid-cols-2">
+                          <div className="rounded-xl bg-[#f4faf8] px-3 py-2.5">
+                            <p className="font-semibold uppercase tracking-[0.16em] text-[#63867f]">
+                              Requested By
+                            </p>
+                            <p className="mt-1 text-[#476d67]">{record.requestedBy}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-wrap gap-2 lg:justify-end">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => onViewResult(record)}
-                      >
-                        View Result
-                      </Button>
+                      <div className="flex flex-wrap gap-2 lg:justify-end">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => onViewResult(record)}
+                        >
+                          View Result
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))
+                ))}
+              </div>
+            </section>
+          ))}
+
+          {showExternalLaboratoryResults && (
+            <section className="space-y-3">
+              <div className="flex items-center gap-3">
+                <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-[#2f5e57]">
+                  Other
+                </h4>
+                <span className="h-px flex-1 bg-[#dcebe7]" />
+                <span className="rounded-full bg-[#ecf6f4] px-3 py-1 text-[11px] font-medium text-[#396f66]">
+                  External results
+                </span>
+              </div>
+              <ExternalLabAttachments
+                patientId={patient.patient_id}
+                patientCode={patient.patient_code}
+                patientName={patient.name}
+              />
+            </section>
+          )}
+        </>
       )}
     </div>
   );

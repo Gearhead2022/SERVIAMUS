@@ -155,6 +155,7 @@ export const upsertStructuredLabResult = async ({
       consistency: trimFormValue(form, "consistency"),
       pus_cells: trimFormValue(form, "pus_cells"),
       rbc: trimFormValue(form, "rbc"),
+      morphology: trimFormValue(form, "morphology"),
       bacteria: trimFormValue(form, "bacteria"),
       hookworm: trimFormValue(form, "hookworm"),
       ascaris: trimFormValue(form, "ascaris"),
@@ -302,6 +303,7 @@ export const upsertStructuredLabResult = async ({
       potassium: trimFormValue(form, "potassium"),
       chloride: trimFormValue(form, "chloride"),
       ionized_calcium: trimFormValue(form, "ionized_calcium"),
+      ionized_calcium_unit: trimFormValue(form, "ionized_calcium_unit"),
       others: trimFormValue(form, "others"),
       ...resultAuditFields(medTechUserId, pathologistUserId),
     };

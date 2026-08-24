@@ -26,6 +26,7 @@ import { mapMedCertRecordToForm } from "@/utils/consultation/mapMedCertRecord";
 import { mapPrescriptionRecordToForm } from "@/utils/consultation/mapRxRecord";
 import { LabRecordGroup, LabRequest, LabResultPayload } from "@/types/LabTypes";
 import { usePatientLabRecords } from "@/hooks/Lab/useLab";
+import ExternalLabAttachments from "@/components/Modal/LabModal/ExternalLabAttachments";
 import { usePatientChartAttachments } from "@/hooks/Patient/usePatientCharts";
 import { openPatientChartAttachment } from "@/services/patient-chart.services";
 import { PatientChartAttachment } from "@/types/PatientChartTypes";
@@ -689,6 +690,25 @@ const ViewPatientHistoryModal: React.FC<{
                                 <LabCard key={lab.labId} lab={lab} onView={onViewLaboratoryTest} />
                             ))
                         }
+
+                        {(recordGroup === "all" || recordGroup === "other") && typeof patient?.patient_id === "number" && (
+                            <section className="pt-2">
+                                <div className="mb-3 flex items-center gap-3">
+                                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "#6b7da0" }}>
+                                        Other
+                                    </h3>
+                                    <span className="h-px flex-1" style={{ background: "#dce3ef" }} />
+                                    <span className="rounded-full px-2.5 py-1 text-[10px] font-semibold" style={{ background: "#eef1f9", color: "#0f2244" }}>
+                                        External results
+                                    </span>
+                                </div>
+                                <ExternalLabAttachments
+                                    patientId={patient.patient_id}
+                                    patientCode={patient.patient_code}
+                                    patientName={patient.name}
+                                />
+                            </section>
+                        )}
                     </div>
                 )}
 

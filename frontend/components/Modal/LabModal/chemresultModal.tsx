@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import {
   chemistryDefaultValues,
@@ -38,41 +39,61 @@ export default function ChemistryResultModal({
   });
 
   const ionizedCalcium = watch("ionized_calcium") || 0;
-  const ionizedConv = Number((ionizedCalcium * 4.0078).toFixed(2));
+  const ionizedCalciumUnit = watch("ionized_calcium_unit");
+  const ionizedConv = Number(
+    (
+      ionizedCalciumUnit === "mg/dL"
+        ? ionizedCalcium / 4.0078
+        : ionizedCalcium * 4.0078
+    ).toFixed(2)
+  );
+  const equivalentUnit = ionizedCalciumUnit === "mg/dL" ? "mmol/L" : "mg/dL";
+  const chemistryRows = getChemistryPanelRows(fieldNames).filter(
+    ({ fieldName }) => fieldName !== "ionized_calcium_conv"
+  );
+  const hasIonizedCalcium = chemistryRows.some(
+    ({ fieldName }) => fieldName === "ionized_calcium"
+  );
 
   return (
     <form
       onSubmit={handleSubmit((data) =>
         onSubmit({
           ...data,
-          ionized_calcium_conv: Number(
-            (data.ionized_calcium * 4.0078).toFixed(2)
-          ),
+          ionized_calcium_conv: ionizedConv,
         })
       )}
       className="p-5 space-y-5"
     >
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        {getChemistryPanelRows(fieldNames).map(({ label, fieldName }) => (
-          <div key={fieldName} className="flex flex-col gap-1">
+        {chemistryRows.map(({ label, fieldName }) => (
+            <div key={fieldName} className="contents">
+              <Input
+                label={fieldName === "ionized_calcium" ? "Ionized Calcium" : label}
+                placeholder="--"
+                inputMode="decimal"
+                {...register(fieldName as keyof ChemistryFormValues, {
+                  valueAsNumber: true,
+                })}
+                error={errors[fieldName as keyof ChemistryFormValues]?.message}
+              />
+              {fieldName === "ionized_calcium" && (
+                <Select label="Ionized Calcium Unit" {...register("ionized_calcium_unit")}>
+                  <option value="mmol/L">mmol/L</option>
+                  <option value="mg/dL">mg/dL</option>
+                </Select>
+              )}
+            </div>
+          ))}
+        {hasIonizedCalcium && (
+          <div>
             <Input
-              label={label}
-              placeholder="--"
-              inputMode="decimal"
-              {...register(fieldName as keyof ChemistryFormValues, {
-                valueAsNumber: true,
-              })}
-              error={errors[fieldName as keyof ChemistryFormValues]?.message}
+              label={`Equivalent (${equivalentUnit})`}
+              value={ionizedConv}
+              readOnly
             />
           </div>
-        ))}
-        <div>
-          <Input
-            label="Ionized Calcium (Converted)"
-            value={ionizedConv}
-            readOnly
-          />
-        </div>
+        )}
         <div className="col-span-2 flex flex-col gap-1">
           <Textarea
             label="Others"

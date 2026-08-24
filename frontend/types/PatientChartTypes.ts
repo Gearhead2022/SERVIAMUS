@@ -14,6 +14,17 @@ export type PatientChartUploadPayload = {
   onProgress?: (percent: number) => void;
 };
 
+export type PatientChartUploadResult = {
+  attachment: PatientChartAttachment;
+  duplicate: boolean;
+};
+
+export type PatientChartBatchPatient = {
+  patient_id: number;
+  patient_code: string;
+  name: string;
+};
+
 export type PatientChartAttachmentList = {
   data: PatientChartAttachment[];
   pagination: {

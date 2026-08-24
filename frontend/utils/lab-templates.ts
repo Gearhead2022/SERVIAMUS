@@ -253,8 +253,8 @@ const chemistryPanelRows: ChemistryPanelRow[] = [
   { fieldName: "sodium", label: "Sodium (Na)", unit: "mmol/L", referenceValues: "135-150" },
   { fieldName: "potassium", label: "Potassium (K)", unit: "mmol/L", referenceValues: "3.5-5.0" },
   { fieldName: "chloride", label: "Chloride (Cl)", unit: "mmol/L", referenceValues: "94-110" },
-  { fieldName: "ionized_calcium", label: "Ionized Calcium (lCa )", unit: "mg/dL", referenceValues: "1.10-1.35" },
-  { fieldName: "ionized_calcium_conv", label: "Ionized Calcium Converted", unit: "mg/dL", referenceValues: "4.4-5.4" },
+  { fieldName: "ionized_calcium", label: "Ionized Calcium", unit: "mmol/L", referenceValues: "1.10-1.35" },
+  { fieldName: "ionized_calcium_conv", label: "Ionized Calcium Equivalent", unit: "mg/dL", referenceValues: "4.4-5.4" },
 ];
 
 const chemistryPanelMatchers: Array<{

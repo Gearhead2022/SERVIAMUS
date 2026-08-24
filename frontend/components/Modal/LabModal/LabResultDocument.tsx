@@ -33,22 +33,29 @@ function LabResultRow({
   label,
   value,
   unit,
+  className = "",
 }: {
   label: string;
   value: string;
   unit?: string;
+  className?: string;
 }) {
   return (
-    <div className="grid grid-cols-[1fr_.01fr_1fr_1fr] border-b border-r border-slate-200 last:border-b-0">
+    <div className={`grid grid-cols-[1fr_.01fr_2fr] border-b border-r border-slate-200 last:border-b-0 ${className}`}>
       <div className="px-4 py-1 text-[12px] font-medium text-slate-700 uppercase flex items-center">
         {label}
       </div>
+
       <p className="text-black py-1 flex items-center">:</p>
-      <div className="px-4 py-1 text-[12px] text-black font-bold uppercase flex items-center">
-        {value}
-      </div>
-      <div className="px-4 py-1 text-[12px] text-slate-600 text-right">
-        {unit}
+
+      <div className="px-4 py-1 text-[12px] text-black flex items-center gap-2">
+        <span className="font-bold uppercase">{value}</span>
+
+        {unit && (
+          <span className="text-slate-600 font-normal">
+            {unit}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -103,6 +110,51 @@ function getValue(
   }
 
   return fallback;
+}
+
+function isRbcOverTen(form: LabResultPayload) {
+  const rbcValue = form.rbc;
+  const numericRbc = Number.parseFloat(
+    typeof rbcValue === "number" ? String(rbcValue) : rbcValue?.trim() ?? ""
+  );
+
+  return Number.isFinite(numericRbc) && numericRbc > 10;
+}
+
+function getIonizedCalciumUnit(form: LabResultPayload) {
+  return form.ionized_calcium_unit === "mg/dL" ? "mg/dL" : "mmol/L";
+}
+
+function UrinalysisRbcResultRow({ form }: { form: LabResultPayload }) {
+  if (!isRbcOverTen(form)) {
+    return (
+      <LabResultRow
+        label="RBC"
+        value={getValue(form, "rbc", "____")}
+        unit="/LPF"
+      />
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-[.55fr_.01fr_.8fr_.9fr_.01fr_1.2fr] border-b border-r border-slate-200 text-[12px]">
+      <div className="flex items-center px-4 py-1 font-medium uppercase text-slate-700">
+        RBC
+      </div>
+      <p className="flex items-center py-1 text-black">:</p>
+      <div className="flex items-center gap-2 px-3 py-1 text-black">
+        <span className="font-bold uppercase">{getValue(form, "rbc", "____")}</span>
+        <span className="font-normal text-slate-600">/LPF</span>
+      </div>
+      <div className="flex items-center px-2 py-1 font-medium uppercase text-slate-700">
+        Morphology
+      </div>
+      <p className="flex items-center py-1 text-black">:</p>
+      <div className="flex items-center px-3 py-1 font-bold uppercase text-black">
+        {getValue(form, "morphology", "____")}
+      </div>
+    </div>
+  );
 }
 function PreviewField({
   label,
@@ -391,7 +443,7 @@ function LabNumberAndRemarks({
   remarks: string;
 }) {
   return (
-    <div className="mt-10 space-y-2">
+    <div className="mt-4 space-y-2">
       <p className="text-right text-[12px] font-bold italic tracking-wide text-slate-800">
         LAB NO: {getValue(form, "lab_no", "—")}
       </p>
@@ -916,11 +968,7 @@ function UrinalysisDocument({ request, form }: Props) {
             unit="/HPF"
           />
 
-          <LabResultRow
-            label="RBC"
-            value={getValue(form, "rbc", "____")}
-            unit="/LPF"
-          />
+          <UrinalysisRbcResultRow form={form} />
 
           <LabResultRow
             label="SQUAMOUS EPITH. CELLS"
@@ -943,6 +991,22 @@ function UrinalysisDocument({ request, form }: Props) {
           <LabResultRow
             label="Mucous Threads"
             value={getValue(form, "mucous", "____")}
+            unit="/LPF"
+          />
+
+        </div>
+      </Section>
+      <Section title="">
+        <div className="overflow-hidden rounded-xl border border-slate-300 grid grid-cols-[.7fr_.7fr]">
+          <LabResultRow
+            label="Crystals"
+            value={getValue(form, "crystals", "____")}
+            unit="/HPF"
+          />
+
+          <LabResultRow
+            label="Casts"
+            value={getValue(form, "casts", "____")}
             unit="/LPF"
           />
 
@@ -1386,6 +1450,9 @@ function ChemistryPanelDocument({ request, form, displayMode = "preview" }: Prop
   const fieldNames = resolveChemistryPanelFieldNames(request);
   const rows = getChemistryPanelRows(displayMode === "print" ? undefined : fieldNames);
   const valueFallback = displayMode === "print" ? "0" : "__________________";
+  const ionizedCalciumUnit = getIonizedCalciumUnit(form);
+  const ionizedCalciumReference =
+    ionizedCalciumUnit === "mg/dL" ? "4.4-5.4" : "1.10-1.35";
 
   return (
     <PreviewShell title="CHEMISTRY" form={form}>
@@ -1417,31 +1484,22 @@ function ChemistryPanelDocument({ request, form, displayMode = "preview" }: Prop
               </div>
 
               <div className="px-4 py-2 border-r border-slate-200 text-center font-semibold text-black">
-                {row.label === "Ionized Calcium" ? (
-                  <>
-                    <div className="py-1">{getValue(form, "ionized_calcium", valueFallback)}</div>
-                    <div className="py-1">{getValue(form, "ionized_conv", valueFallback)}</div>
-                  </>
+                {row.fieldName === "ionized_calcium" ? (
+                  getValue(form, "ionized_calcium", valueFallback)
                 ) : (
                   getValue(form, row.fieldName, valueFallback)
                 )}
               </div>
               <div className="px-4 py-2 border-r border-slate-200 font-medium text-center text-slate-700 tabular-nums">
-                {row.label === "Ionized Calcium" ? (
-                  <>
-                    <div className="py-1">{row.unit}</div>
-                    <div className="py-1">mg/dL</div>
-                  </>
+                {row.fieldName === "ionized_calcium" ? (
+                  <div>{ionizedCalciumUnit}</div>
                 ) : (
                   <div>{row.unit}</div>
                 )}
               </div>
               <div className="px-4 py-2 border-r border-slate-200 font-medium text-center text-slate-700">
-                {row.label === "Ionized Calcium" ? (
-                  <>
-                    <div className="py-1">{row.referenceValues}</div>
-                    <div className="py-1">4.4-5.4</div>
-                  </>
+                {row.fieldName === "ionized_calcium" ? (
+                  <div>{ionizedCalciumReference}</div>
                 ) : (
                   <div>{row.referenceValues}</div>
                 )}

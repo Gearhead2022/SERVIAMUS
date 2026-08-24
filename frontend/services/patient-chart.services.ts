@@ -1,5 +1,5 @@
 import api from "./axios";
-import { PatientChartAttachment, PatientChartAttachmentList, PatientChartUploadPayload } from "@/types/PatientChartTypes";
+import { PatientChartAttachment, PatientChartAttachmentList, PatientChartBatchPatient, PatientChartUploadPayload, PatientChartUploadResult } from "@/types/PatientChartTypes";
 import { resolvePatientChartMimeType } from "@/utils/patient-chart-file";
 
 export const fetchPatientChartAttachments = async (
@@ -35,7 +35,15 @@ export const uploadPatientChartAttachment = async ({ file, patientId, onProgress
       onProgress?.(Math.min(100, Math.round((event.loaded / event.total) * 100)));
     },
   });
-  return response.data.data as PatientChartAttachment;
+  return {
+    attachment: response.data.data as PatientChartAttachment,
+    duplicate: Boolean(response.data.duplicate),
+  } as PatientChartUploadResult;
+};
+
+export const resolvePatientChartBatchPatients = async (patientCodes: string[]) => {
+  const response = await api.post("/api/patient-chart/batch/resolve-patients", { patientCodes });
+  return (response.data.data ?? []) as PatientChartBatchPatient[];
 };
 
 export const openPatientChartAttachment = async (attachmentId: number) => {

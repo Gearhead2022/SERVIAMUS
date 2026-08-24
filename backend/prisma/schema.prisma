@@ -513,6 +513,7 @@ model UrinalysisResult {
   blood            String?   @db.VarChar(50)
   pus_cells        String?   @db.VarChar(50)
   rbc              String?   @db.VarChar(50)
+  morphology       String?   @db.VarChar(255)
   bacteria         String?   @db.VarChar(50)
   squamous_cell    String?   @db.VarChar(50)
   round_cell       String?   @db.VarChar(50)
@@ -614,6 +615,7 @@ model ChemistryResult {
   potassium        String?   @db.VarChar(50)
   chloride         String?   @db.VarChar(50)
   ionized_calcium  String?   @db.VarChar(50)
+  ionized_calcium_unit String? @db.VarChar(10)
   others           String?   @db.Text
   med_tech_user_id Int?
   pth_user_id      Int?
@@ -750,12 +752,14 @@ model PatientChartAttachment {
   stored_name   String   @unique @db.VarChar(255)
   mime_type     String   @db.VarChar(100)
   file_size     Int
+  content_sha256 String? @db.Char(64)
   created_at    DateTime @default(now())
 
   patient  Patients @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
   uploader Users    @relation("PatientChartAttachmentUploader", fields: [uploaded_by], references: [user_id])
 
   @@index([patient_id, created_at])
+  @@unique([patient_id, content_sha256])
   @@index([uploaded_by])
   @@map("patient_chart_attachments")
 }
