@@ -26,7 +26,7 @@ type NotificationData = {
 type NotificationHandler = (data: NotificationData) => void;
 
 const ENTITY_QUERY_MAP: Record<EntityType, ReadonlyArray<readonly string[]>> = {
-    request: [ ["lab"], ["billing"], ["dashboard"]], //["queue"],["request"], ["labRequests"]
+    request: [["request"], ["lab"], ["billing"], ["dashboard"]],
     consultation: [["consultation"], ["consultation", "list"], ["queue"], ["dashboard"]],
     lab: [["lab"], ["laboratory"], ["billing"], ["request"], ["queue"], ["dashboard"]],
     "lab-attachment": [["lab"], ["laboratory"], ["dashboard"]],

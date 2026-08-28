@@ -1,0 +1,38 @@
+diff --git a/backend/src/modules/lab/lab.result-writers.ts b/backend/src/modules/lab/lab.result-writers.ts
+index 3a0111c..845060f 100755
+--- a/backend/src/modules/lab/lab.result-writers.ts
++++ b/backend/src/modules/lab/lab.result-writers.ts
+@@ -105 +105 @@ export const upsertStructuredLabResult = async ({
+-    };
++    } satisfies Omit<Prisma.HematologyResultUncheckedCreateInput, "lab_id">;
+@@ -135 +135 @@ export const upsertStructuredLabResult = async ({
+-    };
++    } satisfies Omit<Prisma.SerologyResultUncheckedCreateInput, "lab_id">;
+@@ -158 +157,0 @@ export const upsertStructuredLabResult = async ({
+-      morphology: trimFormValue(form, "morphology"),
+@@ -170 +169 @@ export const upsertStructuredLabResult = async ({
+-    };
++    } satisfies Omit<Prisma.ParasitologyResultUncheckedCreateInput, "lab_id">;
+@@ -198,0 +198 @@ export const upsertStructuredLabResult = async ({
++      morphology: trimFormValue(form, "morphology"),
+@@ -207 +207 @@ export const upsertStructuredLabResult = async ({
+-    };
++    } satisfies Omit<Prisma.UrinalysisResultUncheckedCreateInput, "lab_id">;
+@@ -257 +257 @@ export const upsertStructuredLabResult = async ({
+-    };
++    } satisfies Omit<Prisma.ClinicalChemistryResultUncheckedCreateInput, "lab_id">;
+@@ -281 +281 @@ export const upsertStructuredLabResult = async ({
+-    };
++    } satisfies Omit<Prisma.HbA1cResultUncheckedCreateInput, "lab_id">;
+@@ -309 +309 @@ export const upsertStructuredLabResult = async ({
+-    };
++    } satisfies Omit<Prisma.ChemistryResultUncheckedCreateInput, "lab_id">;
+@@ -364 +364 @@ export const upsertStructuredLabResult = async ({
+-    };
++    } satisfies Omit<Prisma.OgttResultUncheckedCreateInput, "lab_id">;
+@@ -375 +375 @@ export const upsertStructuredLabResult = async ({
+-  if (resolvedSchemaKey == "FOBT"){
++  if (resolvedSchemaKey === "FOBT") {
+@@ -384 +384 @@ export const upsertStructuredLabResult = async ({
+-    };
++    } satisfies Omit<Prisma.FOBTResultUncheckedCreateInput, "lab_id">;

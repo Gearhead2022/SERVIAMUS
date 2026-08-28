@@ -60,6 +60,15 @@ export interface PatientConsultationRecordsPayload {
     ht?: string;
 }
 
+export interface ConsultationVitalsPayload {
+    bp?: string;
+    temp?: string;
+    cr?: string;
+    rr?: string;
+    wt?: string;
+    ht?: string;
+}
+
 
 export interface PrescriptionPayload {
     consultation_id: number;

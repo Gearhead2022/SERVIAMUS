@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createConsultationResultController, createFollowupResultController, createMedCertResultController, createPrescriptionController, getAllPatientConsultationController, getAllPatientMedCertController, getAllPatientRequestController, getConsultationRecordByIdController, getConsultationRecordHistoryController, getConsultationResultByIdController, getConsultationRxByIdController, getDoctorByIdController, getFollowupRecordsController, getFollowupResultByIdController, getInitialConsultationController, getInitialConsultationWithPrevFollowupsController, getLabRequestByNameController, getMedicalCertificateByIdController, getMedicalCertificateRecordHistoryController, getPatientPrescriptionController, getPatientRecordController, getPrescriptionByRequestController, getPrescriptionRecordHistoryController, getStatisticsController, getWeeklyTallyController, laboratoryRecordHistoryController, updateRequestStatusController } from "./consultation.controller";
+import { createConsultationResultController, createFollowupResultController, createMedCertResultController, createPrescriptionController, getAllPatientConsultationController, getAllPatientMedCertController, getAllPatientRequestController, getConsultationRecordByIdController, getConsultationRecordHistoryController, getConsultationResultByIdController, getConsultationRxByIdController, getDoctorByIdController, getFollowupRecordsController, getFollowupResultByIdController, getInitialConsultationController, getInitialConsultationWithPrevFollowupsController, getLabRequestByNameController, getMedicalCertificateByIdController, getMedicalCertificateRecordHistoryController, getPatientPrescriptionController, getPatientRecordController, getPrescriptionByRequestController, getPrescriptionRecordHistoryController, getStatisticsController, getWeeklyTallyController, laboratoryRecordHistoryController, updateConsultationVitalsController, updateRequestStatusController } from "./consultation.controller";
 
 const router = Router();
 
@@ -17,6 +17,11 @@ router.get(
 router.patch(
   "/:id/status",
   updateRequestStatusController
+);
+
+router.patch(
+  "/:id/vitals",
+  updateConsultationVitalsController
 );
 
 router.get(

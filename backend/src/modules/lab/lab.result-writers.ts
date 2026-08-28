@@ -102,7 +102,7 @@ export const upsertStructuredLabResult = async ({
       rh_type: trimFormValue(form, "rh_type"),
       others2: trimFormValue(form, "others2"),
       ...resultAuditFields(medTechUserId, pathologistUserId),
-    };
+    } satisfies Omit<Prisma.HematologyResultUncheckedCreateInput, "lab_id">;
 
     await tx.hematologyResult.upsert({
       where: { lab_id: labId },
@@ -132,7 +132,7 @@ export const upsertStructuredLabResult = async ({
       result: trimFormValue(form, "result"),
       day_of_fever: trimFormValue(form, "day_of_fever", "dayoffever"),
       ...resultAuditFields(medTechUserId, pathologistUserId),
-    };
+    } satisfies Omit<Prisma.SerologyResultUncheckedCreateInput, "lab_id">;
 
     await tx.serologyResult.upsert({
       where: { lab_id: labId },
@@ -155,7 +155,6 @@ export const upsertStructuredLabResult = async ({
       consistency: trimFormValue(form, "consistency"),
       pus_cells: trimFormValue(form, "pus_cells"),
       rbc: trimFormValue(form, "rbc"),
-      morphology: trimFormValue(form, "morphology"),
       bacteria: trimFormValue(form, "bacteria"),
       hookworm: trimFormValue(form, "hookworm"),
       ascaris: trimFormValue(form, "ascaris"),
@@ -167,7 +166,7 @@ export const upsertStructuredLabResult = async ({
       coli_trophozoite: trimFormValue(form, "coli_trophozoite"),
       others: trimFormValue(form, "others"),
       ...resultAuditFields(medTechUserId, pathologistUserId),
-    };
+    } satisfies Omit<Prisma.ParasitologyResultUncheckedCreateInput, "lab_id">;
 
     await tx.parasitologyResult.upsert({
       where: { lab_id: labId },
@@ -196,6 +195,7 @@ export const upsertStructuredLabResult = async ({
       blood: trimFormValue(form, "blood"),
       pus_cells: trimFormValue(form, "pus_cells"),
       rbc: trimFormValue(form, "rbc"),
+      morphology: trimFormValue(form, "morphology"),
       bacteria: trimFormValue(form, "bacteria"),
       squamous_cell: trimFormValue(form, "squamous_cell"),
       round_cell: trimFormValue(form, "round_cell"),
@@ -204,7 +204,7 @@ export const upsertStructuredLabResult = async ({
       casts: trimFormValue(form, "casts"),
       others: trimFormValue(form, "others"),
       ...resultAuditFields(medTechUserId, pathologistUserId),
-    };
+    } satisfies Omit<Prisma.UrinalysisResultUncheckedCreateInput, "lab_id">;
 
     await tx.urinalysisResult.upsert({
       where: { lab_id: labId },
@@ -254,7 +254,7 @@ export const upsertStructuredLabResult = async ({
       last_meal: trimFormValue(form, "last_meal"),
       time_taken: trimFormValue(form, "time_taken"),
       ...resultAuditFields(medTechUserId, pathologistUserId),
-    };
+    } satisfies Omit<Prisma.ClinicalChemistryResultUncheckedCreateInput, "lab_id">;
 
     await tx.clinicalChemistryResult.upsert({
       where: { lab_id: labId },
@@ -278,7 +278,7 @@ export const upsertStructuredLabResult = async ({
       result: trimFormValue(form, "result"),
       result_interpretation: trimFormValue(form, "result_interpretation"),
       ...resultAuditFields(medTechUserId, pathologistUserId),
-    };
+    } satisfies Omit<Prisma.HbA1cResultUncheckedCreateInput, "lab_id">;
 
     await tx.hbA1cResult.upsert({
       where: { lab_id: labId },
@@ -306,7 +306,7 @@ export const upsertStructuredLabResult = async ({
       ionized_calcium_unit: trimFormValue(form, "ionized_calcium_unit"),
       others: trimFormValue(form, "others"),
       ...resultAuditFields(medTechUserId, pathologistUserId),
-    };
+    } satisfies Omit<Prisma.ChemistryResultUncheckedCreateInput, "lab_id">;
 
     await tx.chemistryResult.upsert({
       where: { lab_id: labId },
@@ -361,7 +361,7 @@ export const upsertStructuredLabResult = async ({
         "three_hour_after_load_conv"
       ),
       ...resultAuditFields(medTechUserId, pathologistUserId),
-    };
+    } satisfies Omit<Prisma.OgttResultUncheckedCreateInput, "lab_id">;
 
     await tx.ogttResult.upsert({
       where: { lab_id: labId },
@@ -372,7 +372,7 @@ export const upsertStructuredLabResult = async ({
       update: data,
     });
   }
-  if (resolvedSchemaKey == "FOBT"){
+  if (resolvedSchemaKey === "FOBT") {
     const data = {
       patient_id: patientId,
       test_name: trimFormValue(form, "testname", "test", "test_name"),
@@ -381,7 +381,7 @@ export const upsertStructuredLabResult = async ({
       day_of_fever: trimFormValue(form, "daysoffever"),
       result: trimFormValue(form, "results"),
       ...resultAuditFields(medTechUserId, pathologistUserId),
-    };
+    } satisfies Omit<Prisma.FOBTResultUncheckedCreateInput, "lab_id">;
 
     await tx.fOBTResult.upsert({
       where: { lab_id: labId },

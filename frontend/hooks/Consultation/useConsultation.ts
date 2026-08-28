@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { consultationFollowupResults, consultationResults, createPrescription, fetchAllConsultationRequest, getAllPatientConsultationList, getAllPatientMedCertList, getConsultationById, getConsultationPrint, getConsultationRecord, getConsultationRecordhistory, getConsultationRxPrint, getDoctorInfo, getFollowupPrint, getFollowupRecords, getInitialConsultations, getInitialConsultationWithPrevFollowups, getLaboratoryRecordHistory, getLabRequestByName, getMedicalCertificatePrint, getMedicalCertificateRecordhistory, getPatientPrescription, getPrescriptionRecordhistory, getRequestPerWeek, getStatisticsRecord, medicalCertificateResult, updateStatus } from "@/services/consultation.services";
+import { consultationFollowupResults, consultationResults, createPrescription, fetchAllConsultationRequest, getAllPatientConsultationList, getAllPatientMedCertList, getConsultationById, getConsultationPrint, getConsultationRecord, getConsultationRecordhistory, getConsultationRxPrint, getDoctorInfo, getFollowupPrint, getFollowupRecords, getInitialConsultations, getInitialConsultationWithPrevFollowups, getLaboratoryRecordHistory, getLabRequestByName, getMedicalCertificatePrint, getMedicalCertificateRecordhistory, getPatientPrescription, getPrescriptionRecordhistory, getRequestPerWeek, getStatisticsRecord, medicalCertificateResult, updateConsultationVitals, updateStatus } from "@/services/consultation.services";
 import SweetAlert from "@/utils/SweetAlert";
 import { ConsultationResultProps, Status, PrescriptionProps, ConsultationProps, MedicalCertificateProps, RequestTypes, LabRequestItems, ConsultationHistoryRecordsProps, medCertHistoryRecordsProps, ConsultationRequestProps, ConsultationWithRequestProps, FollowupConsultationResultProps, InitialConsultationProps, InitialConsultationWithPrevFollowupsProps } from "@/types/ConsultationTypes";
 import { PatientProps } from "@/types/PatientTypes";
@@ -142,6 +142,32 @@ export const useRequestAction = () => {
         error instanceof Error ? error.message : "Something went wrong"
       );
     }
+  });
+};
+
+export const useSaveConsultationVitals = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      consultationRequestId,
+      data,
+    }: {
+      consultationRequestId: number;
+      data: {
+        bp?: string;
+        temp?: string;
+        cr?: string;
+        rr?: string;
+        wt?: string;
+        ht?: string;
+      };
+    }) => updateConsultationVitals(consultationRequestId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["consultation"] });
+      queryClient.invalidateQueries({ queryKey: ["request"] });
+      queryClient.invalidateQueries({ queryKey: ["prevVitalSigns"] });
+    },
   });
 };
 

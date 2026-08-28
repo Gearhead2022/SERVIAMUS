@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createFollowUp, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getConsultationResultById, getConsultationRxById, getDoctorById, getFollowupById, getFollowupRecords, getInitialConsultations, getInitialConsultationWithPrevFollowups, getLabRequestByName, getMedicalCertificateById, getPatientPrescription, getRequestsPerWeekday, getStatistics, laboratoryRecordHistory, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction } from "./consultation.services";
+import { consultationRecordHistory, consultationRecords, consultationRecordsByRequest, createConsultationResult, createFollowUp, createMedicalCertificate, createPresciptions, getAllPatientConsultationRecord, getAllPatientMedCertRecord, getAllRequests, getConsultationRecordById, getConsultationResultById, getConsultationRxById, getDoctorById, getFollowupById, getFollowupRecords, getInitialConsultations, getInitialConsultationWithPrevFollowups, getLabRequestByName, getMedicalCertificateById, getPatientPrescription, getRequestsPerWeekday, getStatistics, laboratoryRecordHistory, medicalCertificateRecordHistory, prescriptionRecordHistory, requestAction, updateConsultationVitals } from "./consultation.services";
+import { ConsultationVitalsPayload } from "./consultation.types";
 import { RequestStatus, RequestType } from "@prisma/client";
 import { prisma } from "../../config/prismaClient";
 import { getIO } from "../../socket";
@@ -30,6 +31,45 @@ export const createConsultationResultController = async (req: Request, res: Resp
     return res.status(400).json({
       success: false,
       message: error.message
+    });
+  }
+};
+
+export const updateConsultationVitalsController = async (req: Request, res: Response) => {
+  try {
+    const consultationRequestId = Number(req.params.id);
+
+    if (!Number.isInteger(consultationRequestId) || consultationRequestId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid consultation request ID",
+      });
+    }
+
+    const vitals = await updateConsultationVitals(
+      consultationRequestId,
+      req.body as ConsultationVitalsPayload
+    );
+
+    const payload = {
+      patientId: vitals.patientId,
+      requestId: vitals.requestId,
+      consultationRequestId,
+      reason: "vitals-updated",
+    };
+
+    const io = getIO();
+    io.to([...WORKFLOW_ROOMS]).emit("consultation:updated", payload);
+    io.to([...WORKFLOW_ROOMS]).emit("request:updated", payload);
+
+    return res.status(200).json({
+      success: true,
+      data: vitals,
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
     });
   }
 };

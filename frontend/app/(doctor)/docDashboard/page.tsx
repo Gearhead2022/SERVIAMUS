@@ -21,7 +21,6 @@ import { usePatientLabRequests } from "@/hooks/Lab/useLab";
 import SweetAlert from "@/utils/SweetAlert";
 import ModalHeader from "@/components/Modal/ModalHeader";
 import PatientConsultationForm from "@/components/Modal/NestedModal/PatientConsultationForm";
-import { useGetPrevVitalSigns } from "@/hooks/Patient/usePatientRegistration";
 import { Status } from "@/types/ConsultationTypes";
 import { RequestProps } from "@/types/RequestTypes";
 import AddPrescriptionForm from "@/components/Modal/ChildModal/AddPrescriptionForm";
@@ -480,7 +479,6 @@ const Dashboard = () => {
     catch { return null; }
   });
 
-  const { data: prevVitalSigns } = useGetPrevVitalSigns(currentPatient?.patient_id);
   const { data: consultationRecords } = useConsultationRecords(currentPatient?.patient_id, currentRequestId!);
   const { data: patientLabRequests = [] } = usePatientLabRequests(currentPatient?.patient_id);
   const { data: doctorInfo } = useGetDoctorById(doctorId);
@@ -568,7 +566,7 @@ const Dashboard = () => {
       {/* ── Modals (unchanged) ── */}
       {addConsultationOpen && !currentRequest?.consult?.is_follow_up && (
         <ModalHeader showModal title="Patient Consultation Results" subtitle="Fill in the details below" sizeModal="xlarge" onClose={() => setAddConsultationOpen(false)}>
-          <PatientConsultationForm patient={currentPatient} vitals={prevVitalSigns ?? undefined} consult={consultationRecords ?? undefined} cons_id={selectedConsultationId} onClose={() => setAddConsultationOpen(false)}
+          <PatientConsultationForm patient={currentPatient} vitals={currentVitals ?? undefined} consult={consultationRecords ?? undefined} cons_id={selectedConsultationId} onClose={() => setAddConsultationOpen(false)}
             onPreview={(data) => { setConsultationResultData(data); setConsultationResultPreview(true); }} />
         </ModalHeader>
       )}

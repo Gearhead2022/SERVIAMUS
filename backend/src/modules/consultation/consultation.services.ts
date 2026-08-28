@@ -1,5 +1,5 @@
 import { prisma } from "../../config/prismaClient";
-import { CreateFollowupPayload, FollowupConsultationProps, FollowupWithRelations, MedicalCertificatePayload, PatientConsultationRecordsPayload, PrescriptionPayload, WeeklyTally } from "./consultation.types";
+import { ConsultationVitalsPayload, CreateFollowupPayload, FollowupConsultationProps, FollowupWithRelations, MedicalCertificatePayload, PatientConsultationRecordsPayload, PrescriptionPayload, WeeklyTally } from "./consultation.types";
 import { PrescriptionItem, RequestStatus, RequestType } from "@prisma/client";
 import { getConsultationFromRequest, mapRequestToQueueStatus } from "./consultation.helper";
 import { Prisma } from "@prisma/client";
@@ -19,22 +19,54 @@ const requestUpdateRooms = [
   "role_STAFF",
 ] as const;
 
+const normalizeVitalSignValue = (value: unknown) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized === "" ? null : normalized;
+};
+
 export const createConsultationResult = async (
   payload: PatientConsultationRecordsPayload
 ) => {
   return prisma.$transaction(async (tx) => {
-    // 1. Get latest vitals
-    const vitals = await tx.vitallSign.findFirst({
-      where: { patient_id: payload.patient_id },
-      orderBy: { vs_id: "desc" },
+    // Keep the completed consultation tied to the vital-sign record created
+    // specifically for this consultation request. Using the patient's latest
+    // record can attach vitals from a different visit when multiple requests
+    // are being handled at the same time.
+    const consultationRequest = await tx.consultationRequest.findUnique({
+      where: { cons_id: payload.cons_id },
       select: {
         vs_id: true,
+        request: {
+          select: {
+            patient_id: true,
+          },
+        },
       },
     });
 
-    if (!vitals) {
-      throw new Error("No vitals found for this patient");
+    if (!consultationRequest) {
+      throw new Error("Consultation request not found");
     }
+
+    if (consultationRequest.request.patient_id !== payload.patient_id) {
+      throw new Error("Consultation request does not belong to this patient");
+    }
+
+    await tx.vitallSign.update({
+      where: { vs_id: consultationRequest.vs_id },
+      data: {
+        bp: normalizeVitalSignValue(payload.bp),
+        temp: normalizeVitalSignValue(payload.temp),
+        cr: normalizeVitalSignValue(payload.cr),
+        rr: normalizeVitalSignValue(payload.rr),
+        wt: normalizeVitalSignValue(payload.wt),
+        ht: normalizeVitalSignValue(payload.ht),
+      },
+    });
 
     const records = await tx.consultationRecords.upsert({
       where: { patient_id: payload.patient_id },
@@ -125,7 +157,7 @@ export const createConsultationResult = async (
         cons_id: payload.cons_id,
         phr_id: records.phr_id,
         patient_id: payload.patient_id,
-        vs_id: vitals.vs_id,
+        vs_id: consultationRequest.vs_id,
         consultation_date: new Date(payload.consultation_date),
 
         chief_complaint: payload.chief_complaint,
@@ -142,6 +174,49 @@ export const createConsultationResult = async (
     });
 
     return consultation;
+  });
+};
+
+export const updateConsultationVitals = async (
+  consultationRequestId: number,
+  payload: ConsultationVitalsPayload
+) => {
+  return prisma.$transaction(async (tx) => {
+    const consultationRequest = await tx.consultationRequest.findUnique({
+      where: { cons_id: consultationRequestId },
+      select: {
+        vs_id: true,
+        req_id: true,
+        request: {
+          select: {
+            patient_id: true,
+          },
+        },
+      },
+    });
+
+    if (!consultationRequest) {
+      throw new Error("Consultation request not found");
+    }
+
+    const vitals = await tx.vitallSign.update({
+      where: { vs_id: consultationRequest.vs_id },
+      data: {
+        bp: normalizeVitalSignValue(payload.bp),
+        temp: normalizeVitalSignValue(payload.temp),
+        cr: normalizeVitalSignValue(payload.cr),
+        rr: normalizeVitalSignValue(payload.rr),
+        wt: normalizeVitalSignValue(payload.wt),
+        ht: normalizeVitalSignValue(payload.ht),
+      },
+    });
+
+    return {
+      consultationRequestId,
+      requestId: consultationRequest.req_id,
+      patientId: consultationRequest.request.patient_id,
+      vitals,
+    };
   });
 };
 

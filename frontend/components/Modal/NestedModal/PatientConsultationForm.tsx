@@ -1,21 +1,26 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { patientConsultationSchema } from "@/schemas/consultation.schema";
-import { useForm, UseFormReturn, Path, UseFormRegister } from "react-hook-form";
+import { useForm, UseFormReturn, Path, UseFormRegister, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PatientProps } from "@/types/PatientTypes";
 import Button from "@/components/ui/Button";
 import { VitalSignProps } from "@/types/RequestTypes"
 import { ConsultationResultProps } from "@/types/ConsultationTypes";
 import { normalizeConsultationDefaults } from "@/utils/consultation/normalizeConsultationDefaults";
+import { useSaveConsultationVitals } from "@/hooks/Consultation/useConsultation";
 
 type RegisterConsultationFormValues = z.infer<typeof patientConsultationSchema>;
 
 type StepProps = {
   form: UseFormReturn<RegisterConsultationFormValues>;
 };
+
+type VitalSaveState = "idle" | "saving" | "saved" | "error";
+
+const VITAL_FIELDS = ["bp", "temp", "cr", "rr", "wt", "ht"] as const;
 
 const STEPS = [
   { label: "Personal", sub: "Information" },
@@ -177,7 +182,14 @@ function Step1({ form }: StepProps) {
   );
 }
 
-function Step2({ form }: StepProps) {
+function Step2({
+  form,
+  vitalSaveState,
+  onRetryVitalsSave,
+}: StepProps & {
+  vitalSaveState: VitalSaveState;
+  onRetryVitalsSave: () => void;
+}) {
   const { register, formState: { errors } } = form;
   return (
     <>
@@ -185,6 +197,27 @@ function Step2({ form }: StepProps) {
       <p className="text-sm text-[#6b7da0] mt-1 mb-6">Current and previous measurements with clinical notes</p>
 
       <VitalsRow label="Vitals Record" form={form} teal />
+
+      <div className="-mt-2 mb-4 flex items-center justify-end gap-2" aria-live="polite">
+        {vitalSaveState === "saving" && (
+          <span className="text-xs text-[#6b7da0]">Saving vital signs…</span>
+        )}
+        {vitalSaveState === "saved" && (
+          <span className="text-xs font-medium text-[#0e7c7b]">Vital signs saved</span>
+        )}
+        {vitalSaveState === "error" && (
+          <>
+            <span className="text-xs font-medium text-red-600">Vital signs were not saved.</span>
+            <button
+              type="button"
+              onClick={onRetryVitalsSave}
+              className="text-xs font-semibold text-[#1a3560] underline underline-offset-2 hover:text-[#0e7c7b]"
+            >
+              Retry
+            </button>
+          </>
+        )}
+      </div>
 
       <div className="mt-2">
         <label className={labelCls}>History of Present Illness</label>
@@ -363,6 +396,8 @@ function Step4({ form }: StepProps) {
 
 const PatientConsultationForm: React.FC<{ patient: PatientProps | undefined, vitals: VitalSignProps | undefined, consult: ConsultationResultProps | undefined, cons_id: number, onClose: () => void, onPreview: (data: RegisterConsultationFormValues) => void }> = ({ patient, vitals, consult, cons_id, onClose, onPreview }) => {
   const [step, setStep] = useState(1);
+  const [vitalSaveState, setVitalSaveState] = useState<VitalSaveState>("idle");
+  const [vitalSaveAttempt, setVitalSaveAttempt] = useState(0);
 
   const form = useForm<RegisterConsultationFormValues>({
     resolver: zodResolver(patientConsultationSchema),
@@ -370,9 +405,64 @@ const PatientConsultationForm: React.FC<{ patient: PatientProps | undefined, vit
     defaultValues: normalizeConsultationDefaults(patient, consult, vitals) as RegisterConsultationFormValues,
   });
 
+  const { mutateAsync: saveConsultationVitals } = useSaveConsultationVitals();
+  const watchedVitals = useWatch({
+    control: form.control,
+    name: VITAL_FIELDS,
+  });
+  const vitalSnapshot = JSON.stringify({
+    bp: watchedVitals[0] ?? "",
+    temp: watchedVitals[1] ?? "",
+    cr: watchedVitals[2] ?? "",
+    rr: watchedVitals[3] ?? "",
+    wt: watchedVitals[4] ?? "",
+    ht: watchedVitals[5] ?? "",
+  });
+  const lastSavedVitalSnapshot = useRef(vitalSnapshot);
+  const latestVitalSnapshot = useRef(vitalSnapshot);
+  const vitalSaveQueue = useRef(Promise.resolve());
+
+  useEffect(() => {
+    latestVitalSnapshot.current = vitalSnapshot;
+  }, [vitalSnapshot]);
+
+  useEffect(() => {
+    if (!cons_id || vitalSnapshot === lastSavedVitalSnapshot.current) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setVitalSaveState("saving");
+      vitalSaveQueue.current = vitalSaveQueue.current
+        .catch(() => undefined)
+        .then(() => saveConsultationVitals({
+          consultationRequestId: cons_id,
+          data: JSON.parse(vitalSnapshot),
+        }))
+        .then(() => {
+          lastSavedVitalSnapshot.current = vitalSnapshot;
+          if (latestVitalSnapshot.current === vitalSnapshot) {
+            setVitalSaveState("saved");
+          }
+        })
+        .catch(() => {
+          if (latestVitalSnapshot.current === vitalSnapshot) {
+            setVitalSaveState("error");
+          }
+        });
+    }, 600);
+
+    return () => window.clearTimeout(timer);
+  }, [cons_id, saveConsultationVitals, vitalSaveAttempt, vitalSnapshot]);
+
   const panels: React.ReactElement[] = [
     <Step1 key="step1" form={form} />,
-    <Step2 key="step2" form={form} />,
+    <Step2
+      key="step2"
+      form={form}
+      vitalSaveState={vitalSaveState}
+      onRetryVitalsSave={() => setVitalSaveAttempt((attempt) => attempt + 1)}
+    />,
     <Step3 key="step3" form={form} />,
     <Step4 key="step4" form={form} />,
   ];

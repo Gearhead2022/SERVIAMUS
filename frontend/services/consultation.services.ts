@@ -2,6 +2,15 @@ import api from "./axios";
 import { ConsultationResultProps, MedicalCertificateProps, Status, RequestTypes, CreatePrescriptionPayload, CreateFollowupPayload } from "@/types/ConsultationTypes";
 import { PaginationMeta } from "@/types/RequestTypes";
 
+export type ConsultationVitalsPayload = {
+  bp?: string;
+  temp?: string;
+  cr?: string;
+  rr?: string;
+  wt?: string;
+  ht?: string;
+};
+
 export const consultationResults = async (
   data: ConsultationResultProps
 ) => {
@@ -67,6 +76,17 @@ export const getAllPatientConsultationList = async (patient_id: number, search?:
   });
   return { data: res.data.data ?? [], pagination: res.data.pagination as PaginationMeta };
 }
+
+export const updateConsultationVitals = async (
+  consultationRequestId: number,
+  data: ConsultationVitalsPayload
+) => {
+  const res = await api.patch(
+    `/api/consultation/${consultationRequestId}/vitals`,
+    data
+  );
+  return res.data.data;
+};
 
 export const getAllPatientMedCertList = async (patient_id: number, search?: string, page = 1, limit = 10) => {
   const res = await api.get(`/api/consultation/${patient_id}/getAllPatientMedCertRecords`, {
